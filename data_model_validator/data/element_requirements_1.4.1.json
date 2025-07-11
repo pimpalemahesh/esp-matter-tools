@@ -1,0 +1,5827 @@
+[
+    {
+        "name": "door_lock",
+        "id": "0x000A",
+        "revision": "3",
+        "clusters": [
+            {
+                "name": "identify",
+                "id": "0x0003",
+                "revision": "5",
+                "attributes": [
+                    {
+                        "name": "identify_time",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "identify_type",
+                        "id": "0x0001"
+                    }
+                ],
+                "commands": [
+                    {
+                        "name": "identify",
+                        "id": "0x0000"
+                    }
+                ],
+                "events": [],
+                "features": [],
+                "type": "server"
+            },
+            {
+                "name": "door_lock",
+                "id": "0x0101",
+                "revision": "8",
+                "attributes": [
+                    {
+                        "name": "lock_state",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "lock_type",
+                        "id": "0x0001"
+                    },
+                    {
+                        "name": "actuator_enabled",
+                        "id": "0x0002"
+                    },
+                    {
+                        "name": "operating_mode",
+                        "id": "0x0025"
+                    },
+                    {
+                        "name": "supported_operating_modes",
+                        "id": "0x0026"
+                    }
+                ],
+                "commands": [
+                    {
+                        "name": "lock_door",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "unlock_door",
+                        "id": "0x0001"
+                    }
+                ],
+                "events": [
+                    {
+                        "name": "door_lock_alarm",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "lock_operation",
+                        "id": "0x0002"
+                    },
+                    {
+                        "name": "lock_operation_error",
+                        "id": "0x0003"
+                    }
+                ],
+                "features": [],
+                "type": "server"
+            }
+        ]
+    },
+    {
+        "name": "door_lock_controller",
+        "id": "0x000B",
+        "revision": "3",
+        "clusters": [
+            {
+                "name": "door_lock",
+                "id": "0x0101",
+                "revision": "8",
+                "attributes": [
+                    {
+                        "name": "lock_state",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "lock_type",
+                        "id": "0x0001"
+                    },
+                    {
+                        "name": "actuator_enabled",
+                        "id": "0x0002"
+                    },
+                    {
+                        "name": "operating_mode",
+                        "id": "0x0025"
+                    },
+                    {
+                        "name": "supported_operating_modes",
+                        "id": "0x0026"
+                    }
+                ],
+                "commands": [
+                    {
+                        "name": "lock_door",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "unlock_door",
+                        "id": "0x0001"
+                    }
+                ],
+                "events": [
+                    {
+                        "name": "door_lock_alarm",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "lock_operation",
+                        "id": "0x0002"
+                    },
+                    {
+                        "name": "lock_operation_error",
+                        "id": "0x0003"
+                    }
+                ],
+                "features": [],
+                "type": "client"
+            }
+        ]
+    },
+    {
+        "name": "aggregator",
+        "id": "0x000E",
+        "revision": "2",
+        "clusters": []
+    },
+    {
+        "name": "generic_switch",
+        "id": "0x000F",
+        "revision": "3",
+        "clusters": [
+            {
+                "name": "identify",
+                "id": "0x0003",
+                "revision": "5",
+                "attributes": [
+                    {
+                        "name": "identify_time",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "identify_type",
+                        "id": "0x0001"
+                    }
+                ],
+                "commands": [
+                    {
+                        "name": "identify",
+                        "id": "0x0000"
+                    }
+                ],
+                "events": [],
+                "features": [],
+                "type": "server"
+            },
+            {
+                "name": "switch_cluster",
+                "id": "0x003B",
+                "revision": "2",
+                "attributes": [
+                    {
+                        "name": "number_of_positions",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "current_position",
+                        "id": "0x0001"
+                    }
+                ],
+                "commands": [],
+                "events": [],
+                "features": [],
+                "type": "server"
+            }
+        ]
+    },
+    {
+        "name": "power_source",
+        "id": "0x0011",
+        "revision": "1",
+        "clusters": [
+            {
+                "name": "power_source",
+                "id": "0x002F",
+                "revision": "3",
+                "attributes": [
+                    {
+                        "name": "status",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "order",
+                        "id": "0x0001"
+                    },
+                    {
+                        "name": "description",
+                        "id": "0x0002"
+                    },
+                    {
+                        "name": "endpoint_list",
+                        "id": "0x001F"
+                    }
+                ],
+                "commands": [],
+                "events": [],
+                "features": [],
+                "type": "server"
+            }
+        ]
+    },
+    {
+        "name": "ota_requestor",
+        "id": "0x0012",
+        "revision": "1",
+        "clusters": [
+            {
+                "name": "ota_software_update_provider",
+                "id": "0x0029",
+                "revision": "1",
+                "attributes": [],
+                "commands": [
+                    {
+                        "name": "query_image",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "query_image_response",
+                        "id": "0x0001"
+                    },
+                    {
+                        "name": "apply_update_request",
+                        "id": "0x0002"
+                    },
+                    {
+                        "name": "apply_update_response",
+                        "id": "0x0003"
+                    },
+                    {
+                        "name": "notify_update_applied",
+                        "id": "0x0004"
+                    }
+                ],
+                "events": [],
+                "features": [],
+                "type": "client"
+            },
+            {
+                "name": "ota_software_update_requestor",
+                "id": "0x002A",
+                "revision": "1",
+                "attributes": [
+                    {
+                        "name": "default_ota_providers",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "update_possible",
+                        "id": "0x0001"
+                    },
+                    {
+                        "name": "update_state",
+                        "id": "0x0002"
+                    },
+                    {
+                        "name": "update_state_progress",
+                        "id": "0x0003"
+                    }
+                ],
+                "commands": [],
+                "events": [
+                    {
+                        "name": "state_transition",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "version_applied",
+                        "id": "0x0001"
+                    },
+                    {
+                        "name": "download_error",
+                        "id": "0x0002"
+                    }
+                ],
+                "features": [],
+                "type": "server"
+            }
+        ]
+    },
+    {
+        "name": "bridged_node",
+        "id": "0x0013",
+        "revision": "3",
+        "clusters": [
+            {
+                "name": "bridged_device_basic_information",
+                "id": "0x0039",
+                "revision": "4",
+                "attributes": [
+                    {
+                        "name": "data_model_revision",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "vendor_name",
+                        "id": "0x0001"
+                    },
+                    {
+                        "name": "vendor_id",
+                        "id": "0x0002"
+                    },
+                    {
+                        "name": "product_name",
+                        "id": "0x0003"
+                    },
+                    {
+                        "name": "product_id",
+                        "id": "0x0004"
+                    },
+                    {
+                        "name": "node_label",
+                        "id": "0x0005"
+                    },
+                    {
+                        "name": "location",
+                        "id": "0x0006"
+                    },
+                    {
+                        "name": "hardware_version",
+                        "id": "0x0007"
+                    },
+                    {
+                        "name": "hardware_version_string",
+                        "id": "0x0008"
+                    },
+                    {
+                        "name": "software_version",
+                        "id": "0x0009"
+                    },
+                    {
+                        "name": "software_version_string",
+                        "id": "0x000A"
+                    },
+                    {
+                        "name": "reachable",
+                        "id": "0x0011"
+                    },
+                    {
+                        "name": "unique_id",
+                        "id": "0x0012"
+                    },
+                    {
+                        "name": "unique_id",
+                        "id": "0x0012"
+                    },
+                    {
+                        "name": "capability_minima",
+                        "id": "0x0013"
+                    },
+                    {
+                        "name": "specification_version",
+                        "id": "0x0015"
+                    },
+                    {
+                        "name": "max_paths_per_invoke",
+                        "id": "0x0016"
+                    }
+                ],
+                "commands": [],
+                "events": [
+                    {
+                        "name": "start_up",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "reachable_changed",
+                        "id": "0x0003"
+                    }
+                ],
+                "features": [],
+                "type": "server"
+            }
+        ]
+    },
+    {
+        "name": "ota_provider",
+        "id": "0x0014",
+        "revision": "1",
+        "clusters": [
+            {
+                "name": "ota_software_update_provider",
+                "id": "0x0029",
+                "revision": "1",
+                "attributes": [],
+                "commands": [
+                    {
+                        "name": "query_image",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "query_image_response",
+                        "id": "0x0001"
+                    },
+                    {
+                        "name": "apply_update_request",
+                        "id": "0x0002"
+                    },
+                    {
+                        "name": "apply_update_response",
+                        "id": "0x0003"
+                    },
+                    {
+                        "name": "notify_update_applied",
+                        "id": "0x0004"
+                    }
+                ],
+                "events": [],
+                "features": [],
+                "type": "server"
+            }
+        ]
+    },
+    {
+        "name": "contact_sensor",
+        "id": "0x0015",
+        "revision": "2",
+        "clusters": [
+            {
+                "name": "identify",
+                "id": "0x0003",
+                "revision": "5",
+                "attributes": [
+                    {
+                        "name": "identify_time",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "identify_type",
+                        "id": "0x0001"
+                    }
+                ],
+                "commands": [
+                    {
+                        "name": "identify",
+                        "id": "0x0000"
+                    }
+                ],
+                "events": [],
+                "features": [],
+                "type": "server"
+            },
+            {
+                "name": "boolean_state",
+                "id": "0x0045",
+                "revision": "1",
+                "attributes": [
+                    {
+                        "name": "state_value",
+                        "id": "0x0000"
+                    }
+                ],
+                "commands": [],
+                "events": [],
+                "features": [],
+                "type": "server"
+            }
+        ]
+    },
+    {
+        "name": "root_node",
+        "id": "0x0016",
+        "revision": "3",
+        "clusters": [
+            {
+                "name": "access_control",
+                "id": "0x001F",
+                "revision": "2",
+                "attributes": [
+                    {
+                        "name": "acl",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "subjects_per_access_control_entry",
+                        "id": "0x0002"
+                    },
+                    {
+                        "name": "targets_per_access_control_entry",
+                        "id": "0x0003"
+                    },
+                    {
+                        "name": "access_control_entries_per_fabric",
+                        "id": "0x0004"
+                    }
+                ],
+                "commands": [],
+                "events": [
+                    {
+                        "name": "access_control_entry_changed",
+                        "id": "0x0000"
+                    }
+                ],
+                "features": [],
+                "type": "server"
+            },
+            {
+                "name": "basic_information",
+                "id": "0x0028",
+                "revision": "4",
+                "attributes": [
+                    {
+                        "name": "data_model_revision",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "vendor_name",
+                        "id": "0x0001"
+                    },
+                    {
+                        "name": "vendor_id",
+                        "id": "0x0002"
+                    },
+                    {
+                        "name": "product_name",
+                        "id": "0x0003"
+                    },
+                    {
+                        "name": "product_id",
+                        "id": "0x0004"
+                    },
+                    {
+                        "name": "node_label",
+                        "id": "0x0005"
+                    },
+                    {
+                        "name": "location",
+                        "id": "0x0006"
+                    },
+                    {
+                        "name": "hardware_version",
+                        "id": "0x0007"
+                    },
+                    {
+                        "name": "hardware_version_string",
+                        "id": "0x0008"
+                    },
+                    {
+                        "name": "software_version",
+                        "id": "0x0009"
+                    },
+                    {
+                        "name": "software_version_string",
+                        "id": "0x000A"
+                    },
+                    {
+                        "name": "unique_id",
+                        "id": "0x0012"
+                    },
+                    {
+                        "name": "capability_minima",
+                        "id": "0x0013"
+                    },
+                    {
+                        "name": "specification_version",
+                        "id": "0x0015"
+                    },
+                    {
+                        "name": "max_paths_per_invoke",
+                        "id": "0x0016"
+                    }
+                ],
+                "commands": [],
+                "events": [
+                    {
+                        "name": "start_up",
+                        "id": "0x0000"
+                    }
+                ],
+                "features": [],
+                "type": "server"
+            },
+            {
+                "name": "general_commissioning",
+                "id": "0x0030",
+                "revision": "2",
+                "attributes": [
+                    {
+                        "name": "breadcrumb",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "basic_commissioning_info",
+                        "id": "0x0001"
+                    },
+                    {
+                        "name": "regulatory_config",
+                        "id": "0x0002"
+                    },
+                    {
+                        "name": "location_capability",
+                        "id": "0x0003"
+                    },
+                    {
+                        "name": "supports_concurrent_connection",
+                        "id": "0x0004"
+                    }
+                ],
+                "commands": [
+                    {
+                        "name": "arm_fail_safe",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "arm_fail_safe_response",
+                        "id": "0x0001"
+                    },
+                    {
+                        "name": "set_regulatory_config",
+                        "id": "0x0002"
+                    },
+                    {
+                        "name": "set_regulatory_config_response",
+                        "id": "0x0003"
+                    },
+                    {
+                        "name": "commissioning_complete",
+                        "id": "0x0004"
+                    },
+                    {
+                        "name": "commissioning_complete_response",
+                        "id": "0x0005"
+                    }
+                ],
+                "events": [],
+                "features": [],
+                "type": "server"
+            },
+            {
+                "name": "general_diagnostics",
+                "id": "0x0033",
+                "revision": "2",
+                "attributes": [
+                    {
+                        "name": "network_interfaces",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "reboot_count",
+                        "id": "0x0001"
+                    },
+                    {
+                        "name": "up_time",
+                        "id": "0x0002"
+                    },
+                    {
+                        "name": "test_event_triggers_enabled",
+                        "id": "0x0008"
+                    }
+                ],
+                "commands": [
+                    {
+                        "name": "test_event_trigger",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "time_snapshot",
+                        "id": "0x0001"
+                    },
+                    {
+                        "name": "time_snapshot_response",
+                        "id": "0x0002"
+                    }
+                ],
+                "events": [
+                    {
+                        "name": "boot_reason",
+                        "id": "0x0003"
+                    }
+                ],
+                "features": [],
+                "type": "server"
+            },
+            {
+                "name": "administrator_commissioning",
+                "id": "0x003C",
+                "revision": "1",
+                "attributes": [
+                    {
+                        "name": "window_status",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "admin_fabric_index",
+                        "id": "0x0001"
+                    },
+                    {
+                        "name": "admin_vendor_id",
+                        "id": "0x0002"
+                    }
+                ],
+                "commands": [
+                    {
+                        "name": "open_commissioning_window",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "revoke_commissioning",
+                        "id": "0x0002"
+                    }
+                ],
+                "events": [],
+                "features": [],
+                "type": "server"
+            },
+            {
+                "name": "operational_credentials",
+                "id": "0x003E",
+                "revision": "1",
+                "attributes": [
+                    {
+                        "name": "no_cs",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "fabrics",
+                        "id": "0x0001"
+                    },
+                    {
+                        "name": "supported_fabrics",
+                        "id": "0x0002"
+                    },
+                    {
+                        "name": "commissioned_fabrics",
+                        "id": "0x0003"
+                    },
+                    {
+                        "name": "trusted_root_certificates",
+                        "id": "0x0004"
+                    },
+                    {
+                        "name": "current_fabric_index",
+                        "id": "0x0005"
+                    }
+                ],
+                "commands": [
+                    {
+                        "name": "attestation_request",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "attestation_response",
+                        "id": "0x0001"
+                    },
+                    {
+                        "name": "certificate_chain_request",
+                        "id": "0x0002"
+                    },
+                    {
+                        "name": "certificate_chain_response",
+                        "id": "0x0003"
+                    },
+                    {
+                        "name": "csr_request",
+                        "id": "0x0004"
+                    },
+                    {
+                        "name": "csr_response",
+                        "id": "0x0005"
+                    },
+                    {
+                        "name": "add_noc",
+                        "id": "0x0006"
+                    },
+                    {
+                        "name": "update_noc",
+                        "id": "0x0007"
+                    },
+                    {
+                        "name": "noc_response",
+                        "id": "0x0008"
+                    },
+                    {
+                        "name": "update_fabric_label",
+                        "id": "0x0009"
+                    },
+                    {
+                        "name": "remove_fabric",
+                        "id": "0x000A"
+                    },
+                    {
+                        "name": "add_trusted_root_certificate",
+                        "id": "0x000B"
+                    }
+                ],
+                "events": [],
+                "features": [],
+                "type": "server"
+            },
+            {
+                "name": "group_key_management",
+                "id": "0x003F",
+                "revision": "2",
+                "attributes": [
+                    {
+                        "name": "group_key_map",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "group_table",
+                        "id": "0x0001"
+                    },
+                    {
+                        "name": "max_groups_per_fabric",
+                        "id": "0x0002"
+                    },
+                    {
+                        "name": "max_group_keys_per_fabric",
+                        "id": "0x0003"
+                    }
+                ],
+                "commands": [
+                    {
+                        "name": "key_set_write",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "key_set_read",
+                        "id": "0x0001"
+                    },
+                    {
+                        "name": "key_set_read_response",
+                        "id": "0x0002"
+                    },
+                    {
+                        "name": "key_set_remove",
+                        "id": "0x0003"
+                    },
+                    {
+                        "name": "key_set_read_all_indices",
+                        "id": "0x0004"
+                    },
+                    {
+                        "name": "key_set_read_all_indices_response",
+                        "id": "0x0005"
+                    }
+                ],
+                "events": [],
+                "features": [],
+                "type": "server"
+            }
+        ]
+    },
+    {
+        "name": "solar_power",
+        "id": "0x0017",
+        "revision": "1",
+        "clusters": []
+    },
+    {
+        "name": "battery_storage",
+        "id": "0x0018",
+        "revision": "1",
+        "clusters": []
+    },
+    {
+        "name": "secondary_network_interface",
+        "id": "0x0019",
+        "revision": "1",
+        "clusters": [
+            {
+                "name": "network_commissioning",
+                "id": "0x0031",
+                "revision": "2",
+                "attributes": [
+                    {
+                        "name": "max_networks",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "networks",
+                        "id": "0x0001"
+                    },
+                    {
+                        "name": "interface_enabled",
+                        "id": "0x0004"
+                    },
+                    {
+                        "name": "last_networking_status",
+                        "id": "0x0005"
+                    },
+                    {
+                        "name": "last_network_id",
+                        "id": "0x0006"
+                    },
+                    {
+                        "name": "last_connect_error_value",
+                        "id": "0x0007"
+                    }
+                ],
+                "commands": [],
+                "events": [],
+                "features": [],
+                "type": "server"
+            }
+        ]
+    },
+    {
+        "name": "speaker",
+        "id": "0x0022",
+        "revision": "1",
+        "clusters": [
+            {
+                "name": "on_off",
+                "id": "0x0006",
+                "revision": "6",
+                "attributes": [
+                    {
+                        "name": "on_off",
+                        "id": "0x0000"
+                    }
+                ],
+                "commands": [
+                    {
+                        "name": "off",
+                        "id": "0x0000"
+                    }
+                ],
+                "events": [],
+                "features": [],
+                "type": "server"
+            },
+            {
+                "name": "level_control",
+                "id": "0x0008",
+                "revision": "6",
+                "attributes": [
+                    {
+                        "name": "current_level",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "options",
+                        "id": "0x000F"
+                    },
+                    {
+                        "name": "on_level",
+                        "id": "0x0011"
+                    }
+                ],
+                "commands": [
+                    {
+                        "name": "move_to_level",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "move",
+                        "id": "0x0001"
+                    },
+                    {
+                        "name": "step",
+                        "id": "0x0002"
+                    },
+                    {
+                        "name": "stop",
+                        "id": "0x0003"
+                    },
+                    {
+                        "name": "move_to_level_with_on_off",
+                        "id": "0x0004"
+                    },
+                    {
+                        "name": "move_with_on_off",
+                        "id": "0x0005"
+                    },
+                    {
+                        "name": "step_with_on_off",
+                        "id": "0x0006"
+                    },
+                    {
+                        "name": "stop_with_on_off",
+                        "id": "0x0007"
+                    }
+                ],
+                "events": [],
+                "features": [],
+                "type": "server"
+            }
+        ]
+    },
+    {
+        "name": "casting_video_player",
+        "id": "0x0023",
+        "revision": "2",
+        "clusters": [
+            {
+                "name": "on_off",
+                "id": "0x0006",
+                "revision": "6",
+                "attributes": [
+                    {
+                        "name": "on_off",
+                        "id": "0x0000"
+                    }
+                ],
+                "commands": [
+                    {
+                        "name": "off",
+                        "id": "0x0000"
+                    }
+                ],
+                "events": [],
+                "features": [],
+                "type": "server"
+            },
+            {
+                "name": "media_playback",
+                "id": "0x0506",
+                "revision": "2",
+                "attributes": [
+                    {
+                        "name": "current_state",
+                        "id": "0x0000"
+                    }
+                ],
+                "commands": [
+                    {
+                        "name": "play",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "pause",
+                        "id": "0x0001"
+                    },
+                    {
+                        "name": "stop",
+                        "id": "0x0002"
+                    },
+                    {
+                        "name": "playback_response",
+                        "id": "0x000A"
+                    }
+                ],
+                "events": [],
+                "features": [],
+                "type": "server"
+            },
+            {
+                "name": "keypad_input",
+                "id": "0x0509",
+                "revision": "1",
+                "attributes": [],
+                "commands": [
+                    {
+                        "name": "send_key",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "send_key_response",
+                        "id": "0x0001"
+                    }
+                ],
+                "events": [],
+                "features": [],
+                "type": "server"
+            },
+            {
+                "name": "content_launcher",
+                "id": "0x050A",
+                "revision": "2",
+                "attributes": [],
+                "commands": [],
+                "events": [],
+                "features": [],
+                "type": "server"
+            }
+        ]
+    },
+    {
+        "name": "content_app",
+        "id": "0x0024",
+        "revision": "2",
+        "clusters": [
+            {
+                "name": "keypad_input",
+                "id": "0x0509",
+                "revision": "1",
+                "attributes": [],
+                "commands": [
+                    {
+                        "name": "send_key",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "send_key_response",
+                        "id": "0x0001"
+                    }
+                ],
+                "events": [],
+                "features": [],
+                "type": "server"
+            },
+            {
+                "name": "application_launcher",
+                "id": "0x050C",
+                "revision": "2",
+                "attributes": [],
+                "commands": [
+                    {
+                        "name": "launch_app",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "stop_app",
+                        "id": "0x0001"
+                    },
+                    {
+                        "name": "hide_app",
+                        "id": "0x0002"
+                    },
+                    {
+                        "name": "launcher_response",
+                        "id": "0x0003"
+                    }
+                ],
+                "events": [],
+                "features": [],
+                "type": "server"
+            },
+            {
+                "name": "application_basic",
+                "id": "0x050D",
+                "revision": "1",
+                "attributes": [
+                    {
+                        "name": "application_name",
+                        "id": "0x0002"
+                    },
+                    {
+                        "name": "application",
+                        "id": "0x0004"
+                    },
+                    {
+                        "name": "status",
+                        "id": "0x0005"
+                    },
+                    {
+                        "name": "application_version",
+                        "id": "0x0006"
+                    },
+                    {
+                        "name": "allowed_vendor_list",
+                        "id": "0x0007"
+                    }
+                ],
+                "commands": [],
+                "events": [],
+                "features": [],
+                "type": "server"
+            }
+        ]
+    },
+    {
+        "name": "mode_select",
+        "id": "0x0027",
+        "revision": "1",
+        "clusters": [
+            {
+                "name": "mode_select",
+                "id": "0x0050",
+                "revision": "2",
+                "attributes": [
+                    {
+                        "name": "description",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "standard_namespace",
+                        "id": "0x0001"
+                    },
+                    {
+                        "name": "supported_modes",
+                        "id": "0x0002"
+                    },
+                    {
+                        "name": "current_mode",
+                        "id": "0x0003"
+                    }
+                ],
+                "commands": [
+                    {
+                        "name": "change_to_mode",
+                        "id": "0x0000"
+                    }
+                ],
+                "events": [],
+                "features": [],
+                "type": "server"
+            }
+        ]
+    },
+    {
+        "name": "basic_video_player",
+        "id": "0x0028",
+        "revision": "2",
+        "clusters": [
+            {
+                "name": "on_off",
+                "id": "0x0006",
+                "revision": "6",
+                "attributes": [
+                    {
+                        "name": "on_off",
+                        "id": "0x0000"
+                    }
+                ],
+                "commands": [
+                    {
+                        "name": "off",
+                        "id": "0x0000"
+                    }
+                ],
+                "events": [],
+                "features": [],
+                "type": "server"
+            },
+            {
+                "name": "media_playback",
+                "id": "0x0506",
+                "revision": "2",
+                "attributes": [
+                    {
+                        "name": "current_state",
+                        "id": "0x0000"
+                    }
+                ],
+                "commands": [
+                    {
+                        "name": "play",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "pause",
+                        "id": "0x0001"
+                    },
+                    {
+                        "name": "stop",
+                        "id": "0x0002"
+                    },
+                    {
+                        "name": "playback_response",
+                        "id": "0x000A"
+                    }
+                ],
+                "events": [],
+                "features": [],
+                "type": "server"
+            },
+            {
+                "name": "keypad_input",
+                "id": "0x0509",
+                "revision": "1",
+                "attributes": [],
+                "commands": [
+                    {
+                        "name": "send_key",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "send_key_response",
+                        "id": "0x0001"
+                    }
+                ],
+                "events": [],
+                "features": [],
+                "type": "server"
+            }
+        ]
+    },
+    {
+        "name": "casting_video_client",
+        "id": "0x0029",
+        "revision": "2",
+        "clusters": [
+            {
+                "name": "on_off",
+                "id": "0x0006",
+                "revision": "6",
+                "attributes": [
+                    {
+                        "name": "on_off",
+                        "id": "0x0000"
+                    }
+                ],
+                "commands": [
+                    {
+                        "name": "off",
+                        "id": "0x0000"
+                    }
+                ],
+                "events": [],
+                "features": [],
+                "type": "client"
+            },
+            {
+                "name": "keypad_input",
+                "id": "0x0509",
+                "revision": "1",
+                "attributes": [],
+                "commands": [
+                    {
+                        "name": "send_key",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "send_key_response",
+                        "id": "0x0001"
+                    }
+                ],
+                "events": [],
+                "features": [],
+                "type": "client"
+            },
+            {
+                "name": "content_launcher",
+                "id": "0x050A",
+                "revision": "2",
+                "attributes": [],
+                "commands": [],
+                "events": [],
+                "features": [],
+                "type": "client"
+            },
+            {
+                "name": "application_basic",
+                "id": "0x050D",
+                "revision": "1",
+                "attributes": [
+                    {
+                        "name": "application_name",
+                        "id": "0x0002"
+                    },
+                    {
+                        "name": "application",
+                        "id": "0x0004"
+                    },
+                    {
+                        "name": "status",
+                        "id": "0x0005"
+                    },
+                    {
+                        "name": "application_version",
+                        "id": "0x0006"
+                    },
+                    {
+                        "name": "allowed_vendor_list",
+                        "id": "0x0007"
+                    }
+                ],
+                "commands": [],
+                "events": [],
+                "features": [],
+                "type": "client"
+            }
+        ]
+    },
+    {
+        "name": "video_remote_control",
+        "id": "0x002A",
+        "revision": "2",
+        "clusters": [
+            {
+                "name": "on_off",
+                "id": "0x0006",
+                "revision": "6",
+                "attributes": [
+                    {
+                        "name": "on_off",
+                        "id": "0x0000"
+                    }
+                ],
+                "commands": [
+                    {
+                        "name": "off",
+                        "id": "0x0000"
+                    }
+                ],
+                "events": [],
+                "features": [],
+                "type": "client"
+            },
+            {
+                "name": "media_playback",
+                "id": "0x0506",
+                "revision": "2",
+                "attributes": [
+                    {
+                        "name": "current_state",
+                        "id": "0x0000"
+                    }
+                ],
+                "commands": [
+                    {
+                        "name": "play",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "pause",
+                        "id": "0x0001"
+                    },
+                    {
+                        "name": "stop",
+                        "id": "0x0002"
+                    },
+                    {
+                        "name": "playback_response",
+                        "id": "0x000A"
+                    }
+                ],
+                "events": [],
+                "features": [],
+                "type": "client"
+            },
+            {
+                "name": "keypad_input",
+                "id": "0x0509",
+                "revision": "1",
+                "attributes": [],
+                "commands": [
+                    {
+                        "name": "send_key",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "send_key_response",
+                        "id": "0x0001"
+                    }
+                ],
+                "events": [],
+                "features": [],
+                "type": "client"
+            }
+        ]
+    },
+    {
+        "name": "fan",
+        "id": "0x002B",
+        "revision": "3",
+        "clusters": [
+            {
+                "name": "identify",
+                "id": "0x0003",
+                "revision": "5",
+                "attributes": [
+                    {
+                        "name": "identify_time",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "identify_type",
+                        "id": "0x0001"
+                    }
+                ],
+                "commands": [
+                    {
+                        "name": "identify",
+                        "id": "0x0000"
+                    }
+                ],
+                "events": [],
+                "features": [],
+                "type": "server"
+            },
+            {
+                "name": "groups",
+                "id": "0x0004",
+                "revision": "4",
+                "attributes": [
+                    {
+                        "name": "name_support",
+                        "id": "0x0000"
+                    }
+                ],
+                "commands": [
+                    {
+                        "name": "add_group",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "add_group_response",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "view_group",
+                        "id": "0x0001"
+                    },
+                    {
+                        "name": "view_group_response",
+                        "id": "0x0001"
+                    },
+                    {
+                        "name": "get_group_membership",
+                        "id": "0x0002"
+                    },
+                    {
+                        "name": "get_group_membership_response",
+                        "id": "0x0002"
+                    },
+                    {
+                        "name": "remove_group",
+                        "id": "0x0003"
+                    },
+                    {
+                        "name": "remove_group_response",
+                        "id": "0x0003"
+                    },
+                    {
+                        "name": "remove_all_groups",
+                        "id": "0x0004"
+                    },
+                    {
+                        "name": "add_group_if_identifying",
+                        "id": "0x0005"
+                    }
+                ],
+                "events": [],
+                "features": [],
+                "type": "server"
+            },
+            {
+                "name": "fan_control",
+                "id": "0x0202",
+                "revision": "4",
+                "attributes": [
+                    {
+                        "name": "fan_mode",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "fan_mode_sequence",
+                        "id": "0x0001"
+                    },
+                    {
+                        "name": "percent_setting",
+                        "id": "0x0002"
+                    },
+                    {
+                        "name": "percent_current",
+                        "id": "0x0003"
+                    }
+                ],
+                "commands": [],
+                "events": [],
+                "features": [],
+                "type": "server"
+            }
+        ]
+    },
+    {
+        "name": "air_quality_sensor",
+        "id": "0x002C",
+        "revision": "1",
+        "clusters": [
+            {
+                "name": "identify",
+                "id": "0x0003",
+                "revision": "5",
+                "attributes": [
+                    {
+                        "name": "identify_time",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "identify_type",
+                        "id": "0x0001"
+                    }
+                ],
+                "commands": [
+                    {
+                        "name": "identify",
+                        "id": "0x0000"
+                    }
+                ],
+                "events": [],
+                "features": [],
+                "type": "server"
+            },
+            {
+                "name": "air_quality",
+                "id": "0x005B",
+                "revision": "1",
+                "attributes": [
+                    {
+                        "name": "air_quality",
+                        "id": "0x0000"
+                    }
+                ],
+                "commands": [],
+                "events": [],
+                "features": [],
+                "type": "server"
+            }
+        ]
+    },
+    {
+        "name": "air_purifier",
+        "id": "0x002D",
+        "revision": "2",
+        "clusters": [
+            {
+                "name": "identify",
+                "id": "0x0003",
+                "revision": "5",
+                "attributes": [
+                    {
+                        "name": "identify_time",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "identify_type",
+                        "id": "0x0001"
+                    }
+                ],
+                "commands": [
+                    {
+                        "name": "identify",
+                        "id": "0x0000"
+                    }
+                ],
+                "events": [],
+                "features": [],
+                "type": "server"
+            },
+            {
+                "name": "fan_control",
+                "id": "0x0202",
+                "revision": "4",
+                "attributes": [
+                    {
+                        "name": "fan_mode",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "fan_mode_sequence",
+                        "id": "0x0001"
+                    },
+                    {
+                        "name": "percent_setting",
+                        "id": "0x0002"
+                    },
+                    {
+                        "name": "percent_current",
+                        "id": "0x0003"
+                    }
+                ],
+                "commands": [],
+                "events": [],
+                "features": [],
+                "type": "server"
+            }
+        ]
+    },
+    {
+        "name": "water_freeze_detector",
+        "id": "0x0041",
+        "revision": "1",
+        "clusters": [
+            {
+                "name": "identify",
+                "id": "0x0003",
+                "revision": "5",
+                "attributes": [
+                    {
+                        "name": "identify_time",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "identify_type",
+                        "id": "0x0001"
+                    }
+                ],
+                "commands": [
+                    {
+                        "name": "identify",
+                        "id": "0x0000"
+                    }
+                ],
+                "events": [],
+                "features": [],
+                "type": "server"
+            },
+            {
+                "name": "boolean_state",
+                "id": "0x0045",
+                "revision": "1",
+                "attributes": [
+                    {
+                        "name": "state_value",
+                        "id": "0x0000"
+                    }
+                ],
+                "commands": [],
+                "events": [],
+                "features": [],
+                "type": "server"
+            }
+        ]
+    },
+    {
+        "name": "water_valve",
+        "id": "0x0042",
+        "revision": "1",
+        "clusters": [
+            {
+                "name": "identify",
+                "id": "0x0003",
+                "revision": "5",
+                "attributes": [
+                    {
+                        "name": "identify_time",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "identify_type",
+                        "id": "0x0001"
+                    }
+                ],
+                "commands": [
+                    {
+                        "name": "identify",
+                        "id": "0x0000"
+                    }
+                ],
+                "events": [],
+                "features": [],
+                "type": "server"
+            },
+            {
+                "name": "valve_configuration_and_control",
+                "id": "0x0081",
+                "revision": "1",
+                "attributes": [
+                    {
+                        "name": "open_duration",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "default_open_duration",
+                        "id": "0x0001"
+                    },
+                    {
+                        "name": "remaining_duration",
+                        "id": "0x0003"
+                    },
+                    {
+                        "name": "current_state",
+                        "id": "0x0004"
+                    },
+                    {
+                        "name": "target_state",
+                        "id": "0x0005"
+                    }
+                ],
+                "commands": [
+                    {
+                        "name": "open",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "close",
+                        "id": "0x0001"
+                    }
+                ],
+                "events": [],
+                "features": [],
+                "type": "server"
+            }
+        ]
+    },
+    {
+        "name": "water_leak_detector",
+        "id": "0x0043",
+        "revision": "1",
+        "clusters": [
+            {
+                "name": "identify",
+                "id": "0x0003",
+                "revision": "5",
+                "attributes": [
+                    {
+                        "name": "identify_time",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "identify_type",
+                        "id": "0x0001"
+                    }
+                ],
+                "commands": [
+                    {
+                        "name": "identify",
+                        "id": "0x0000"
+                    }
+                ],
+                "events": [],
+                "features": [],
+                "type": "server"
+            },
+            {
+                "name": "boolean_state",
+                "id": "0x0045",
+                "revision": "1",
+                "attributes": [
+                    {
+                        "name": "state_value",
+                        "id": "0x0000"
+                    }
+                ],
+                "commands": [],
+                "events": [],
+                "features": [],
+                "type": "server"
+            }
+        ]
+    },
+    {
+        "name": "rain_sensor",
+        "id": "0x0044",
+        "revision": "1",
+        "clusters": [
+            {
+                "name": "identify",
+                "id": "0x0003",
+                "revision": "5",
+                "attributes": [
+                    {
+                        "name": "identify_time",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "identify_type",
+                        "id": "0x0001"
+                    }
+                ],
+                "commands": [
+                    {
+                        "name": "identify",
+                        "id": "0x0000"
+                    }
+                ],
+                "events": [],
+                "features": [],
+                "type": "server"
+            },
+            {
+                "name": "boolean_state",
+                "id": "0x0045",
+                "revision": "1",
+                "attributes": [
+                    {
+                        "name": "state_value",
+                        "id": "0x0000"
+                    }
+                ],
+                "commands": [],
+                "events": [],
+                "features": [],
+                "type": "server"
+            }
+        ]
+    },
+    {
+        "name": "refrigerator",
+        "id": "0x0070",
+        "revision": "2",
+        "clusters": []
+    },
+    {
+        "name": "temperature_controlled_cabinet",
+        "id": "0x0071",
+        "revision": "3",
+        "clusters": [
+            {
+                "name": "temperature_control",
+                "id": "0x0056",
+                "revision": "1",
+                "attributes": [],
+                "commands": [
+                    {
+                        "name": "set_temperature",
+                        "id": "0x0000"
+                    }
+                ],
+                "events": [],
+                "features": [],
+                "type": "server"
+            }
+        ]
+    },
+    {
+        "name": "room_air_conditioner",
+        "id": "0x0072",
+        "revision": "2",
+        "clusters": [
+            {
+                "name": "identify",
+                "id": "0x0003",
+                "revision": "5",
+                "attributes": [
+                    {
+                        "name": "identify_time",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "identify_type",
+                        "id": "0x0001"
+                    }
+                ],
+                "commands": [
+                    {
+                        "name": "identify",
+                        "id": "0x0000"
+                    }
+                ],
+                "events": [],
+                "features": [],
+                "type": "server"
+            },
+            {
+                "name": "on_off",
+                "id": "0x0006",
+                "revision": "6",
+                "attributes": [
+                    {
+                        "name": "on_off",
+                        "id": "0x0000"
+                    }
+                ],
+                "commands": [
+                    {
+                        "name": "off",
+                        "id": "0x0000"
+                    }
+                ],
+                "events": [],
+                "features": [
+                    {
+                        "name": "dead_front_behavior",
+                        "id": "0x0002",
+                        "code": "DF"
+                    }
+                ],
+                "type": "server"
+            },
+            {
+                "name": "thermostat",
+                "id": "0x0201",
+                "revision": "8",
+                "attributes": [
+                    {
+                        "name": "local_temperature",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "control_sequence_of_operation",
+                        "id": "0x001B"
+                    },
+                    {
+                        "name": "system_mode",
+                        "id": "0x001C"
+                    }
+                ],
+                "commands": [
+                    {
+                        "name": "setpoint_raise_lower",
+                        "id": "0x0000"
+                    }
+                ],
+                "events": [],
+                "features": [],
+                "type": "server"
+            }
+        ]
+    },
+    {
+        "name": "laundry_washer",
+        "id": "0x0073",
+        "revision": "1",
+        "clusters": [
+            {
+                "name": "operational_state",
+                "id": "0x0060",
+                "revision": "3",
+                "attributes": [
+                    {
+                        "name": "phase_list",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "current_phase",
+                        "id": "0x0001"
+                    },
+                    {
+                        "name": "operational_state_list",
+                        "id": "0x0003"
+                    },
+                    {
+                        "name": "operational_state",
+                        "id": "0x0004"
+                    },
+                    {
+                        "name": "operational_error",
+                        "id": "0x0005"
+                    }
+                ],
+                "commands": [],
+                "events": [
+                    {
+                        "name": "operational_error",
+                        "id": "0x0000"
+                    }
+                ],
+                "features": [],
+                "type": "server"
+            }
+        ]
+    },
+    {
+        "name": "robotic_vacuum_cleaner",
+        "id": "0x0074",
+        "revision": "3",
+        "clusters": [
+            {
+                "name": "identify",
+                "id": "0x0003",
+                "revision": "5",
+                "attributes": [
+                    {
+                        "name": "identify_time",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "identify_type",
+                        "id": "0x0001"
+                    }
+                ],
+                "commands": [
+                    {
+                        "name": "identify",
+                        "id": "0x0000"
+                    }
+                ],
+                "events": [],
+                "features": [],
+                "type": "server"
+            },
+            {
+                "name": "rvc_run_mode",
+                "id": "0x0054",
+                "revision": "3",
+                "attributes": [
+                    {
+                        "name": "supported_modes",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "current_mode",
+                        "id": "0x0001"
+                    }
+                ],
+                "commands": [
+                    {
+                        "name": "change_to_mode",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "change_to_mode_response",
+                        "id": "0x0001"
+                    }
+                ],
+                "events": [],
+                "features": [],
+                "type": "server"
+            },
+            {
+                "name": "rvc_operational_state",
+                "id": "0x0061",
+                "revision": "2",
+                "attributes": [
+                    {
+                        "name": "phase_list",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "current_phase",
+                        "id": "0x0001"
+                    },
+                    {
+                        "name": "operational_state_list",
+                        "id": "0x0003"
+                    },
+                    {
+                        "name": "operational_state",
+                        "id": "0x0004"
+                    },
+                    {
+                        "name": "operational_error",
+                        "id": "0x0005"
+                    }
+                ],
+                "commands": [],
+                "events": [
+                    {
+                        "name": "operational_error",
+                        "id": "0x0000"
+                    }
+                ],
+                "features": [],
+                "type": "server"
+            }
+        ]
+    },
+    {
+        "name": "dishwasher",
+        "id": "0x0075",
+        "revision": "1",
+        "clusters": [
+            {
+                "name": "operational_state",
+                "id": "0x0060",
+                "revision": "3",
+                "attributes": [
+                    {
+                        "name": "phase_list",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "current_phase",
+                        "id": "0x0001"
+                    },
+                    {
+                        "name": "operational_state_list",
+                        "id": "0x0003"
+                    },
+                    {
+                        "name": "operational_state",
+                        "id": "0x0004"
+                    },
+                    {
+                        "name": "operational_error",
+                        "id": "0x0005"
+                    }
+                ],
+                "commands": [],
+                "events": [
+                    {
+                        "name": "operational_error",
+                        "id": "0x0000"
+                    }
+                ],
+                "features": [],
+                "type": "server"
+            }
+        ]
+    },
+    {
+        "name": "smoke_co_alarm",
+        "id": "0x0076",
+        "revision": "1",
+        "clusters": [
+            {
+                "name": "identify",
+                "id": "0x0003",
+                "revision": "5",
+                "attributes": [
+                    {
+                        "name": "identify_time",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "identify_type",
+                        "id": "0x0001"
+                    }
+                ],
+                "commands": [
+                    {
+                        "name": "identify",
+                        "id": "0x0000"
+                    }
+                ],
+                "events": [],
+                "features": [],
+                "type": "server"
+            },
+            {
+                "name": "smoke_co_alarm",
+                "id": "0x005C",
+                "revision": "1",
+                "attributes": [
+                    {
+                        "name": "expressed_state",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "battery_alert",
+                        "id": "0x0003"
+                    },
+                    {
+                        "name": "test_in_progress",
+                        "id": "0x0005"
+                    },
+                    {
+                        "name": "hardware_fault_alert",
+                        "id": "0x0006"
+                    },
+                    {
+                        "name": "end_of_service_alert",
+                        "id": "0x0007"
+                    }
+                ],
+                "commands": [],
+                "events": [
+                    {
+                        "name": "low_battery",
+                        "id": "0x0002"
+                    },
+                    {
+                        "name": "hardware_fault",
+                        "id": "0x0003"
+                    },
+                    {
+                        "name": "end_of_service",
+                        "id": "0x0004"
+                    },
+                    {
+                        "name": "self_test_complete",
+                        "id": "0x0005"
+                    },
+                    {
+                        "name": "all_clear",
+                        "id": "0x000A"
+                    }
+                ],
+                "features": [],
+                "type": "server"
+            }
+        ]
+    },
+    {
+        "name": "cook_surface",
+        "id": "0x0077",
+        "revision": "1",
+        "clusters": []
+    },
+    {
+        "name": "cooktop",
+        "id": "0x0078",
+        "revision": "1",
+        "clusters": [
+            {
+                "name": "on_off",
+                "id": "0x0006",
+                "revision": "6",
+                "attributes": [
+                    {
+                        "name": "on_off",
+                        "id": "0x0000"
+                    }
+                ],
+                "commands": [
+                    {
+                        "name": "off",
+                        "id": "0x0000"
+                    }
+                ],
+                "events": [],
+                "features": [
+                    {
+                        "name": "off_only",
+                        "id": "0x0004",
+                        "code": "OFFONLY"
+                    }
+                ],
+                "type": "server"
+            }
+        ]
+    },
+    {
+        "name": "microwave_oven",
+        "id": "0x0079",
+        "revision": "1",
+        "clusters": [
+            {
+                "name": "microwave_oven_mode",
+                "id": "0x005E",
+                "revision": "2",
+                "attributes": [
+                    {
+                        "name": "supported_modes",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "current_mode",
+                        "id": "0x0001"
+                    }
+                ],
+                "commands": [
+                    {
+                        "name": "change_to_mode",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "change_to_mode_response",
+                        "id": "0x0001"
+                    }
+                ],
+                "events": [],
+                "features": [],
+                "type": "server"
+            },
+            {
+                "name": "microwave_oven_control",
+                "id": "0x005F",
+                "revision": "1",
+                "attributes": [
+                    {
+                        "name": "cook_time",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "max_cook_time",
+                        "id": "0x0001"
+                    }
+                ],
+                "commands": [
+                    {
+                        "name": "set_cooking_parameters",
+                        "id": "0x0000"
+                    }
+                ],
+                "events": [],
+                "features": [],
+                "type": "server"
+            },
+            {
+                "name": "operational_state",
+                "id": "0x0060",
+                "revision": "3",
+                "attributes": [
+                    {
+                        "name": "phase_list",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "current_phase",
+                        "id": "0x0001"
+                    },
+                    {
+                        "name": "operational_state_list",
+                        "id": "0x0003"
+                    },
+                    {
+                        "name": "operational_state",
+                        "id": "0x0004"
+                    },
+                    {
+                        "name": "operational_error",
+                        "id": "0x0005"
+                    }
+                ],
+                "commands": [],
+                "events": [
+                    {
+                        "name": "operational_error",
+                        "id": "0x0000"
+                    }
+                ],
+                "features": [],
+                "type": "server"
+            }
+        ]
+    },
+    {
+        "name": "extractor_hood",
+        "id": "0x007A",
+        "revision": "1",
+        "clusters": [
+            {
+                "name": "fan_control",
+                "id": "0x0202",
+                "revision": "4",
+                "attributes": [
+                    {
+                        "name": "fan_mode",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "fan_mode_sequence",
+                        "id": "0x0001"
+                    },
+                    {
+                        "name": "percent_setting",
+                        "id": "0x0002"
+                    },
+                    {
+                        "name": "percent_current",
+                        "id": "0x0003"
+                    }
+                ],
+                "commands": [],
+                "events": [],
+                "features": [],
+                "type": "server"
+            }
+        ]
+    },
+    {
+        "name": "oven",
+        "id": "0x007B",
+        "revision": "2",
+        "clusters": []
+    },
+    {
+        "name": "laundry_dryer",
+        "id": "0x007C",
+        "revision": "1",
+        "clusters": [
+            {
+                "name": "operational_state",
+                "id": "0x0060",
+                "revision": "3",
+                "attributes": [
+                    {
+                        "name": "phase_list",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "current_phase",
+                        "id": "0x0001"
+                    },
+                    {
+                        "name": "operational_state_list",
+                        "id": "0x0003"
+                    },
+                    {
+                        "name": "operational_state",
+                        "id": "0x0004"
+                    },
+                    {
+                        "name": "operational_error",
+                        "id": "0x0005"
+                    }
+                ],
+                "commands": [],
+                "events": [
+                    {
+                        "name": "operational_error",
+                        "id": "0x0000"
+                    }
+                ],
+                "features": [],
+                "type": "server"
+            }
+        ]
+    },
+    {
+        "name": "network_infrastructure_manager",
+        "id": "0x0090",
+        "revision": "1",
+        "clusters": [
+            {
+                "name": "wi_fi_network_management",
+                "id": "0x0451",
+                "revision": "1",
+                "attributes": [
+                    {
+                        "name": "ssid",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "passphrase_surrogate",
+                        "id": "0x0001"
+                    }
+                ],
+                "commands": [
+                    {
+                        "name": "network_passphrase_request",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "network_passphrase_response",
+                        "id": "0x0001"
+                    }
+                ],
+                "events": [],
+                "features": [],
+                "type": "server"
+            },
+            {
+                "name": "thread_border_router_management",
+                "id": "0x0452",
+                "revision": "1",
+                "attributes": [
+                    {
+                        "name": "border_router_name",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "border_agent_id",
+                        "id": "0x0001"
+                    },
+                    {
+                        "name": "thread_version",
+                        "id": "0x0002"
+                    },
+                    {
+                        "name": "interface_enabled",
+                        "id": "0x0003"
+                    },
+                    {
+                        "name": "active_dataset_timestamp",
+                        "id": "0x0004"
+                    },
+                    {
+                        "name": "pending_dataset_timestamp",
+                        "id": "0x0005"
+                    }
+                ],
+                "commands": [
+                    {
+                        "name": "get_active_dataset_request",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "get_pending_dataset_request",
+                        "id": "0x0001"
+                    },
+                    {
+                        "name": "dataset_response",
+                        "id": "0x0002"
+                    },
+                    {
+                        "name": "set_active_dataset_request",
+                        "id": "0x0003"
+                    }
+                ],
+                "events": [],
+                "features": [],
+                "type": "server"
+            },
+            {
+                "name": "thread_network_directory",
+                "id": "0x0453",
+                "revision": "1",
+                "attributes": [
+                    {
+                        "name": "preferred_extended_pan_id",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "thread_networks",
+                        "id": "0x0001"
+                    },
+                    {
+                        "name": "thread_network_table_size",
+                        "id": "0x0002"
+                    }
+                ],
+                "commands": [
+                    {
+                        "name": "add_network",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "remove_network",
+                        "id": "0x0001"
+                    },
+                    {
+                        "name": "get_operational_dataset",
+                        "id": "0x0002"
+                    },
+                    {
+                        "name": "operational_dataset_response",
+                        "id": "0x0003"
+                    }
+                ],
+                "events": [],
+                "features": [],
+                "type": "server"
+            }
+        ]
+    },
+    {
+        "name": "thread_border_router",
+        "id": "0x0091",
+        "revision": "1",
+        "clusters": [
+            {
+                "name": "thread_network_diagnostics",
+                "id": "0x0035",
+                "revision": "3",
+                "attributes": [
+                    {
+                        "name": "channel",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "routing_role",
+                        "id": "0x0001"
+                    },
+                    {
+                        "name": "network_name",
+                        "id": "0x0002"
+                    },
+                    {
+                        "name": "pan_id",
+                        "id": "0x0003"
+                    },
+                    {
+                        "name": "extended_pan_id",
+                        "id": "0x0004"
+                    },
+                    {
+                        "name": "mesh_local_prefix",
+                        "id": "0x0005"
+                    },
+                    {
+                        "name": "neighbor_table",
+                        "id": "0x0007"
+                    },
+                    {
+                        "name": "route_table",
+                        "id": "0x0008"
+                    },
+                    {
+                        "name": "partition_id",
+                        "id": "0x0009"
+                    },
+                    {
+                        "name": "weighting",
+                        "id": "0x000A"
+                    },
+                    {
+                        "name": "data_version",
+                        "id": "0x000B"
+                    },
+                    {
+                        "name": "stable_data_version",
+                        "id": "0x000C"
+                    },
+                    {
+                        "name": "leader_router_id",
+                        "id": "0x000D"
+                    },
+                    {
+                        "name": "security_policy",
+                        "id": "0x003B"
+                    },
+                    {
+                        "name": "channel_page_0_mask",
+                        "id": "0x003C"
+                    },
+                    {
+                        "name": "operational_dataset_components",
+                        "id": "0x003D"
+                    },
+                    {
+                        "name": "active_network_faults_list",
+                        "id": "0x003E"
+                    }
+                ],
+                "commands": [],
+                "events": [],
+                "features": [],
+                "type": "server"
+            },
+            {
+                "name": "thread_border_router_management",
+                "id": "0x0452",
+                "revision": "1",
+                "attributes": [
+                    {
+                        "name": "border_router_name",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "border_agent_id",
+                        "id": "0x0001"
+                    },
+                    {
+                        "name": "thread_version",
+                        "id": "0x0002"
+                    },
+                    {
+                        "name": "interface_enabled",
+                        "id": "0x0003"
+                    },
+                    {
+                        "name": "active_dataset_timestamp",
+                        "id": "0x0004"
+                    },
+                    {
+                        "name": "pending_dataset_timestamp",
+                        "id": "0x0005"
+                    }
+                ],
+                "commands": [
+                    {
+                        "name": "get_active_dataset_request",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "get_pending_dataset_request",
+                        "id": "0x0001"
+                    },
+                    {
+                        "name": "dataset_response",
+                        "id": "0x0002"
+                    },
+                    {
+                        "name": "set_active_dataset_request",
+                        "id": "0x0003"
+                    }
+                ],
+                "events": [],
+                "features": [],
+                "type": "server"
+            }
+        ]
+    },
+    {
+        "name": "on_off_light",
+        "id": "0x0100",
+        "revision": "3",
+        "clusters": [
+            {
+                "name": "identify",
+                "id": "0x0003",
+                "revision": "5",
+                "attributes": [
+                    {
+                        "name": "identify_time",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "identify_type",
+                        "id": "0x0001"
+                    }
+                ],
+                "commands": [],
+                "events": [],
+                "features": [],
+                "type": "server"
+            },
+            {
+                "name": "groups",
+                "id": "0x0004",
+                "revision": "4",
+                "attributes": [
+                    {
+                        "name": "name_support",
+                        "id": "0x0000"
+                    }
+                ],
+                "commands": [
+                    {
+                        "name": "add_group",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "add_group_response",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "view_group",
+                        "id": "0x0001"
+                    },
+                    {
+                        "name": "view_group_response",
+                        "id": "0x0001"
+                    },
+                    {
+                        "name": "get_group_membership",
+                        "id": "0x0002"
+                    },
+                    {
+                        "name": "get_group_membership_response",
+                        "id": "0x0002"
+                    },
+                    {
+                        "name": "remove_group",
+                        "id": "0x0003"
+                    },
+                    {
+                        "name": "remove_group_response",
+                        "id": "0x0003"
+                    },
+                    {
+                        "name": "remove_all_groups",
+                        "id": "0x0004"
+                    },
+                    {
+                        "name": "add_group_if_identifying",
+                        "id": "0x0005"
+                    }
+                ],
+                "events": [],
+                "features": [],
+                "type": "server"
+            },
+            {
+                "name": "on_off",
+                "id": "0x0006",
+                "revision": "6",
+                "attributes": [
+                    {
+                        "name": "on_off",
+                        "id": "0x0000"
+                    }
+                ],
+                "commands": [
+                    {
+                        "name": "off",
+                        "id": "0x0000"
+                    }
+                ],
+                "events": [],
+                "features": [
+                    {
+                        "name": "lighting",
+                        "id": "0x0001",
+                        "code": "LT"
+                    }
+                ],
+                "type": "server"
+            }
+        ]
+    },
+    {
+        "name": "dimmable_light",
+        "id": "0x0101",
+        "revision": "3",
+        "clusters": [
+            {
+                "name": "identify",
+                "id": "0x0003",
+                "revision": "5",
+                "attributes": [
+                    {
+                        "name": "identify_time",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "identify_type",
+                        "id": "0x0001"
+                    }
+                ],
+                "commands": [],
+                "events": [],
+                "features": [],
+                "type": "server"
+            },
+            {
+                "name": "groups",
+                "id": "0x0004",
+                "revision": "4",
+                "attributes": [
+                    {
+                        "name": "name_support",
+                        "id": "0x0000"
+                    }
+                ],
+                "commands": [
+                    {
+                        "name": "add_group",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "add_group_response",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "view_group",
+                        "id": "0x0001"
+                    },
+                    {
+                        "name": "view_group_response",
+                        "id": "0x0001"
+                    },
+                    {
+                        "name": "get_group_membership",
+                        "id": "0x0002"
+                    },
+                    {
+                        "name": "get_group_membership_response",
+                        "id": "0x0002"
+                    },
+                    {
+                        "name": "remove_group",
+                        "id": "0x0003"
+                    },
+                    {
+                        "name": "remove_group_response",
+                        "id": "0x0003"
+                    },
+                    {
+                        "name": "remove_all_groups",
+                        "id": "0x0004"
+                    },
+                    {
+                        "name": "add_group_if_identifying",
+                        "id": "0x0005"
+                    }
+                ],
+                "events": [],
+                "features": [],
+                "type": "server"
+            },
+            {
+                "name": "on_off",
+                "id": "0x0006",
+                "revision": "6",
+                "attributes": [
+                    {
+                        "name": "on_off",
+                        "id": "0x0000"
+                    }
+                ],
+                "commands": [
+                    {
+                        "name": "off",
+                        "id": "0x0000"
+                    }
+                ],
+                "events": [],
+                "features": [
+                    {
+                        "name": "lighting",
+                        "id": "0x0001",
+                        "code": "LT"
+                    }
+                ],
+                "type": "server"
+            },
+            {
+                "name": "level_control",
+                "id": "0x0008",
+                "revision": "6",
+                "attributes": [
+                    {
+                        "name": "current_level",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "options",
+                        "id": "0x000F"
+                    },
+                    {
+                        "name": "on_level",
+                        "id": "0x0011"
+                    }
+                ],
+                "commands": [
+                    {
+                        "name": "move_to_level",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "move",
+                        "id": "0x0001"
+                    },
+                    {
+                        "name": "step",
+                        "id": "0x0002"
+                    },
+                    {
+                        "name": "stop",
+                        "id": "0x0003"
+                    },
+                    {
+                        "name": "move_to_level_with_on_off",
+                        "id": "0x0004"
+                    },
+                    {
+                        "name": "move_with_on_off",
+                        "id": "0x0005"
+                    },
+                    {
+                        "name": "step_with_on_off",
+                        "id": "0x0006"
+                    },
+                    {
+                        "name": "stop_with_on_off",
+                        "id": "0x0007"
+                    }
+                ],
+                "events": [],
+                "features": [
+                    {
+                        "name": "lighting",
+                        "id": "0x0002",
+                        "code": "LT"
+                    },
+                    {
+                        "name": "on_off",
+                        "id": "0x0001",
+                        "code": "OO"
+                    }
+                ],
+                "type": "server"
+            }
+        ]
+    },
+    {
+        "name": "on_off_light_switch",
+        "id": "0x0103",
+        "revision": "3",
+        "clusters": [
+            {
+                "name": "identify",
+                "id": "0x0003",
+                "revision": "5",
+                "attributes": [
+                    {
+                        "name": "identify_time",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "identify_type",
+                        "id": "0x0001"
+                    }
+                ],
+                "commands": [
+                    {
+                        "name": "identify",
+                        "id": "0x0000"
+                    }
+                ],
+                "events": [],
+                "features": [],
+                "type": "server"
+            },
+            {
+                "name": "identify",
+                "id": "0x0003",
+                "revision": "5",
+                "attributes": [
+                    {
+                        "name": "identify_time",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "identify_type",
+                        "id": "0x0001"
+                    }
+                ],
+                "commands": [
+                    {
+                        "name": "identify",
+                        "id": "0x0000"
+                    }
+                ],
+                "events": [],
+                "features": [],
+                "type": "client"
+            },
+            {
+                "name": "on_off",
+                "id": "0x0006",
+                "revision": "6",
+                "attributes": [
+                    {
+                        "name": "on_off",
+                        "id": "0x0000"
+                    }
+                ],
+                "commands": [
+                    {
+                        "name": "off",
+                        "id": "0x0000"
+                    }
+                ],
+                "events": [],
+                "features": [],
+                "type": "client"
+            }
+        ]
+    },
+    {
+        "name": "dimmer_switch",
+        "id": "0x0104",
+        "revision": "3",
+        "clusters": [
+            {
+                "name": "identify",
+                "id": "0x0003",
+                "revision": "5",
+                "attributes": [
+                    {
+                        "name": "identify_time",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "identify_type",
+                        "id": "0x0001"
+                    }
+                ],
+                "commands": [
+                    {
+                        "name": "identify",
+                        "id": "0x0000"
+                    }
+                ],
+                "events": [],
+                "features": [],
+                "type": "server"
+            },
+            {
+                "name": "identify",
+                "id": "0x0003",
+                "revision": "5",
+                "attributes": [
+                    {
+                        "name": "identify_time",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "identify_type",
+                        "id": "0x0001"
+                    }
+                ],
+                "commands": [
+                    {
+                        "name": "identify",
+                        "id": "0x0000"
+                    }
+                ],
+                "events": [],
+                "features": [],
+                "type": "client"
+            },
+            {
+                "name": "on_off",
+                "id": "0x0006",
+                "revision": "6",
+                "attributes": [
+                    {
+                        "name": "on_off",
+                        "id": "0x0000"
+                    }
+                ],
+                "commands": [
+                    {
+                        "name": "off",
+                        "id": "0x0000"
+                    }
+                ],
+                "events": [],
+                "features": [],
+                "type": "client"
+            },
+            {
+                "name": "level_control",
+                "id": "0x0008",
+                "revision": "6",
+                "attributes": [
+                    {
+                        "name": "current_level",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "options",
+                        "id": "0x000F"
+                    },
+                    {
+                        "name": "on_level",
+                        "id": "0x0011"
+                    }
+                ],
+                "commands": [
+                    {
+                        "name": "move_to_level",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "move",
+                        "id": "0x0001"
+                    },
+                    {
+                        "name": "step",
+                        "id": "0x0002"
+                    },
+                    {
+                        "name": "stop",
+                        "id": "0x0003"
+                    },
+                    {
+                        "name": "move_to_level_with_on_off",
+                        "id": "0x0004"
+                    },
+                    {
+                        "name": "move_with_on_off",
+                        "id": "0x0005"
+                    },
+                    {
+                        "name": "step_with_on_off",
+                        "id": "0x0006"
+                    },
+                    {
+                        "name": "stop_with_on_off",
+                        "id": "0x0007"
+                    }
+                ],
+                "events": [],
+                "features": [],
+                "type": "client"
+            }
+        ]
+    },
+    {
+        "name": "color_dimmer_switch",
+        "id": "0x0105",
+        "revision": "3",
+        "clusters": [
+            {
+                "name": "identify",
+                "id": "0x0003",
+                "revision": "5",
+                "attributes": [
+                    {
+                        "name": "identify_time",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "identify_type",
+                        "id": "0x0001"
+                    }
+                ],
+                "commands": [
+                    {
+                        "name": "identify",
+                        "id": "0x0000"
+                    }
+                ],
+                "events": [],
+                "features": [],
+                "type": "server"
+            },
+            {
+                "name": "identify",
+                "id": "0x0003",
+                "revision": "5",
+                "attributes": [
+                    {
+                        "name": "identify_time",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "identify_type",
+                        "id": "0x0001"
+                    }
+                ],
+                "commands": [
+                    {
+                        "name": "identify",
+                        "id": "0x0000"
+                    }
+                ],
+                "events": [],
+                "features": [],
+                "type": "client"
+            },
+            {
+                "name": "on_off",
+                "id": "0x0006",
+                "revision": "6",
+                "attributes": [
+                    {
+                        "name": "on_off",
+                        "id": "0x0000"
+                    }
+                ],
+                "commands": [
+                    {
+                        "name": "off",
+                        "id": "0x0000"
+                    }
+                ],
+                "events": [],
+                "features": [],
+                "type": "client"
+            },
+            {
+                "name": "level_control",
+                "id": "0x0008",
+                "revision": "6",
+                "attributes": [
+                    {
+                        "name": "current_level",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "options",
+                        "id": "0x000F"
+                    },
+                    {
+                        "name": "on_level",
+                        "id": "0x0011"
+                    }
+                ],
+                "commands": [
+                    {
+                        "name": "move_to_level",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "move",
+                        "id": "0x0001"
+                    },
+                    {
+                        "name": "step",
+                        "id": "0x0002"
+                    },
+                    {
+                        "name": "stop",
+                        "id": "0x0003"
+                    },
+                    {
+                        "name": "move_to_level_with_on_off",
+                        "id": "0x0004"
+                    },
+                    {
+                        "name": "move_with_on_off",
+                        "id": "0x0005"
+                    },
+                    {
+                        "name": "step_with_on_off",
+                        "id": "0x0006"
+                    },
+                    {
+                        "name": "stop_with_on_off",
+                        "id": "0x0007"
+                    }
+                ],
+                "events": [],
+                "features": [],
+                "type": "client"
+            },
+            {
+                "name": "color_control",
+                "id": "0x0300",
+                "revision": "7",
+                "attributes": [
+                    {
+                        "name": "color_mode",
+                        "id": "0x0008"
+                    },
+                    {
+                        "name": "options",
+                        "id": "0x000F"
+                    },
+                    {
+                        "name": "number_of_primaries",
+                        "id": "0x0010"
+                    },
+                    {
+                        "name": "enhanced_color_mode",
+                        "id": "0x4001"
+                    },
+                    {
+                        "name": "color_capabilities",
+                        "id": "0x400A"
+                    }
+                ],
+                "commands": [],
+                "events": [],
+                "features": [],
+                "type": "client"
+            }
+        ]
+    },
+    {
+        "name": "light_sensor",
+        "id": "0x0106",
+        "revision": "3",
+        "clusters": [
+            {
+                "name": "identify",
+                "id": "0x0003",
+                "revision": "5",
+                "attributes": [
+                    {
+                        "name": "identify_time",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "identify_type",
+                        "id": "0x0001"
+                    }
+                ],
+                "commands": [
+                    {
+                        "name": "identify",
+                        "id": "0x0000"
+                    }
+                ],
+                "events": [],
+                "features": [],
+                "type": "server"
+            },
+            {
+                "name": "illuminance_measurement",
+                "id": "0x0400",
+                "revision": "3",
+                "attributes": [
+                    {
+                        "name": "measured_value",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "min_measured_value",
+                        "id": "0x0001"
+                    },
+                    {
+                        "name": "max_measured_value",
+                        "id": "0x0002"
+                    }
+                ],
+                "commands": [],
+                "events": [],
+                "features": [],
+                "type": "server"
+            }
+        ]
+    },
+    {
+        "name": "occupancy_sensor",
+        "id": "0x0107",
+        "revision": "4",
+        "clusters": [
+            {
+                "name": "identify",
+                "id": "0x0003",
+                "revision": "5",
+                "attributes": [
+                    {
+                        "name": "identify_time",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "identify_type",
+                        "id": "0x0001"
+                    }
+                ],
+                "commands": [
+                    {
+                        "name": "identify",
+                        "id": "0x0000"
+                    }
+                ],
+                "events": [],
+                "features": [],
+                "type": "server"
+            },
+            {
+                "name": "occupancy_sensing",
+                "id": "0x0406",
+                "revision": "5",
+                "attributes": [
+                    {
+                        "name": "occupancy",
+                        "id": "0x0000"
+                    }
+                ],
+                "commands": [],
+                "events": [],
+                "features": [],
+                "type": "server"
+            }
+        ]
+    },
+    {
+        "name": "on_off_plug_in_unit",
+        "id": "0x010A",
+        "revision": "3",
+        "clusters": [
+            {
+                "name": "identify",
+                "id": "0x0003",
+                "revision": "5",
+                "attributes": [
+                    {
+                        "name": "identify_time",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "identify_type",
+                        "id": "0x0001"
+                    }
+                ],
+                "commands": [],
+                "events": [],
+                "features": [],
+                "type": "server"
+            },
+            {
+                "name": "groups",
+                "id": "0x0004",
+                "revision": "4",
+                "attributes": [
+                    {
+                        "name": "name_support",
+                        "id": "0x0000"
+                    }
+                ],
+                "commands": [
+                    {
+                        "name": "add_group",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "add_group_response",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "view_group",
+                        "id": "0x0001"
+                    },
+                    {
+                        "name": "view_group_response",
+                        "id": "0x0001"
+                    },
+                    {
+                        "name": "get_group_membership",
+                        "id": "0x0002"
+                    },
+                    {
+                        "name": "get_group_membership_response",
+                        "id": "0x0002"
+                    },
+                    {
+                        "name": "remove_group",
+                        "id": "0x0003"
+                    },
+                    {
+                        "name": "remove_group_response",
+                        "id": "0x0003"
+                    },
+                    {
+                        "name": "remove_all_groups",
+                        "id": "0x0004"
+                    },
+                    {
+                        "name": "add_group_if_identifying",
+                        "id": "0x0005"
+                    }
+                ],
+                "events": [],
+                "features": [],
+                "type": "server"
+            },
+            {
+                "name": "on_off",
+                "id": "0x0006",
+                "revision": "6",
+                "attributes": [
+                    {
+                        "name": "on_off",
+                        "id": "0x0000"
+                    }
+                ],
+                "commands": [
+                    {
+                        "name": "off",
+                        "id": "0x0000"
+                    }
+                ],
+                "events": [],
+                "features": [
+                    {
+                        "name": "lighting",
+                        "id": "0x0001",
+                        "code": "LT"
+                    }
+                ],
+                "type": "server"
+            }
+        ]
+    },
+    {
+        "name": "dimmable_plug_in_unit",
+        "id": "0x010B",
+        "revision": "4",
+        "clusters": [
+            {
+                "name": "identify",
+                "id": "0x0003",
+                "revision": "5",
+                "attributes": [
+                    {
+                        "name": "identify_time",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "identify_type",
+                        "id": "0x0001"
+                    }
+                ],
+                "commands": [],
+                "events": [],
+                "features": [],
+                "type": "server"
+            },
+            {
+                "name": "groups",
+                "id": "0x0004",
+                "revision": "4",
+                "attributes": [
+                    {
+                        "name": "name_support",
+                        "id": "0x0000"
+                    }
+                ],
+                "commands": [
+                    {
+                        "name": "add_group",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "add_group_response",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "view_group",
+                        "id": "0x0001"
+                    },
+                    {
+                        "name": "view_group_response",
+                        "id": "0x0001"
+                    },
+                    {
+                        "name": "get_group_membership",
+                        "id": "0x0002"
+                    },
+                    {
+                        "name": "get_group_membership_response",
+                        "id": "0x0002"
+                    },
+                    {
+                        "name": "remove_group",
+                        "id": "0x0003"
+                    },
+                    {
+                        "name": "remove_group_response",
+                        "id": "0x0003"
+                    },
+                    {
+                        "name": "remove_all_groups",
+                        "id": "0x0004"
+                    },
+                    {
+                        "name": "add_group_if_identifying",
+                        "id": "0x0005"
+                    }
+                ],
+                "events": [],
+                "features": [],
+                "type": "server"
+            },
+            {
+                "name": "on_off",
+                "id": "0x0006",
+                "revision": "6",
+                "attributes": [
+                    {
+                        "name": "on_off",
+                        "id": "0x0000"
+                    }
+                ],
+                "commands": [
+                    {
+                        "name": "off",
+                        "id": "0x0000"
+                    }
+                ],
+                "events": [],
+                "features": [
+                    {
+                        "name": "lighting",
+                        "id": "0x0001",
+                        "code": "LT"
+                    }
+                ],
+                "type": "server"
+            },
+            {
+                "name": "level_control",
+                "id": "0x0008",
+                "revision": "6",
+                "attributes": [
+                    {
+                        "name": "current_level",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "options",
+                        "id": "0x000F"
+                    },
+                    {
+                        "name": "on_level",
+                        "id": "0x0011"
+                    }
+                ],
+                "commands": [
+                    {
+                        "name": "move_to_level",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "move",
+                        "id": "0x0001"
+                    },
+                    {
+                        "name": "step",
+                        "id": "0x0002"
+                    },
+                    {
+                        "name": "stop",
+                        "id": "0x0003"
+                    },
+                    {
+                        "name": "move_to_level_with_on_off",
+                        "id": "0x0004"
+                    },
+                    {
+                        "name": "move_with_on_off",
+                        "id": "0x0005"
+                    },
+                    {
+                        "name": "step_with_on_off",
+                        "id": "0x0006"
+                    },
+                    {
+                        "name": "stop_with_on_off",
+                        "id": "0x0007"
+                    }
+                ],
+                "events": [],
+                "features": [
+                    {
+                        "name": "on_off",
+                        "id": "0x0001",
+                        "code": "OO"
+                    },
+                    {
+                        "name": "lighting",
+                        "id": "0x0002",
+                        "code": "LT"
+                    }
+                ],
+                "type": "server"
+            }
+        ]
+    },
+    {
+        "name": "color_temperature_light",
+        "id": "0x010C",
+        "revision": "4",
+        "clusters": [
+            {
+                "name": "identify",
+                "id": "0x0003",
+                "revision": "5",
+                "attributes": [
+                    {
+                        "name": "identify_time",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "identify_type",
+                        "id": "0x0001"
+                    }
+                ],
+                "commands": [],
+                "events": [],
+                "features": [],
+                "type": "server"
+            },
+            {
+                "name": "groups",
+                "id": "0x0004",
+                "revision": "4",
+                "attributes": [
+                    {
+                        "name": "name_support",
+                        "id": "0x0000"
+                    }
+                ],
+                "commands": [
+                    {
+                        "name": "add_group",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "add_group_response",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "view_group",
+                        "id": "0x0001"
+                    },
+                    {
+                        "name": "view_group_response",
+                        "id": "0x0001"
+                    },
+                    {
+                        "name": "get_group_membership",
+                        "id": "0x0002"
+                    },
+                    {
+                        "name": "get_group_membership_response",
+                        "id": "0x0002"
+                    },
+                    {
+                        "name": "remove_group",
+                        "id": "0x0003"
+                    },
+                    {
+                        "name": "remove_group_response",
+                        "id": "0x0003"
+                    },
+                    {
+                        "name": "remove_all_groups",
+                        "id": "0x0004"
+                    },
+                    {
+                        "name": "add_group_if_identifying",
+                        "id": "0x0005"
+                    }
+                ],
+                "events": [],
+                "features": [],
+                "type": "server"
+            },
+            {
+                "name": "on_off",
+                "id": "0x0006",
+                "revision": "6",
+                "attributes": [
+                    {
+                        "name": "on_off",
+                        "id": "0x0000"
+                    }
+                ],
+                "commands": [
+                    {
+                        "name": "off",
+                        "id": "0x0000"
+                    }
+                ],
+                "events": [],
+                "features": [
+                    {
+                        "name": "lighting",
+                        "id": "0x0001",
+                        "code": "LT"
+                    }
+                ],
+                "type": "server"
+            },
+            {
+                "name": "level_control",
+                "id": "0x0008",
+                "revision": "6",
+                "attributes": [
+                    {
+                        "name": "current_level",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "options",
+                        "id": "0x000F"
+                    },
+                    {
+                        "name": "on_level",
+                        "id": "0x0011"
+                    }
+                ],
+                "commands": [
+                    {
+                        "name": "move_to_level",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "move",
+                        "id": "0x0001"
+                    },
+                    {
+                        "name": "step",
+                        "id": "0x0002"
+                    },
+                    {
+                        "name": "stop",
+                        "id": "0x0003"
+                    },
+                    {
+                        "name": "move_to_level_with_on_off",
+                        "id": "0x0004"
+                    },
+                    {
+                        "name": "move_with_on_off",
+                        "id": "0x0005"
+                    },
+                    {
+                        "name": "step_with_on_off",
+                        "id": "0x0006"
+                    },
+                    {
+                        "name": "stop_with_on_off",
+                        "id": "0x0007"
+                    }
+                ],
+                "events": [],
+                "features": [
+                    {
+                        "name": "on_off",
+                        "id": "0x0001",
+                        "code": "OO"
+                    },
+                    {
+                        "name": "lighting",
+                        "id": "0x0002",
+                        "code": "LT"
+                    }
+                ],
+                "type": "server"
+            },
+            {
+                "name": "color_control",
+                "id": "0x0300",
+                "revision": "7",
+                "attributes": [
+                    {
+                        "name": "color_mode",
+                        "id": "0x0008"
+                    },
+                    {
+                        "name": "options",
+                        "id": "0x000F"
+                    },
+                    {
+                        "name": "number_of_primaries",
+                        "id": "0x0010"
+                    },
+                    {
+                        "name": "enhanced_color_mode",
+                        "id": "0x4001"
+                    },
+                    {
+                        "name": "color_capabilities",
+                        "id": "0x400A"
+                    }
+                ],
+                "commands": [],
+                "events": [],
+                "features": [
+                    {
+                        "name": "color_temperature",
+                        "id": "0x0010",
+                        "code": "CT"
+                    }
+                ],
+                "type": "server"
+            }
+        ]
+    },
+    {
+        "name": "extended_color_light",
+        "id": "0x010D",
+        "revision": "4",
+        "clusters": [
+            {
+                "name": "identify",
+                "id": "0x0003",
+                "revision": "5",
+                "attributes": [
+                    {
+                        "name": "identify_time",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "identify_type",
+                        "id": "0x0001"
+                    }
+                ],
+                "commands": [],
+                "events": [],
+                "features": [],
+                "type": "server"
+            },
+            {
+                "name": "groups",
+                "id": "0x0004",
+                "revision": "4",
+                "attributes": [
+                    {
+                        "name": "name_support",
+                        "id": "0x0000"
+                    }
+                ],
+                "commands": [
+                    {
+                        "name": "add_group",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "add_group_response",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "view_group",
+                        "id": "0x0001"
+                    },
+                    {
+                        "name": "view_group_response",
+                        "id": "0x0001"
+                    },
+                    {
+                        "name": "get_group_membership",
+                        "id": "0x0002"
+                    },
+                    {
+                        "name": "get_group_membership_response",
+                        "id": "0x0002"
+                    },
+                    {
+                        "name": "remove_group",
+                        "id": "0x0003"
+                    },
+                    {
+                        "name": "remove_group_response",
+                        "id": "0x0003"
+                    },
+                    {
+                        "name": "remove_all_groups",
+                        "id": "0x0004"
+                    },
+                    {
+                        "name": "add_group_if_identifying",
+                        "id": "0x0005"
+                    }
+                ],
+                "events": [],
+                "features": [],
+                "type": "server"
+            },
+            {
+                "name": "on_off",
+                "id": "0x0006",
+                "revision": "6",
+                "attributes": [
+                    {
+                        "name": "on_off",
+                        "id": "0x0000"
+                    }
+                ],
+                "commands": [
+                    {
+                        "name": "off",
+                        "id": "0x0000"
+                    }
+                ],
+                "events": [],
+                "features": [
+                    {
+                        "name": "lighting",
+                        "id": "0x0001",
+                        "code": "LT"
+                    }
+                ],
+                "type": "server"
+            },
+            {
+                "name": "level_control",
+                "id": "0x0008",
+                "revision": "6",
+                "attributes": [
+                    {
+                        "name": "current_level",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "options",
+                        "id": "0x000F"
+                    },
+                    {
+                        "name": "on_level",
+                        "id": "0x0011"
+                    }
+                ],
+                "commands": [
+                    {
+                        "name": "move_to_level",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "move",
+                        "id": "0x0001"
+                    },
+                    {
+                        "name": "step",
+                        "id": "0x0002"
+                    },
+                    {
+                        "name": "stop",
+                        "id": "0x0003"
+                    },
+                    {
+                        "name": "move_to_level_with_on_off",
+                        "id": "0x0004"
+                    },
+                    {
+                        "name": "move_with_on_off",
+                        "id": "0x0005"
+                    },
+                    {
+                        "name": "step_with_on_off",
+                        "id": "0x0006"
+                    },
+                    {
+                        "name": "stop_with_on_off",
+                        "id": "0x0007"
+                    }
+                ],
+                "events": [],
+                "features": [
+                    {
+                        "name": "on_off",
+                        "id": "0x0001",
+                        "code": "OO"
+                    },
+                    {
+                        "name": "lighting",
+                        "id": "0x0002",
+                        "code": "LT"
+                    }
+                ],
+                "type": "server"
+            },
+            {
+                "name": "color_control",
+                "id": "0x0300",
+                "revision": "7",
+                "attributes": [
+                    {
+                        "name": "color_mode",
+                        "id": "0x0008"
+                    },
+                    {
+                        "name": "options",
+                        "id": "0x000F"
+                    },
+                    {
+                        "name": "number_of_primaries",
+                        "id": "0x0010"
+                    },
+                    {
+                        "name": "enhanced_color_mode",
+                        "id": "0x4001"
+                    },
+                    {
+                        "name": "color_capabilities",
+                        "id": "0x400A"
+                    }
+                ],
+                "commands": [],
+                "events": [],
+                "features": [
+                    {
+                        "name": "xy",
+                        "id": "0x0008",
+                        "code": "XY"
+                    },
+                    {
+                        "name": "color_temperature",
+                        "id": "0x0010",
+                        "code": "CT"
+                    }
+                ],
+                "type": "server"
+            }
+        ]
+    },
+    {
+        "name": "mounted_on_off_control",
+        "id": "0x010F",
+        "revision": "1",
+        "clusters": [
+            {
+                "name": "identify",
+                "id": "0x0003",
+                "revision": "5",
+                "attributes": [
+                    {
+                        "name": "identify_time",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "identify_type",
+                        "id": "0x0001"
+                    }
+                ],
+                "commands": [],
+                "events": [],
+                "features": [],
+                "type": "server"
+            },
+            {
+                "name": "groups",
+                "id": "0x0004",
+                "revision": "4",
+                "attributes": [
+                    {
+                        "name": "name_support",
+                        "id": "0x0000"
+                    }
+                ],
+                "commands": [
+                    {
+                        "name": "add_group",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "add_group_response",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "view_group",
+                        "id": "0x0001"
+                    },
+                    {
+                        "name": "view_group_response",
+                        "id": "0x0001"
+                    },
+                    {
+                        "name": "get_group_membership",
+                        "id": "0x0002"
+                    },
+                    {
+                        "name": "get_group_membership_response",
+                        "id": "0x0002"
+                    },
+                    {
+                        "name": "remove_group",
+                        "id": "0x0003"
+                    },
+                    {
+                        "name": "remove_group_response",
+                        "id": "0x0003"
+                    },
+                    {
+                        "name": "remove_all_groups",
+                        "id": "0x0004"
+                    },
+                    {
+                        "name": "add_group_if_identifying",
+                        "id": "0x0005"
+                    }
+                ],
+                "events": [],
+                "features": [],
+                "type": "server"
+            },
+            {
+                "name": "on_off",
+                "id": "0x0006",
+                "revision": "6",
+                "attributes": [
+                    {
+                        "name": "on_off",
+                        "id": "0x0000"
+                    }
+                ],
+                "commands": [
+                    {
+                        "name": "off",
+                        "id": "0x0000"
+                    }
+                ],
+                "events": [],
+                "features": [
+                    {
+                        "name": "lighting",
+                        "id": "0x0001",
+                        "code": "LT"
+                    }
+                ],
+                "type": "server"
+            }
+        ]
+    },
+    {
+        "name": "mounted_dimmable_load_control",
+        "id": "0x0110",
+        "revision": "1",
+        "clusters": [
+            {
+                "name": "identify",
+                "id": "0x0003",
+                "revision": "5",
+                "attributes": [
+                    {
+                        "name": "identify_time",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "identify_type",
+                        "id": "0x0001"
+                    }
+                ],
+                "commands": [],
+                "events": [],
+                "features": [],
+                "type": "server"
+            },
+            {
+                "name": "groups",
+                "id": "0x0004",
+                "revision": "4",
+                "attributes": [
+                    {
+                        "name": "name_support",
+                        "id": "0x0000"
+                    }
+                ],
+                "commands": [
+                    {
+                        "name": "add_group",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "add_group_response",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "view_group",
+                        "id": "0x0001"
+                    },
+                    {
+                        "name": "view_group_response",
+                        "id": "0x0001"
+                    },
+                    {
+                        "name": "get_group_membership",
+                        "id": "0x0002"
+                    },
+                    {
+                        "name": "get_group_membership_response",
+                        "id": "0x0002"
+                    },
+                    {
+                        "name": "remove_group",
+                        "id": "0x0003"
+                    },
+                    {
+                        "name": "remove_group_response",
+                        "id": "0x0003"
+                    },
+                    {
+                        "name": "remove_all_groups",
+                        "id": "0x0004"
+                    },
+                    {
+                        "name": "add_group_if_identifying",
+                        "id": "0x0005"
+                    }
+                ],
+                "events": [],
+                "features": [],
+                "type": "server"
+            },
+            {
+                "name": "on_off",
+                "id": "0x0006",
+                "revision": "6",
+                "attributes": [
+                    {
+                        "name": "on_off",
+                        "id": "0x0000"
+                    }
+                ],
+                "commands": [
+                    {
+                        "name": "off",
+                        "id": "0x0000"
+                    }
+                ],
+                "events": [],
+                "features": [
+                    {
+                        "name": "lighting",
+                        "id": "0x0001",
+                        "code": "LT"
+                    }
+                ],
+                "type": "server"
+            },
+            {
+                "name": "level_control",
+                "id": "0x0008",
+                "revision": "6",
+                "attributes": [
+                    {
+                        "name": "current_level",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "options",
+                        "id": "0x000F"
+                    },
+                    {
+                        "name": "on_level",
+                        "id": "0x0011"
+                    }
+                ],
+                "commands": [
+                    {
+                        "name": "move_to_level",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "move",
+                        "id": "0x0001"
+                    },
+                    {
+                        "name": "step",
+                        "id": "0x0002"
+                    },
+                    {
+                        "name": "stop",
+                        "id": "0x0003"
+                    },
+                    {
+                        "name": "move_to_level_with_on_off",
+                        "id": "0x0004"
+                    },
+                    {
+                        "name": "move_with_on_off",
+                        "id": "0x0005"
+                    },
+                    {
+                        "name": "step_with_on_off",
+                        "id": "0x0006"
+                    },
+                    {
+                        "name": "stop_with_on_off",
+                        "id": "0x0007"
+                    }
+                ],
+                "events": [],
+                "features": [
+                    {
+                        "name": "on_off",
+                        "id": "0x0001",
+                        "code": "OO"
+                    },
+                    {
+                        "name": "lighting",
+                        "id": "0x0002",
+                        "code": "LT"
+                    }
+                ],
+                "type": "server"
+            }
+        ]
+    },
+    {
+        "name": "joint_fabric_administrator",
+        "id": "0x0130",
+        "revision": "1",
+        "clusters": [
+            {
+                "name": "joint_fabric_datastore",
+                "id": "0x0752",
+                "revision": "1",
+                "attributes": [
+                    {
+                        "name": "anchor_root_ca",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "anchor_node_id",
+                        "id": "0x0001"
+                    },
+                    {
+                        "name": "anchor_vendor_id",
+                        "id": "0x0002"
+                    },
+                    {
+                        "name": "friendly_name",
+                        "id": "0x0003"
+                    },
+                    {
+                        "name": "group_key_set_list",
+                        "id": "0x0004"
+                    },
+                    {
+                        "name": "group_list",
+                        "id": "0x0005"
+                    },
+                    {
+                        "name": "node_list",
+                        "id": "0x0006"
+                    },
+                    {
+                        "name": "admin_list",
+                        "id": "0x0007"
+                    },
+                    {
+                        "name": "status_entry",
+                        "id": "0x0008"
+                    }
+                ],
+                "commands": [
+                    {
+                        "name": "add_key_set",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "update_key_set",
+                        "id": "0x0001"
+                    },
+                    {
+                        "name": "remove_key_set",
+                        "id": "0x0002"
+                    },
+                    {
+                        "name": "add_group",
+                        "id": "0x0003"
+                    },
+                    {
+                        "name": "update_group",
+                        "id": "0x0004"
+                    },
+                    {
+                        "name": "remove_group",
+                        "id": "0x0005"
+                    },
+                    {
+                        "name": "add_admin",
+                        "id": "0x0006"
+                    },
+                    {
+                        "name": "update_admin",
+                        "id": "0x0007"
+                    },
+                    {
+                        "name": "remove_admin",
+                        "id": "0x0008"
+                    },
+                    {
+                        "name": "add_pending_node",
+                        "id": "0x0009"
+                    },
+                    {
+                        "name": "refresh_node",
+                        "id": "0x000A"
+                    },
+                    {
+                        "name": "update_node",
+                        "id": "0x000B"
+                    },
+                    {
+                        "name": "remove_node",
+                        "id": "0x000C"
+                    },
+                    {
+                        "name": "update_endpoint_for_node",
+                        "id": "0x000D"
+                    },
+                    {
+                        "name": "add_group_id_to_endpoint_for_node",
+                        "id": "0x000E"
+                    },
+                    {
+                        "name": "remove_group_id_from_endpoint_for_node",
+                        "id": "0x000F"
+                    },
+                    {
+                        "name": "add_binding_to_endpoint_for_node",
+                        "id": "0x0010"
+                    },
+                    {
+                        "name": "remove_binding_from_endpoint_for_node",
+                        "id": "0x0011"
+                    },
+                    {
+                        "name": "add_acl_to_node",
+                        "id": "0x0012"
+                    },
+                    {
+                        "name": "remove_acl_from_node",
+                        "id": "0x0013"
+                    }
+                ],
+                "events": [],
+                "features": [],
+                "type": "server"
+            },
+            {
+                "name": "joint_fabric_pki",
+                "id": "0x0753",
+                "revision": "1",
+                "attributes": [],
+                "commands": [
+                    {
+                        "name": "icacsr_request",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "icacsr_response",
+                        "id": "0x0001"
+                    },
+                    {
+                        "name": "transfer_anchor_request",
+                        "id": "0x0002"
+                    },
+                    {
+                        "name": "transfer_anchor_response",
+                        "id": "0x0003"
+                    },
+                    {
+                        "name": "transfer_anchor_complete",
+                        "id": "0x0004"
+                    }
+                ],
+                "events": [],
+                "features": [],
+                "type": "server"
+            }
+        ]
+    },
+    {
+        "name": "window_covering",
+        "id": "0x0202",
+        "revision": "3",
+        "clusters": [
+            {
+                "name": "identify",
+                "id": "0x0003",
+                "revision": "5",
+                "attributes": [
+                    {
+                        "name": "identify_time",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "identify_type",
+                        "id": "0x0001"
+                    }
+                ],
+                "commands": [
+                    {
+                        "name": "identify",
+                        "id": "0x0000"
+                    }
+                ],
+                "events": [],
+                "features": [],
+                "type": "server"
+            },
+            {
+                "name": "window_covering",
+                "id": "0x0102",
+                "revision": "5",
+                "attributes": [
+                    {
+                        "name": "type",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "config_status",
+                        "id": "0x0007"
+                    },
+                    {
+                        "name": "operational_status",
+                        "id": "0x000A"
+                    },
+                    {
+                        "name": "end_product_type",
+                        "id": "0x000D"
+                    },
+                    {
+                        "name": "mode",
+                        "id": "0x0017"
+                    }
+                ],
+                "commands": [
+                    {
+                        "name": "up_or_open",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "down_or_close",
+                        "id": "0x0001"
+                    },
+                    {
+                        "name": "stop_motion",
+                        "id": "0x0002"
+                    }
+                ],
+                "events": [],
+                "features": [],
+                "type": "server"
+            }
+        ]
+    },
+    {
+        "name": "window_covering_controller",
+        "id": "0x0203",
+        "revision": "3",
+        "clusters": [
+            {
+                "name": "window_covering",
+                "id": "0x0102",
+                "revision": "5",
+                "attributes": [
+                    {
+                        "name": "type",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "config_status",
+                        "id": "0x0007"
+                    },
+                    {
+                        "name": "operational_status",
+                        "id": "0x000A"
+                    },
+                    {
+                        "name": "end_product_type",
+                        "id": "0x000D"
+                    },
+                    {
+                        "name": "mode",
+                        "id": "0x0017"
+                    }
+                ],
+                "commands": [
+                    {
+                        "name": "up_or_open",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "down_or_close",
+                        "id": "0x0001"
+                    },
+                    {
+                        "name": "stop_motion",
+                        "id": "0x0002"
+                    }
+                ],
+                "events": [],
+                "features": [],
+                "type": "client"
+            }
+        ]
+    },
+    {
+        "name": "thermostat",
+        "id": "0x0301",
+        "revision": "4",
+        "clusters": [
+            {
+                "name": "identify",
+                "id": "0x0003",
+                "revision": "5",
+                "attributes": [
+                    {
+                        "name": "identify_time",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "identify_type",
+                        "id": "0x0001"
+                    }
+                ],
+                "commands": [
+                    {
+                        "name": "identify",
+                        "id": "0x0000"
+                    }
+                ],
+                "events": [],
+                "features": [],
+                "type": "server"
+            },
+            {
+                "name": "thermostat",
+                "id": "0x0201",
+                "revision": "8",
+                "attributes": [
+                    {
+                        "name": "local_temperature",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "control_sequence_of_operation",
+                        "id": "0x001B"
+                    },
+                    {
+                        "name": "system_mode",
+                        "id": "0x001C"
+                    }
+                ],
+                "commands": [
+                    {
+                        "name": "setpoint_raise_lower",
+                        "id": "0x0000"
+                    }
+                ],
+                "events": [],
+                "features": [],
+                "type": "server"
+            }
+        ]
+    },
+    {
+        "name": "temperature_sensor",
+        "id": "0x0302",
+        "revision": "2",
+        "clusters": [
+            {
+                "name": "identify",
+                "id": "0x0003",
+                "revision": "5",
+                "attributes": [
+                    {
+                        "name": "identify_time",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "identify_type",
+                        "id": "0x0001"
+                    }
+                ],
+                "commands": [
+                    {
+                        "name": "identify",
+                        "id": "0x0000"
+                    }
+                ],
+                "events": [],
+                "features": [],
+                "type": "server"
+            },
+            {
+                "name": "temperature_measurement",
+                "id": "0x0402",
+                "revision": "4",
+                "attributes": [
+                    {
+                        "name": "measured_value",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "min_measured_value",
+                        "id": "0x0001"
+                    },
+                    {
+                        "name": "max_measured_value",
+                        "id": "0x0002"
+                    }
+                ],
+                "commands": [],
+                "events": [],
+                "features": [],
+                "type": "server"
+            }
+        ]
+    },
+    {
+        "name": "pump",
+        "id": "0x0303",
+        "revision": "3",
+        "clusters": [
+            {
+                "name": "identify",
+                "id": "0x0003",
+                "revision": "5",
+                "attributes": [
+                    {
+                        "name": "identify_time",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "identify_type",
+                        "id": "0x0001"
+                    }
+                ],
+                "commands": [
+                    {
+                        "name": "identify",
+                        "id": "0x0000"
+                    }
+                ],
+                "events": [],
+                "features": [],
+                "type": "server"
+            },
+            {
+                "name": "on_off",
+                "id": "0x0006",
+                "revision": "6",
+                "attributes": [
+                    {
+                        "name": "on_off",
+                        "id": "0x0000"
+                    }
+                ],
+                "commands": [
+                    {
+                        "name": "off",
+                        "id": "0x0000"
+                    }
+                ],
+                "events": [],
+                "features": [],
+                "type": "server"
+            },
+            {
+                "name": "pump_configuration_and_control",
+                "id": "0x0200",
+                "revision": "4",
+                "attributes": [
+                    {
+                        "name": "max_pressure",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "max_speed",
+                        "id": "0x0001"
+                    },
+                    {
+                        "name": "max_flow",
+                        "id": "0x0002"
+                    },
+                    {
+                        "name": "effective_operation_mode",
+                        "id": "0x0011"
+                    },
+                    {
+                        "name": "effective_control_mode",
+                        "id": "0x0012"
+                    },
+                    {
+                        "name": "capacity",
+                        "id": "0x0013"
+                    },
+                    {
+                        "name": "operation_mode",
+                        "id": "0x0020"
+                    }
+                ],
+                "commands": [],
+                "events": [],
+                "features": [],
+                "type": "server"
+            }
+        ]
+    },
+    {
+        "name": "pump_controller",
+        "id": "0x0304",
+        "revision": "4",
+        "clusters": [
+            {
+                "name": "identify",
+                "id": "0x0003",
+                "revision": "5",
+                "attributes": [
+                    {
+                        "name": "identify_time",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "identify_type",
+                        "id": "0x0001"
+                    }
+                ],
+                "commands": [
+                    {
+                        "name": "identify",
+                        "id": "0x0000"
+                    }
+                ],
+                "events": [],
+                "features": [],
+                "type": "server"
+            },
+            {
+                "name": "on_off",
+                "id": "0x0006",
+                "revision": "6",
+                "attributes": [
+                    {
+                        "name": "on_off",
+                        "id": "0x0000"
+                    }
+                ],
+                "commands": [
+                    {
+                        "name": "off",
+                        "id": "0x0000"
+                    }
+                ],
+                "events": [],
+                "features": [],
+                "type": "client"
+            },
+            {
+                "name": "pump_configuration_and_control",
+                "id": "0x0200",
+                "revision": "4",
+                "attributes": [
+                    {
+                        "name": "max_pressure",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "max_speed",
+                        "id": "0x0001"
+                    },
+                    {
+                        "name": "max_flow",
+                        "id": "0x0002"
+                    },
+                    {
+                        "name": "effective_operation_mode",
+                        "id": "0x0011"
+                    },
+                    {
+                        "name": "effective_control_mode",
+                        "id": "0x0012"
+                    },
+                    {
+                        "name": "capacity",
+                        "id": "0x0013"
+                    },
+                    {
+                        "name": "operation_mode",
+                        "id": "0x0020"
+                    }
+                ],
+                "commands": [],
+                "events": [],
+                "features": [],
+                "type": "client"
+            }
+        ]
+    },
+    {
+        "name": "pressure_sensor",
+        "id": "0x0305",
+        "revision": "2",
+        "clusters": [
+            {
+                "name": "identify",
+                "id": "0x0003",
+                "revision": "5",
+                "attributes": [
+                    {
+                        "name": "identify_time",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "identify_type",
+                        "id": "0x0001"
+                    }
+                ],
+                "commands": [
+                    {
+                        "name": "identify",
+                        "id": "0x0000"
+                    }
+                ],
+                "events": [],
+                "features": [],
+                "type": "server"
+            },
+            {
+                "name": "pressure_measurement",
+                "id": "0x0403",
+                "revision": "3",
+                "attributes": [
+                    {
+                        "name": "measured_value",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "min_measured_value",
+                        "id": "0x0001"
+                    },
+                    {
+                        "name": "max_measured_value",
+                        "id": "0x0002"
+                    }
+                ],
+                "commands": [],
+                "events": [],
+                "features": [],
+                "type": "server"
+            }
+        ]
+    },
+    {
+        "name": "flow_sensor",
+        "id": "0x0306",
+        "revision": "2",
+        "clusters": [
+            {
+                "name": "identify",
+                "id": "0x0003",
+                "revision": "5",
+                "attributes": [
+                    {
+                        "name": "identify_time",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "identify_type",
+                        "id": "0x0001"
+                    }
+                ],
+                "commands": [
+                    {
+                        "name": "identify",
+                        "id": "0x0000"
+                    }
+                ],
+                "events": [],
+                "features": [],
+                "type": "server"
+            },
+            {
+                "name": "flow_measurement",
+                "id": "0x0404",
+                "revision": "3",
+                "attributes": [
+                    {
+                        "name": "measured_value",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "min_measured_value",
+                        "id": "0x0001"
+                    },
+                    {
+                        "name": "max_measured_value",
+                        "id": "0x0002"
+                    }
+                ],
+                "commands": [],
+                "events": [],
+                "features": [],
+                "type": "server"
+            }
+        ]
+    },
+    {
+        "name": "humidity_sensor",
+        "id": "0x0307",
+        "revision": "2",
+        "clusters": [
+            {
+                "name": "identify",
+                "id": "0x0003",
+                "revision": "5",
+                "attributes": [
+                    {
+                        "name": "identify_time",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "identify_type",
+                        "id": "0x0001"
+                    }
+                ],
+                "commands": [
+                    {
+                        "name": "identify",
+                        "id": "0x0000"
+                    }
+                ],
+                "events": [],
+                "features": [],
+                "type": "server"
+            },
+            {
+                "name": "relative_humidity_measurement",
+                "id": "0x0405",
+                "revision": "3",
+                "attributes": [
+                    {
+                        "name": "measured_value",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "min_measured_value",
+                        "id": "0x0001"
+                    },
+                    {
+                        "name": "max_measured_value",
+                        "id": "0x0002"
+                    }
+                ],
+                "commands": [],
+                "events": [],
+                "features": [],
+                "type": "server"
+            }
+        ]
+    },
+    {
+        "name": "heat_pump",
+        "id": "0x0309",
+        "revision": "1",
+        "clusters": []
+    },
+    {
+        "name": "energy_evse",
+        "id": "0x050C",
+        "revision": "2",
+        "clusters": [
+            {
+                "name": "energy_evse",
+                "id": "0x0099",
+                "revision": "3",
+                "attributes": [
+                    {
+                        "name": "state",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "supply_state",
+                        "id": "0x0001"
+                    },
+                    {
+                        "name": "fault_state",
+                        "id": "0x0002"
+                    },
+                    {
+                        "name": "charging_enabled_until",
+                        "id": "0x0003"
+                    },
+                    {
+                        "name": "circuit_capacity",
+                        "id": "0x0005"
+                    },
+                    {
+                        "name": "minimum_charge_current",
+                        "id": "0x0006"
+                    },
+                    {
+                        "name": "maximum_charge_current",
+                        "id": "0x0007"
+                    },
+                    {
+                        "name": "session_id",
+                        "id": "0x0040"
+                    },
+                    {
+                        "name": "session_duration",
+                        "id": "0x0041"
+                    },
+                    {
+                        "name": "session_energy_charged",
+                        "id": "0x0042"
+                    }
+                ],
+                "commands": [
+                    {
+                        "name": "disable",
+                        "id": "0x0001"
+                    },
+                    {
+                        "name": "enable_charging",
+                        "id": "0x0002"
+                    }
+                ],
+                "events": [
+                    {
+                        "name": "ev_connected",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "ev_not_detected",
+                        "id": "0x0001"
+                    },
+                    {
+                        "name": "energy_transfer_started",
+                        "id": "0x0002"
+                    },
+                    {
+                        "name": "energy_transfer_stopped",
+                        "id": "0x0003"
+                    },
+                    {
+                        "name": "fault",
+                        "id": "0x0004"
+                    }
+                ],
+                "features": [],
+                "type": "server"
+            },
+            {
+                "name": "energy_evse_mode",
+                "id": "0x009D",
+                "revision": "2",
+                "attributes": [
+                    {
+                        "name": "supported_modes",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "current_mode",
+                        "id": "0x0001"
+                    }
+                ],
+                "commands": [
+                    {
+                        "name": "change_to_mode",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "change_to_mode_response",
+                        "id": "0x0001"
+                    }
+                ],
+                "events": [],
+                "features": [],
+                "type": "server"
+            }
+        ]
+    },
+    {
+        "name": "device_energy_management",
+        "id": "0x050D",
+        "revision": "2",
+        "clusters": [
+            {
+                "name": "device_energy_management",
+                "id": "0x0098",
+                "revision": "4",
+                "attributes": [
+                    {
+                        "name": "esa_type",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "esa_can_generate",
+                        "id": "0x0001"
+                    },
+                    {
+                        "name": "esa_state",
+                        "id": "0x0002"
+                    },
+                    {
+                        "name": "abs_min_power",
+                        "id": "0x0003"
+                    },
+                    {
+                        "name": "abs_max_power",
+                        "id": "0x0004"
+                    }
+                ],
+                "commands": [],
+                "events": [],
+                "features": [],
+                "type": "server"
+            }
+        ]
+    },
+    {
+        "name": "water_heater",
+        "id": "0x050F",
+        "revision": "1",
+        "clusters": [
+            {
+                "name": "water_heater_management",
+                "id": "0x0094",
+                "revision": "2",
+                "attributes": [
+                    {
+                        "name": "heater_types",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "heat_demand",
+                        "id": "0x0001"
+                    },
+                    {
+                        "name": "boost_state",
+                        "id": "0x0005"
+                    }
+                ],
+                "commands": [
+                    {
+                        "name": "boost",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "cancel_boost",
+                        "id": "0x0001"
+                    }
+                ],
+                "events": [
+                    {
+                        "name": "boost_started",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "boost_ended",
+                        "id": "0x0001"
+                    }
+                ],
+                "features": [],
+                "type": "server"
+            },
+            {
+                "name": "water_heater_mode",
+                "id": "0x009E",
+                "revision": "1",
+                "attributes": [
+                    {
+                        "name": "supported_modes",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "current_mode",
+                        "id": "0x0001"
+                    }
+                ],
+                "commands": [
+                    {
+                        "name": "change_to_mode",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "change_to_mode_response",
+                        "id": "0x0001"
+                    }
+                ],
+                "events": [],
+                "features": [],
+                "type": "server"
+            },
+            {
+                "name": "thermostat",
+                "id": "0x0201",
+                "revision": "8",
+                "attributes": [
+                    {
+                        "name": "local_temperature",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "control_sequence_of_operation",
+                        "id": "0x001B"
+                    },
+                    {
+                        "name": "system_mode",
+                        "id": "0x001C"
+                    }
+                ],
+                "commands": [
+                    {
+                        "name": "setpoint_raise_lower",
+                        "id": "0x0000"
+                    }
+                ],
+                "events": [],
+                "features": [
+                    {
+                        "name": "heating",
+                        "id": "0x0001",
+                        "code": "HEAT"
+                    }
+                ],
+                "type": "server"
+            }
+        ]
+    },
+    {
+        "name": "electrical_sensor",
+        "id": "0x0510",
+        "revision": "1",
+        "clusters": [
+            {
+                "name": "power_topology",
+                "id": "0x009C",
+                "revision": "1",
+                "attributes": [],
+                "commands": [],
+                "events": [],
+                "features": [],
+                "type": "server"
+            }
+        ]
+    },
+    {
+        "name": "control_bridge",
+        "id": "0x0840",
+        "revision": "3",
+        "clusters": [
+            {
+                "name": "identify",
+                "id": "0x0003",
+                "revision": "5",
+                "attributes": [
+                    {
+                        "name": "identify_time",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "identify_type",
+                        "id": "0x0001"
+                    }
+                ],
+                "commands": [
+                    {
+                        "name": "identify",
+                        "id": "0x0000"
+                    }
+                ],
+                "events": [],
+                "features": [],
+                "type": "server"
+            },
+            {
+                "name": "identify",
+                "id": "0x0003",
+                "revision": "5",
+                "attributes": [
+                    {
+                        "name": "identify_time",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "identify_type",
+                        "id": "0x0001"
+                    }
+                ],
+                "commands": [
+                    {
+                        "name": "identify",
+                        "id": "0x0000"
+                    }
+                ],
+                "events": [],
+                "features": [],
+                "type": "client"
+            },
+            {
+                "name": "groups",
+                "id": "0x0004",
+                "revision": "4",
+                "attributes": [
+                    {
+                        "name": "name_support",
+                        "id": "0x0000"
+                    }
+                ],
+                "commands": [
+                    {
+                        "name": "add_group",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "add_group_response",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "view_group",
+                        "id": "0x0001"
+                    },
+                    {
+                        "name": "view_group_response",
+                        "id": "0x0001"
+                    },
+                    {
+                        "name": "get_group_membership",
+                        "id": "0x0002"
+                    },
+                    {
+                        "name": "get_group_membership_response",
+                        "id": "0x0002"
+                    },
+                    {
+                        "name": "remove_group",
+                        "id": "0x0003"
+                    },
+                    {
+                        "name": "remove_group_response",
+                        "id": "0x0003"
+                    },
+                    {
+                        "name": "remove_all_groups",
+                        "id": "0x0004"
+                    },
+                    {
+                        "name": "add_group_if_identifying",
+                        "id": "0x0005"
+                    }
+                ],
+                "events": [],
+                "features": [],
+                "type": "client"
+            },
+            {
+                "name": "on_off",
+                "id": "0x0006",
+                "revision": "6",
+                "attributes": [
+                    {
+                        "name": "on_off",
+                        "id": "0x0000"
+                    }
+                ],
+                "commands": [
+                    {
+                        "name": "off",
+                        "id": "0x0000"
+                    }
+                ],
+                "events": [],
+                "features": [],
+                "type": "client"
+            },
+            {
+                "name": "level_control",
+                "id": "0x0008",
+                "revision": "6",
+                "attributes": [
+                    {
+                        "name": "current_level",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "options",
+                        "id": "0x000F"
+                    },
+                    {
+                        "name": "on_level",
+                        "id": "0x0011"
+                    }
+                ],
+                "commands": [
+                    {
+                        "name": "move_to_level",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "move",
+                        "id": "0x0001"
+                    },
+                    {
+                        "name": "step",
+                        "id": "0x0002"
+                    },
+                    {
+                        "name": "stop",
+                        "id": "0x0003"
+                    },
+                    {
+                        "name": "move_to_level_with_on_off",
+                        "id": "0x0004"
+                    },
+                    {
+                        "name": "move_with_on_off",
+                        "id": "0x0005"
+                    },
+                    {
+                        "name": "step_with_on_off",
+                        "id": "0x0006"
+                    },
+                    {
+                        "name": "stop_with_on_off",
+                        "id": "0x0007"
+                    }
+                ],
+                "events": [],
+                "features": [],
+                "type": "client"
+            },
+            {
+                "name": "color_control",
+                "id": "0x0300",
+                "revision": "7",
+                "attributes": [
+                    {
+                        "name": "color_mode",
+                        "id": "0x0008"
+                    },
+                    {
+                        "name": "options",
+                        "id": "0x000F"
+                    },
+                    {
+                        "name": "number_of_primaries",
+                        "id": "0x0010"
+                    },
+                    {
+                        "name": "enhanced_color_mode",
+                        "id": "0x4001"
+                    },
+                    {
+                        "name": "color_capabilities",
+                        "id": "0x400A"
+                    }
+                ],
+                "commands": [],
+                "events": [],
+                "features": [],
+                "type": "client"
+            }
+        ]
+    },
+    {
+        "name": "on_off_sensor",
+        "id": "0x0850",
+        "revision": "3",
+        "clusters": [
+            {
+                "name": "identify",
+                "id": "0x0003",
+                "revision": "5",
+                "attributes": [
+                    {
+                        "name": "identify_time",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "identify_type",
+                        "id": "0x0001"
+                    }
+                ],
+                "commands": [
+                    {
+                        "name": "identify",
+                        "id": "0x0000"
+                    }
+                ],
+                "events": [],
+                "features": [],
+                "type": "server"
+            },
+            {
+                "name": "identify",
+                "id": "0x0003",
+                "revision": "5",
+                "attributes": [
+                    {
+                        "name": "identify_time",
+                        "id": "0x0000"
+                    },
+                    {
+                        "name": "identify_type",
+                        "id": "0x0001"
+                    }
+                ],
+                "commands": [
+                    {
+                        "name": "identify",
+                        "id": "0x0000"
+                    }
+                ],
+                "events": [],
+                "features": [],
+                "type": "client"
+            },
+            {
+                "name": "on_off",
+                "id": "0x0006",
+                "revision": "6",
+                "attributes": [
+                    {
+                        "name": "on_off",
+                        "id": "0x0000"
+                    }
+                ],
+                "commands": [
+                    {
+                        "name": "off",
+                        "id": "0x0000"
+                    }
+                ],
+                "events": [],
+                "features": [],
+                "type": "client"
+            }
+        ]
+    }
+]
