@@ -180,3 +180,18 @@ test_mfg_tool:
                           --dac-key test_data/DAC_key_No_UUID.der           \
                           --dac-cert test_data/DAC_cert_No_UUID.der
       rm -rf out/
+
+test_data_model_validator:
+  stage: test
+  image: python:3.9-bullseye
+
+  tags:
+    - build
+
+  script:
+    - cd data_model_validator
+    - python3 -m pip install --upgrade pip
+    - python3 -m pip install -r requirements.txt
+    - python3 -m pip install -r tests/requirements.txt
+    - PYTHONPATH=. pytest tests/ -v --cov=core --cov=utils --cov=datamodel_parser --cov-report=term-missing
+    - python3 datamodel_parser.py --test

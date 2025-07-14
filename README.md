@@ -17,4 +17,5 @@ is the official Matter development framework for ESP32 series SoCs
 ## Tools
 
 * [esp-matter-mfg-tool](mfg_tool): tool to generate the Matter compatible manufacturing and secure certificate partitions.
+* [data-model-validator](data_model_validator): comprehensive tool for parsing Matter device wildcard logs and validating compliance against CHIP SDK specifications.
 
