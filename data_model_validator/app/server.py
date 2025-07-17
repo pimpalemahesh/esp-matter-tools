@@ -23,6 +23,30 @@ app.config["MAX_CONTENT_LENGTH"] = 50 * 1024 * 1024  # 50MB limit
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# Define paths for JSON files
+OUTPUT_DIR = "output"
+PARSED_DATA_FILE = os.path.join(OUTPUT_DIR, "parsed_data.json")
+VALIDATION_RESULTS_FILE = os.path.join(OUTPUT_DIR, "validation_results.json")
+
+# Ensure output directory exists
+os.makedirs(OUTPUT_DIR, exist_ok=True)
+
+# Clear existing JSON files on app start (refresh behavior)
+def clear_existing_files():
+    """Clear existing JSON files to reset the app state"""
+    try:
+        if os.path.exists(PARSED_DATA_FILE):
+            os.remove(PARSED_DATA_FILE)
+            logger.info("Cleared existing parsed_data.json")
+        if os.path.exists(VALIDATION_RESULTS_FILE):
+            os.remove(VALIDATION_RESULTS_FILE)
+            logger.info("Cleared existing validation_results.json")
+    except Exception as e:
+        logger.error(f"Error clearing existing files: {e}")
+
+# Clear files on app start
+clear_existing_files()
+
 
 @app.route("/", methods=["GET", "POST"])
 def index():
@@ -33,17 +57,17 @@ def index():
     uploaded_filename = None
 
     # Load existing validation results if available
-    if os.path.exists("validation_results.json"):
+    if os.path.exists(VALIDATION_RESULTS_FILE):
         try:
-            with open("validation_results.json", "r") as f:
+            with open(VALIDATION_RESULTS_FILE, "r") as f:
                 validation_data = json.load(f)
         except Exception as e:
             logger.error(f"Error loading validation results: {e}")
 
     # Load existing parsed data if available
-    if os.path.exists("parsed_data.json"):
+    if os.path.exists(PARSED_DATA_FILE):
         try:
-            with open("parsed_data.json", "r") as f:
+            with open(PARSED_DATA_FILE, "r") as f:
                 parsed_data = json.load(f)
         except Exception as e:
             logger.error(f"Error loading parsed data: {e}")
@@ -90,7 +114,7 @@ def index():
             logger.info("Successfully parsed data")
 
             # Save parsed data
-            with open("parsed_data.json", "w") as f:
+            with open(PARSED_DATA_FILE, "w") as f:
                 json.dump(parsed_data, f, indent=2)
 
         except Exception as e:
@@ -132,7 +156,7 @@ def validate_compliance():
             )
 
         # Check if parsed data exists
-        if not os.path.exists("parsed_data.json"):
+        if not os.path.exists(PARSED_DATA_FILE):
             return (
                 jsonify(
                     {
@@ -167,7 +191,7 @@ def validate_compliance():
             )
 
         # Load parsed data
-        with open("parsed_data.json", "r") as f:
+        with open(PARSED_DATA_FILE, "r") as f:
             parsed_data = json.load(f)
 
         # Perform validation
@@ -176,7 +200,7 @@ def validate_compliance():
         )
 
         # Save validation results
-        with open("validation_results.json", "w") as f:
+        with open(VALIDATION_RESULTS_FILE, "w") as f:
             json.dump(validation_data, f, indent=2)
 
         logger.info(f"Compliance validation completed for version {chip_version}")
@@ -197,12 +221,12 @@ def validate_compliance():
 def clear_data():
     """API endpoint to clear parsed data and validation results"""
     try:
-        if os.path.exists("parsed_data.json"):
-            os.remove("parsed_data.json")
+        if os.path.exists(PARSED_DATA_FILE):
+            os.remove(PARSED_DATA_FILE)
             logger.info("Removed parsed_data.json")
 
-        if os.path.exists("validation_results.json"):
-            os.remove("validation_results.json")
+        if os.path.exists(VALIDATION_RESULTS_FILE):
+            os.remove(VALIDATION_RESULTS_FILE)
             logger.info("Removed validation_results.json")
 
         return jsonify({"success": True, "message": "Data cleared successfully"})
@@ -217,11 +241,11 @@ def download_data(data_type):
     """API endpoint to download parsed data or validation results"""
     try:
         if data_type == "parsed":
-            with open("parsed_data.json", "r") as f:
+            with open(PARSED_DATA_FILE, "r") as f:
                 data = json.load(f)
             filename = "parsed_data.json"
         elif data_type == "validation":
-            with open("validation_results.json", "r") as f:
+            with open(VALIDATION_RESULTS_FILE, "r") as f:
                 data = json.load(f)
             filename = "validation_results.json"
         else:

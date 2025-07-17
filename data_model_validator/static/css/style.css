@@ -477,6 +477,16 @@ body {
 
 .cluster-card.non-compliant {
     border-left-color: var(--error-color);
+    background: rgba(244, 67, 54, 0.15);
+    border-left: 4px solid var(--error-color);
+    border: 1px solid rgba(244, 67, 54, 0.3);
+}
+
+.cluster-card.warning {
+    border-left-color: var(--warning-color);
+    background: rgba(255, 193, 7, 0.15);
+    border-left: 4px solid var(--warning-color);
+    border: 1px solid rgba(255, 193, 7, 0.3);
 }
 
 .cluster-header {
@@ -526,11 +536,25 @@ body {
 /* Removed expand-button and expand-icon styles - replaced with modal functionality */
 
 .cluster-stats {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    display: flex;
+    flex-direction: column;
     gap: 15px;
     padding: 20px;
     background: var(--white);
+}
+
+.compliance-status {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.data-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 15px;
 }
 
 .stat-item {
@@ -1167,6 +1191,54 @@ body {
     box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
 }
 
+.cluster-card.non-compliant:hover {
+    background: rgba(244, 67, 54, 0.25);
+    border-color: rgba(244, 67, 54, 0.4);
+}
+
+.cluster-card.warning:hover {
+    background: rgba(255, 193, 7, 0.25);
+    border-color: rgba(255, 193, 7, 0.4);
+}
+
+/* Override inner element backgrounds for non-compliant cards */
+.cluster-card.non-compliant .cluster-header {
+    background: rgba(244, 67, 54, 0.1);
+    border-bottom: 1px solid rgba(244, 67, 54, 0.2);
+}
+
+.cluster-card.non-compliant .cluster-stats {
+    background: transparent;
+}
+
+.cluster-card.non-compliant .stat-item {
+    background: rgba(244, 67, 54, 0.1);
+    border: 1px solid rgba(244, 67, 54, 0.2);
+}
+
+.cluster-card.non-compliant .stat-item:hover {
+    background: rgba(244, 67, 54, 0.2);
+}
+
+/* Override inner element backgrounds for warning cards */
+.cluster-card.warning .cluster-header {
+    background: rgba(255, 193, 7, 0.1);
+    border-bottom: 1px solid rgba(255, 193, 7, 0.2);
+}
+
+.cluster-card.warning .cluster-stats {
+    background: transparent;
+}
+
+.cluster-card.warning .stat-item {
+    background: rgba(255, 193, 7, 0.1);
+    border: 1px solid rgba(255, 193, 7, 0.2);
+}
+
+.cluster-card.warning .stat-item:hover {
+    background: rgba(255, 193, 7, 0.2);
+}
+
 .clickable-cluster:hover .cluster-name {
     color: var(--accent-color);
 }
@@ -1180,6 +1252,188 @@ body {
     align-items: center;
     justify-content: center;
     transition: all 0.3s ease;
+}
+
+/* Missing elements styles */
+.missing-element {
+    border-left: 4px solid var(--error-color);
+    background: rgba(244, 67, 54, 0.05);
+}
+
+.missing-element .modal-id-badge.error {
+    background: var(--error-color);
+    color: white;
+}
+
+.missing-element .modal-name.error {
+    color: var(--error-color);
+    font-weight: 600;
+}
+
+.missing-type-section {
+    margin: 15px 0;
+    padding: 10px;
+    border: 1px solid rgba(244, 67, 54, 0.2);
+    border-radius: 8px;
+    background: rgba(244, 67, 54, 0.02);
+}
+
+/* Revision issues styles */
+.revision-issue {
+    border-left: 4px solid var(--error-color);
+    background: rgba(244, 67, 54, 0.05);
+}
+
+.revision-issue .modal-id-badge.error {
+    background: var(--error-color);
+    color: white;
+}
+
+.revision-issue .modal-name.error {
+    color: var(--error-color);
+    font-weight: 600;
+}
+
+/* Event information styles */
+.event-item {
+    border-left: 4px solid var(--info-color);
+    background: rgba(33, 150, 243, 0.05);
+}
+
+.event-item .modal-id-badge.info {
+    background: var(--info-color);
+    color: white;
+}
+
+.event-item .modal-name.info {
+    color: var(--info-color);
+    font-weight: 600;
+}
+
+.event-item .modal-id-badge.warning {
+    background: var(--warning-color);
+    color: white;
+}
+
+.event-item .modal-name.warning {
+    color: var(--warning-color);
+    font-weight: 600;
+}
+
+/* Modal type badges */
+.modal-type-badge {
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.75em;
+    font-weight: 500;
+    text-transform: uppercase;
+    margin-left: 8px;
+}
+
+.modal-type-badge.generated {
+    background: rgba(76, 175, 80, 0.1);
+    color: var(--success-color);
+    border: 1px solid rgba(76, 175, 80, 0.3);
+}
+
+.modal-type-badge.accepted {
+    background: rgba(33, 150, 243, 0.1);
+    color: var(--info-color);
+    border: 1px solid rgba(33, 150, 243, 0.3);
+}
+
+/* Validation Loader Styles */
+.validation-loader {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(8px);
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.loader-content {
+    text-align: center;
+    padding: 40px;
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1);
+    max-width: 400px;
+    width: 90%;
+}
+
+.loader-spinner {
+    position: relative;
+    display: inline-block;
+    margin-bottom: 24px;
+}
+
+.loader-spinner i {
+    color: var(--accent-color);
+    z-index: 2;
+    position: relative;
+}
+
+.spinner-ring {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 80px;
+    height: 80px;
+    border: 3px solid rgba(33, 150, 243, 0.1);
+    border-top: 3px solid var(--accent-color);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: translate(-50%, -50%) rotate(0deg); }
+    100% { transform: translate(-50%, -50%) rotate(360deg); }
+}
+
+.loader-content h3 {
+    color: var(--primary-color);
+    margin: 0 0 12px 0;
+    font-size: 1.4em;
+}
+
+.loader-content p {
+    color: var(--text-light);
+    margin: 0 0 24px 0;
+    line-height: 1.5;
+}
+
+.loader-progress {
+    margin-top: 24px;
+}
+
+.progress-bar {
+    width: 100%;
+    height: 8px;
+    background: rgba(33, 150, 243, 0.1);
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 12px;
+}
+
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent-color), var(--primary-color));
+    border-radius: 4px;
+    width: 0%;
+    transition: width 0.3s ease;
+}
+
+.progress-text {
+    font-size: 0.9em;
+    color: var(--text-light);
+    font-weight: 500;
 }
 
 .view-button:hover {

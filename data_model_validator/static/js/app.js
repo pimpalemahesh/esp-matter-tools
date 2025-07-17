@@ -324,13 +324,27 @@ function openClusterModal(clusterId, endpointId) {
         return;
     }
     
+    // Find validation data from embedded script tag
+    const validationDataScript = document.querySelector(
+        `.validation-data[data-cluster-id="${clusterId}"][data-endpoint-id="${endpointId}"]`
+    );
+    
+    let validationData = null;
+    if (validationDataScript) {
+        try {
+            validationData = JSON.parse(validationDataScript.textContent);
+        } catch (e) {
+            console.error('Error parsing validation data:', e);
+        }
+    }
+    
     // Update modal title
     const modalTitle = document.getElementById('modalTitle');
     modalTitle.innerHTML = `<i class="fas fa-network-wired"></i> Cluster ${clusterId} - Endpoint ${endpointId}`;
     
     // Build modal content
     const modalBody = document.getElementById('modalBody');
-    modalBody.innerHTML = buildClusterContent(clusterData, clusterId);
+    modalBody.innerHTML = buildClusterContent(clusterData, clusterId, validationData);
     
     // Show modal
     document.getElementById('clusterModal').style.display = 'flex';
@@ -344,33 +358,166 @@ function closeClusterModal() {
     document.body.style.overflow = 'auto'; // Restore scrolling
 }
 
-function buildClusterContent(clusterData, clusterId) {
+function buildClusterContent(clusterData, clusterId, validationData) {
     let html = '';
+    
+    // Missing Elements Section (if validation data is available)
+    if (validationData && validationData.missing_elements && validationData.missing_elements.length > 0) {
+        html += buildMissingElementsSection(validationData.missing_elements);
+    }
+    
+    // Revision Issues Section (cluster-specific)
+    if (validationData && validationData.revision_issues && validationData.revision_issues.length > 0) {
+        html += buildRevisionIssuesSection(validationData.revision_issues);
+    }
+    
+    // Event Information Section
+    if (validationData && validationData.event_warnings && validationData.event_warnings.length > 0) {
+        html += buildEventInformationSection(validationData.event_warnings);
+    }
     
     // Attributes Section
     if (clusterData.attributes && Object.keys(clusterData.attributes).length > 0) {
-        html += buildAttributesSection(clusterData.attributes);
+        html += buildAttributesSection(clusterData.attributes, validationData);
     }
     
     // Commands Section
     if (clusterData.commands) {
-        html += buildCommandsSection(clusterData.commands);
+        html += buildCommandsSection(clusterData.commands, validationData);
     }
     
-    // Events Section
-    if (clusterData.events && clusterData.events.EventList && clusterData.events.EventList.EventList) {
-        html += buildEventsSection(clusterData.events.EventList.EventList);
-    }
-    
-    // Features Section
-    if (clusterData.features && Object.keys(clusterData.features).length > 0) {
-        html += buildFeaturesSection(clusterData.features);
-    }
-    
+    // Only show if there's content
     return html || '<p style="text-align: center; color: #666; padding: 20px;">No detailed information available for this cluster.</p>';
 }
 
-function buildAttributesSection(attributes) {
+function buildMissingElementsSection(missingElements) {
+    let html = `
+        <div class="modal-section">
+            <h3 style="color: var(--error-color);"><i class="fas fa-exclamation-triangle"></i> Missing Elements</h3>
+            <div class="modal-items">
+    `;
+    
+    // Group missing elements by type
+    const groupedElements = {
+        attribute: [],
+        command: [],
+        feature: [],
+        cluster: []
+    };
+    
+    missingElements.forEach(element => {
+        const type = element.type || 'unknown';
+        if (groupedElements[type]) {
+            groupedElements[type].push(element);
+        }
+    });
+    
+    // Display each type of missing element
+    Object.entries(groupedElements).forEach(([type, elements]) => {
+        if (elements.length > 0) {
+            html += `
+                <div class="missing-type-section">
+                    <h4 style="color: var(--error-color); text-transform: capitalize; margin: 15px 0 10px 0;">
+                        <i class="fas fa-${type === 'attribute' ? 'list' : type === 'command' ? 'terminal' : type === 'feature' ? 'cog' : 'network-wired'}"></i>
+                        Missing ${type}s (${elements.length})
+                    </h4>
+            `;
+            
+            elements.forEach(element => {
+                html += `
+                    <div class="modal-item missing-element">
+                        <div class="modal-item-header">
+                            <span class="modal-id-badge error">${element.id || 'Unknown ID'}</span>
+                            <span class="modal-name error">${element.name || 'Unknown Name'}</span>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            html += '</div>';
+        }
+    });
+    
+    html += '</div></div>';
+    return html;
+}
+
+function buildRevisionIssuesSection(revisionIssues) {
+    let html = `
+        <div class="modal-section">
+            <h3 style="color: var(--error-color);"><i class="fas fa-exclamation-circle"></i> Revision Issues</h3>
+            <div class="modal-items">
+    `;
+    
+    revisionIssues.forEach(issue => {
+        html += `
+            <div class="modal-item revision-issue">
+                <div class="modal-item-header">
+                    <span class="modal-id-badge error">${issue.item_id || 'N/A'}</span>
+                    <span class="modal-name error">${issue.item_name || 'Unknown Item'}</span>
+                </div>
+                <div class="modal-values">
+                    <div class="modal-value">
+                        <span class="modal-value-label">Issue:</span>
+                        <span class="modal-value-data">${issue.message}</span>
+                    </div>
+                    <div class="modal-value">
+                        <span class="modal-value-label">Actual Revision:</span>
+                        <span class="modal-value-data">${issue.actual_revision || 'Unknown'}</span>
+                    </div>
+                    <div class="modal-value">
+                        <span class="modal-value-label">Required Revision:</span>
+                        <span class="modal-value-data">${issue.required_revision || 'Unknown'}</span>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+    
+    html += '</div></div>';
+    return html;
+}
+
+function buildEventInformationSection(eventWarnings) {
+    let html = `
+        <div class="modal-section">
+            <h3 style="color: var(--info-color);"><i class="fas fa-info-circle"></i> Event Information</h3>
+            <div class="event-notice" style="background: rgba(33, 150, 243, 0.1); padding: 10px; border-radius: 8px; margin-bottom: 15px;">
+                <i class="fas fa-lightbulb" style="color: var(--info-color);"></i>
+                <span style="color: var(--info-color); margin-left: 8px;">Events are informational only and do not affect compliance status.</span>
+            </div>
+            <div class="modal-items">
+    `;
+    
+    eventWarnings.forEach(warning => {
+        const isWarning = warning.severity === 'warning';
+        html += `
+            <div class="modal-item event-item">
+                <div class="modal-item-header">
+                    <span class="modal-id-badge ${isWarning ? 'warning' : 'info'}">${warning.event_id || 'Event'}</span>
+                    <span class="modal-name ${isWarning ? 'warning' : 'info'}">${warning.event_name || warning.type || 'Event Information'}</span>
+                </div>
+                <div class="modal-values">
+                    <div class="modal-value">
+                        <span class="modal-value-label">Message:</span>
+                        <span class="modal-value-data">${warning.message}</span>
+                    </div>
+                    ${warning.severity ? `
+                    <div class="modal-value">
+                        <span class="modal-value-label">Severity:</span>
+                        <span class="modal-value-data">${warning.severity}</span>
+                    </div>
+                    ` : ''}
+                </div>
+            </div>
+        `;
+    });
+    
+    html += '</div></div>';
+    return html;
+}
+
+function buildAttributesSection(attributes, validationData) {
     let html = `
         <div class="modal-section">
             <h3><i class="fas fa-list"></i> Attributes</h3>
@@ -381,13 +528,18 @@ function buildAttributesSection(attributes) {
     const nameMap = {};
     if (attributes.AttributeList && attributes.AttributeList.AttributeList) {
         attributes.AttributeList.AttributeList.forEach(attr => {
-            nameMap[attr.id] = attr.name;
+            if (typeof attr === 'object' && attr !== null && attr.id) {
+                nameMap[attr.id] = attr.name;
+            }
+            // If attr is just a number, we can't get the name from it
+            // The name will be generated from the attrId later
         });
     }
     
-    // Display all attributes except AttributeList
+    // Display all attributes
     Object.entries(attributes).forEach(([attrId, attrData]) => {
-        if (attrId !== 'AttributeList') {
+        // Skip empty attributes but show AttributeList
+        if (attrData !== null && attrData !== undefined) {
             const attrName = nameMap[attrId] || attrId.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
             
             html += `
@@ -429,7 +581,7 @@ function buildAttributesSection(attributes) {
     return html;
 }
 
-function buildCommandsSection(commands) {
+function buildCommandsSection(commands, validationData) {
     let html = `
         <div class="modal-section">
             <h3><i class="fas fa-terminal"></i> Commands</h3>
@@ -439,11 +591,22 @@ function buildCommandsSection(commands) {
     // Generated Commands
     if (commands.GeneratedCommandList && commands.GeneratedCommandList.GeneratedCommandList) {
         commands.GeneratedCommandList.GeneratedCommandList.forEach(cmd => {
+            let cmdId, cmdName;
+            
+            if (typeof cmd === 'object' && cmd !== null) {
+                cmdId = cmd.id || 'Unknown';
+                cmdName = cmd.name ? cmd.name.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) : 'Unknown Command';
+            } else {
+                // cmd is a number
+                cmdId = `0x${parseInt(cmd).toString(16).toUpperCase().padStart(4, '0')}`;
+                cmdName = `Command ${cmdId}`;
+            }
+            
             html += `
                 <div class="modal-item">
                     <div class="modal-item-header">
-                        <span class="modal-id-badge">${cmd.id}</span>
-                        <span class="modal-name">${cmd.name.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</span>
+                        <span class="modal-id-badge">${cmdId}</span>
+                        <span class="modal-name">${cmdName}</span>
                         <span class="modal-type-badge generated">Generated</span>
                     </div>
                 </div>
@@ -454,11 +617,22 @@ function buildCommandsSection(commands) {
     // Accepted Commands
     if (commands.AcceptedCommandList && commands.AcceptedCommandList.AcceptedCommandList) {
         commands.AcceptedCommandList.AcceptedCommandList.forEach(cmd => {
+            let cmdId, cmdName;
+            
+            if (typeof cmd === 'object' && cmd !== null) {
+                cmdId = cmd.id || 'Unknown';
+                cmdName = cmd.name ? cmd.name.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) : 'Unknown Command';
+            } else {
+                // cmd is a number
+                cmdId = `0x${parseInt(cmd).toString(16).toUpperCase().padStart(4, '0')}`;
+                cmdName = `Command ${cmdId}`;
+            }
+            
             html += `
                 <div class="modal-item">
                     <div class="modal-item-header">
-                        <span class="modal-id-badge">${cmd.id}</span>
-                        <span class="modal-name">${cmd.name.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</span>
+                        <span class="modal-id-badge">${cmdId}</span>
+                        <span class="modal-name">${cmdName}</span>
                         <span class="modal-type-badge accepted">Accepted</span>
                     </div>
                 </div>

@@ -93,7 +93,7 @@
     
     <!-- Validation Summary -->
     <div class="validation-summary">
-        <h3><i class="fas fa-chart-bar"></i> Summary</h3>
+        <h3><i class="fas fa-chart-bar"></i> Endpoint Summary</h3>
         <div class="summary-stats">
             <div class="stat-card stat-total">
                 <div class="stat-value">{{ validation_data.summary.total_endpoints }}</div>
@@ -163,28 +163,12 @@
                             <div class="device-type-id">{{ device_type.device_type_id }}</div>
                         </div>
                         
-                        {% if device_type.missing_elements %}
-                        <div class="missing-elements">
-                            <h4><i class="fas fa-exclamation-triangle"></i> Missing Elements ({{ device_type.missing_elements|length }})</h4>
-                            <ul class="missing-list">
-                                {% for missing in device_type.missing_elements[:5] %}
-                                <li>
-                                    <span>{{ missing.name.replace('_', ' ').title() }} ({{ missing.id }})</span>
-                                    <span class="missing-type">{{ missing.type }}</span>
-                                </li>
-                                {% endfor %}
-                                {% if device_type.missing_elements|length > 5 %}
-                                <li><em>... and {{ device_type.missing_elements|length - 5 }} more</em></li>
-                                {% endif %}
-                            </ul>
-                        </div>
-                        {% endif %}
-                        
-                        {% if device_type.revision_issues %}
+                        {% set endpoint_revision_issues = device_type.revision_issues|selectattr('item_type', 'eq', 'device_type')|list if device_type.revision_issues else [] %}
+                        {% if endpoint_revision_issues %}
                         <div class="revision-issues">
-                            <h4><i class="fas fa-exclamation-circle"></i> Revision Issues ({{ device_type.revision_issues|length }})</h4>
+                            <h4><i class="fas fa-exclamation-circle"></i> Device Type Revision Issues ({{ endpoint_revision_issues|length }})</h4>
                             <ul class="revision-list">
-                                {% for issue in device_type.revision_issues %}
+                                {% for issue in endpoint_revision_issues %}
                                 <li class="revision-error">
                                     <i class="fas fa-times-circle"></i>
                                     <span class="issue-message">{{ issue.message }}</span>
@@ -194,54 +178,74 @@
                         </div>
                         {% endif %}
                         
-                        {% if device_type.event_warnings %}
-                        <div class="event-warnings">
-                            <h4><i class="fas fa-info-circle"></i> Event Information ({{ device_type.event_warnings|length }})</h4>
-                            <div class="event-notice">
-                                <i class="fas fa-lightbulb"></i>
-                                <span>Events are informational only and do not affect compliance status.</span>
-                            </div>
-                            <ul class="event-list">
-                                {% for warning in device_type.event_warnings[:3] %}
-                                {% if warning.severity == 'warning' %}
-                                <li class="event-warning">
-                                    <i class="fas fa-exclamation-triangle"></i>
-                                    <span class="warning-message">{{ warning.message }}</span>
-                                </li>
-                                {% endif %}
-                                {% endfor %}
-                                {% if device_type.event_warnings|length > 3 %}
-                                <li class="event-more"><em>... and {{ device_type.event_warnings|length - 3 }} more event notifications</em></li>
-                                {% endif %}
-                            </ul>
-                        </div>
-                        {% endif %}
-                        
                         {% if device_type.cluster_validations %}
                         <div class="clusters-grid">
                             {% for cluster in device_type.cluster_validations %}
-                            <div class="cluster-card {{ 'non-compliant' if not cluster.is_compliant }}">
+                            {% set cluster_data = parsed_data.endpoints|selectattr('endpoint', 'eq', endpoint.endpoint)|list|first if parsed_data %}
+                            {% set actual_cluster_data = cluster_data.clusters.get(cluster.cluster_id, {}) if cluster_data %}
+                            {% set has_event_warnings = cluster.event_warnings|length > 0 %}
+                            <div class="cluster-card clickable-cluster {{ 'non-compliant' if not cluster.is_compliant else ('warning' if cluster.is_compliant and has_event_warnings else '') }}" 
+                                 data-cluster-id="{{ cluster.cluster_id }}" 
+                                 data-endpoint-id="{{ endpoint.endpoint }}"
+                                 onclick="openClusterModal('{{ cluster.cluster_id }}', '{{ endpoint.endpoint }}')"
+                                 style="cursor: pointer;">
                                 <div class="cluster-header">
-                                    <div class="cluster-name">
-                                        <i class="fas fa-network-wired"></i>
-                                        {{ cluster.cluster_name.replace('_', ' ').title() }}
+                                    <div class="cluster-info">
+                                        <div class="cluster-name">
+                                            <i class="fas fa-network-wired"></i>
+                                            {{ cluster.cluster_name.replace('_', ' ').title() }}
+                                        </div>
+                                        <div class="cluster-description">Click to view details</div>
                                     </div>
-                                    <div class="cluster-id">{{ cluster.cluster_id }}</div>
+                                    <div class="cluster-actions">
+                                        <div class="cluster-id">{{ cluster.cluster_id }}</div>
+                                        <div class="view-button">
+                                            <i class="fas fa-eye"></i>
+                                        </div>
+                                    </div>
                                 </div>
                                 
                                 <div class="cluster-stats">
-                                    <span><i class="fas fa-list"></i> {{ cluster.cluster_type.title() }}</span>
-                                    {% if cluster.missing_elements %}
-                                    <span style="color: var(--error-color);">
-                                        <i class="fas fa-exclamation-triangle"></i> 
-                                        {{ cluster.missing_elements|length }} missing
-                                    </span>
-                                    {% else %}
-                                    <span style="color: var(--success-color);">
-                                        <i class="fas fa-check"></i> Complete
-                                    </span>
-                                    {% endif %}
+                                    <div class="compliance-status">
+                                        <span><i class="fas fa-list"></i> {{ cluster.cluster_type.title() }}</span>
+                                        {% if cluster.missing_elements %}
+                                        <span style="color: var(--error-color);">
+                                            <i class="fas fa-exclamation-triangle"></i> 
+                                            {{ cluster.missing_elements|length }} missing
+                                        </span>
+                                        {% else %}
+                                        <span style="color: var(--success-color);">
+                                            <i class="fas fa-check"></i> Compliant
+                                        </span>
+                                        {% endif %}
+                                    </div>
+                                                                         {% if actual_cluster_data %}
+                                     <div class="data-stats">
+                                         <div class="stat-item">
+                                             <i class="fas fa-list"></i>
+                                             <span class="stat-count">{{ actual_cluster_data.attributes|length }}</span>
+                                             <span class="stat-label">Attributes</span>
+                                         </div>
+                                         <div class="stat-item">
+                                             <i class="fas fa-terminal"></i>
+                                             <span class="stat-count">{{ (actual_cluster_data.commands.get('GeneratedCommandList', {}).get('GeneratedCommandList', []) | length) + (actual_cluster_data.commands.get('AcceptedCommandList', {}).get('AcceptedCommandList', []) | length) }}</span>
+                                             <span class="stat-label">Commands</span>
+                                         </div>
+                                     </div>
+                                     {% endif %}
                                 </div>
+                                
+                                {% if actual_cluster_data %}
+                                <!-- Store cluster data for modal -->
+                                <script type="application/json" class="cluster-data" data-cluster-id="{{ cluster.cluster_id }}" data-endpoint-id="{{ endpoint.endpoint }}">
+                                    {{ actual_cluster_data | tojson }}
+                                </script>
+                                {% endif %}
+                                
+                                <!-- Store validation data for modal -->
+                                <script type="application/json" class="validation-data" data-cluster-id="{{ cluster.cluster_id }}" data-endpoint-id="{{ endpoint.endpoint }}">
+                                    {{ cluster | tojson }}
+                                </script>
                             </div>
                             {% endfor %}
                         </div>
@@ -264,88 +268,7 @@
 </section>
 {% endif %}
 
-<!-- Device Data Overview (if parsed_data is available) -->
-{% if parsed_data and parsed_data.endpoints %}
-<section class="results-section" style="border-top: 1px solid var(--border-color);">
-    <h2 class="section-title">
-        <i class="fas fa-database"></i>
-        Device Data Overview
-    </h2>
-    
-    <div class="endpoints-grid">
-        {% for endpoint in parsed_data.endpoints %}
-        <div class="endpoint-card">
-            <div class="endpoint-header">
-                <div class="endpoint-title">
-                    <i class="fas fa-plug"></i>
-                    Endpoint {{ endpoint.endpoint }}
-                </div>
-                <span class="compliance-badge" style="background: var(--info-color);">
-                    {{ endpoint.clusters|length }} Clusters
-                </span>
-            </div>
-            
-            <div class="endpoint-content">
-                <div class="clusters-grid">
-                    {% for cluster_id, cluster_data in endpoint.clusters.items() %}
-                    {% if cluster_id != 'unknown' %}
-                    <div class="cluster-card clickable-cluster" 
-                         data-cluster-id="{{ cluster_id }}" 
-                         data-endpoint-id="{{ endpoint.endpoint }}"
-                         onclick="openClusterModal('{{ cluster_id }}', '{{ endpoint.endpoint }}')">
-                        <div class="cluster-header">
-                            <div class="cluster-info">
-                                <div class="cluster-name">
-                                    <i class="fas fa-network-wired"></i>
-                                    Cluster {{ cluster_id }}
-                                </div>
-                                <div class="cluster-description">Click to view details</div>
-                            </div>
-                            <div class="cluster-actions">
-                                <div class="cluster-id">{{ cluster_id }}</div>
-                                <div class="view-button">
-                                    <i class="fas fa-eye"></i>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="cluster-stats">
-                            <div class="stat-item">
-                                <i class="fas fa-list"></i>
-                                <span class="stat-count">{{ cluster_data.attributes|length }}</span>
-                                <span class="stat-label">Attributes</span>
-                            </div>
-                            <div class="stat-item">
-                                <i class="fas fa-terminal"></i>
-                                <span class="stat-count">{{ (cluster_data.commands.get('GeneratedCommandList', {}).get('GeneratedCommandList', []) | length) + (cluster_data.commands.get('AcceptedCommandList', {}).get('AcceptedCommandList', []) | length) }}</span>
-                                <span class="stat-label">Commands</span>
-                            </div>
-                            <div class="stat-item">
-                                <i class="fas fa-bolt"></i>
-                                <span class="stat-count">{{ cluster_data.events.get('EventList', {}).get('EventList', []) | length }}</span>
-                                <span class="stat-label">Events</span>
-                            </div>
-                            <div class="stat-item">
-                                <i class="fas fa-cog"></i>
-                                <span class="stat-count">{{ cluster_data.features|length }}</span>
-                                <span class="stat-label">Features</span>
-                            </div>
-                        </div>
-                        
-                        <!-- Store cluster data for modal -->
-                        <script type="application/json" class="cluster-data" data-cluster-id="{{ cluster_id }}" data-endpoint-id="{{ endpoint.endpoint }}">
-                            {{ cluster_data | tojson }}
-                        </script>
-                    </div>
-                    {% endif %}
-                    {% endfor %}
-                </div>
-            </div>
-        </div>
-        {% endfor %}
-    </div>
-</section>
-{% endif %}
+
 
 <!-- Cluster Details Modal -->
 <div id="clusterModal" class="modal">
@@ -364,6 +287,24 @@
 
 <!-- Modal overlay -->
 <div id="modalOverlay" class="modal-overlay" onclick="closeClusterModal()"></div>
+
+<!-- Validation Loader -->
+<div id="validationLoader" class="validation-loader" style="display: none;">
+    <div class="loader-content">
+        <div class="loader-spinner">
+            <i class="fas fa-shield-alt fa-3x"></i>
+            <div class="spinner-ring"></div>
+        </div>
+        <h3 id="loaderTitle">Validating Compliance...</h3>
+        <p id="loaderMessage">Please wait while we validate your device against the selected data model version.</p>
+        <div class="loader-progress">
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+            <span class="progress-text" id="progressText">Initializing...</span>
+        </div>
+    </div>
+</div>
 
 {% endblock %}
 
@@ -431,12 +372,14 @@
                 return;
             }
             
-            // Show immediate feedback - disable button and show loading state
-            validateBtn.disabled = true;
-            validateBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Starting validation...';
+            // Show validation loader
+            showValidationLoader();
             hideMessage('validateMessage');
             
-            // Make API call directly without progress tracking
+            // Simulate progress updates
+            simulateProgress();
+            
+            // Make API call
             fetch('/api/validate-compliance', {
                 method: 'POST',
                 headers: {
@@ -448,22 +391,19 @@
             })
             .then(response => response.json())
             .then(data => {
-                validateBtn.disabled = false;
-                validateBtn.innerHTML = '<i class="fas fa-shield-alt"></i> Validate Compliance';
-                
                 if (data.success) {
-                    showMessage('validateMessage', data.message, 'success');
-                    // Direct reload without the loading transition
+                    updateProgress(100, 'Validation complete!');
                     setTimeout(() => {
+                        hideValidationLoader();
                         window.location.reload();
                     }, 1000);
                 } else {
+                    hideValidationLoader();
                     showMessage('validateMessage', data.error, 'error');
                 }
             })
             .catch(error => {
-                validateBtn.disabled = false;
-                validateBtn.innerHTML = '<i class="fas fa-shield-alt"></i> Validate Compliance';
+                hideValidationLoader();
                 showMessage('validateMessage', 'Error: ' + error.message, 'error');
             });
         });
@@ -529,6 +469,39 @@
                 }, 500);
             });
         }
+    }
+    
+    // Validation Loader Functions
+    function showValidationLoader() {
+        document.getElementById('validationLoader').style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+    }
+    
+    function hideValidationLoader() {
+        document.getElementById('validationLoader').style.display = 'none';
+        document.body.style.overflow = 'auto';
+    }
+    
+    function updateProgress(percentage, message) {
+        document.getElementById('progressFill').style.width = percentage + '%';
+        document.getElementById('progressText').textContent = message;
+    }
+    
+    function simulateProgress() {
+        const steps = [
+            { progress: 10, message: 'Loading requirements...', delay: 200 },
+            { progress: 25, message: 'Parsing device data...', delay: 500 },
+            { progress: 40, message: 'Validating clusters...', delay: 800 },
+            { progress: 60, message: 'Checking attributes...', delay: 1200 },
+            { progress: 80, message: 'Verifying commands...', delay: 1500 },
+            { progress: 95, message: 'Finalizing results...', delay: 1800 }
+        ];
+        
+        steps.forEach(step => {
+            setTimeout(() => {
+                updateProgress(step.progress, step.message);
+            }, step.delay);
+        });
     }
 </script>
 {% endblock %} 
