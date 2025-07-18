@@ -17,13 +17,7 @@ logger = logging.getLogger(__name__)
 
 def test_client_cluster_validation():
     # Test data structure based on user's parsed_data.json
-    test_endpoint_clusters = {
-        "0x0002": {
-            "attributes": {
-                "ClientList": [{"id": "0x0029", "name": "ota_software_update_provider"}]
-            }
-        }
-    }
+    test_endpoint_clusters = {"0x0002": {"attributes": {"ClientList": [{"id": "0x0029", "name": "ota_software_update_provider"}]}}}
 
     # Test requirement for OTA client cluster
     required_cluster = {

@@ -70,9 +70,7 @@ def validate_device_compliance(parsed_data, element_requirements):
                 break
 
         if not device_type_list:
-            endpoint_result["device_types"].append(
-                {"error": "No DeviceTypeList found in descriptor cluster"}
-            )
+            endpoint_result["device_types"].append({"error": "No DeviceTypeList found in descriptor cluster"})
             endpoint_result["is_compliant"] = False
         else:
             # Validate each device type
@@ -86,23 +84,15 @@ def validate_device_compliance(parsed_data, element_requirements):
                     device_type_id = device_type_id
 
                 if device_type_id in requirements_lookup:
-                    device_validation = validate_single_device_type(
-                        endpoint, device_type_id, requirements_lookup[device_type_id]
-                    )
+                    device_validation = validate_single_device_type(endpoint, device_type_id, requirements_lookup[device_type_id])
                     endpoint_result["device_types"].append(device_validation)
                     if not device_validation["is_compliant"]:
                         endpoint_result["is_compliant"] = False
-                        endpoint_result["missing_elements"].extend(
-                            device_validation["missing_elements"]
-                        )
+                        endpoint_result["missing_elements"].extend(device_validation["missing_elements"])
                 else:
                     endpoint_result["device_types"].append(
                         {
-                            "device_type_id": (
-                                f"0x{device_type_id:04X}"
-                                if isinstance(device_type_id, int)
-                                else device_type_id
-                            ),
+                            "device_type_id": (f"0x{device_type_id:04X}" if isinstance(device_type_id, int) else device_type_id),
                             "device_type_name": "unknown",
                             "error": f"Device type {device_type_id} not found in requirements",
                         }
@@ -181,11 +171,7 @@ def validate_cluster(endpoint_clusters, required_cluster):
         if attr_id in actual_cluster.get("attributes", {}):
             found = True
         # Also check in AttributeList for reference
-        attr_list = (
-            actual_cluster.get("attributes", {})
-            .get("AttributeList", {})
-            .get("AttributeList", [])
-        )
+        attr_list = actual_cluster.get("attributes", {}).get("AttributeList", {}).get("AttributeList", [])
         for attr_ref in attr_list:
             if attr_ref.get("id") == attr_id:
                 found = True
@@ -211,11 +197,7 @@ def validate_cluster(endpoint_clusters, required_cluster):
         # Check in both GeneratedCommandList and AcceptedCommandList
         found = False
         for cmd_list_name in ["GeneratedCommandList", "AcceptedCommandList"]:
-            cmd_list = (
-                actual_cluster.get("commands", {})
-                .get(cmd_list_name, {})
-                .get(cmd_list_name, [])
-            )
+            cmd_list = actual_cluster.get("commands", {}).get(cmd_list_name, {}).get(cmd_list_name, [])
             for cmd in cmd_list:
                 if cmd.get("id") == cmd_id:
                     found = True
@@ -256,33 +238,19 @@ if __name__ == "__main__":
         print("\n=== VALIDATION SUMMARY ===")
         print(f"Total Endpoints: {validation_result['summary']['total_endpoints']}")
         print(f"Compliant: {validation_result['summary']['compliant_endpoints']}")
-        print(
-            f"Non-Compliant: {validation_result['summary']['non_compliant_endpoints']}"
-        )
+        print(f"Non-Compliant: {validation_result['summary']['non_compliant_endpoints']}")
 
         for endpoint in validation_result["endpoints"]:
-            print(
-                f"\nEndpoint {endpoint['endpoint']}: {'✅ COMPLIANT' if endpoint['is_compliant'] else '❌ NON-COMPLIANT'}"
-            )
+            print(f"\nEndpoint {endpoint['endpoint']}: {'✅ COMPLIANT' if endpoint['is_compliant'] else '❌ NON-COMPLIANT'}")
             for device_type in endpoint["device_types"]:
                 if "device_type_name" in device_type:
-                    print(
-                        f"  Device Type: {device_type['device_type_name']} ({device_type['device_type_id']})"
-                    )
+                    print(f"  Device Type: {device_type['device_type_name']} ({device_type['device_type_id']})")
                     if not device_type.get("is_compliant", True):
-                        print(
-                            f"    Missing {len(device_type['missing_elements'])} elements"
-                        )
-                        for missing in device_type["missing_elements"][
-                            :3
-                        ]:  # Show first 3
-                            print(
-                                f"      - {missing['type']}: {missing['name']} ({missing['id']})"
-                            )
+                        print(f"    Missing {len(device_type['missing_elements'])} elements")
+                        for missing in device_type["missing_elements"][:3]:  # Show first 3
+                            print(f"      - {missing['type']}: {missing['name']} ({missing['id']})")
                         if len(device_type["missing_elements"]) > 3:
-                            print(
-                                f"      ... and {len(device_type['missing_elements']) - 3} more"
-                            )
+                            print(f"      ... and {len(device_type['missing_elements']) - 3} more")
 
         # Save validation results
         with open("validation_results.json", "w") as f:

@@ -1975,7 +1975,23 @@
                     {
                         "name": "temperature_number",
                         "id": "0x0001",
-                        "code": "TN"
+                        "code": "TN",
+                        "attributes": [
+                            {
+                                "name": "temperature_setpoint",
+                                "id": "0x0000"
+                            },
+                            {
+                                "name": "min_temperature",
+                                "id": "0x0001"
+                            },
+                            {
+                                "name": "max_temperature",
+                                "id": "0x0002"
+                            }
+                        ],
+                        "commands": [],
+                        "events": []
                     }
                 ],
                 "type": "server"
@@ -2032,7 +2048,10 @@
                     {
                         "name": "dead_front_behavior",
                         "id": "0x0002",
-                        "code": "DF"
+                        "code": "DF",
+                        "attributes": [],
+                        "commands": [],
+                        "events": []
                     }
                 ],
                 "type": "server"
@@ -2363,7 +2382,10 @@
                     {
                         "name": "off_only",
                         "id": "0x0004",
-                        "code": "OFFONLY"
+                        "code": "OFFONLY",
+                        "attributes": [],
+                        "commands": [],
+                        "events": []
                     }
                 ],
                 "type": "server"
@@ -3064,7 +3086,40 @@
                     {
                         "name": "lighting",
                         "id": "0x0001",
-                        "code": "LT"
+                        "code": "LT",
+                        "attributes": [
+                            {
+                                "name": "global_scene_control",
+                                "id": "0x4000"
+                            },
+                            {
+                                "name": "on_time",
+                                "id": "0x4001"
+                            },
+                            {
+                                "name": "off_wait_time",
+                                "id": "0x4002"
+                            },
+                            {
+                                "name": "start_up_on_off",
+                                "id": "0x4003"
+                            }
+                        ],
+                        "commands": [
+                            {
+                                "name": "off_with_effect",
+                                "id": "0x0040"
+                            },
+                            {
+                                "name": "on_with_recall_global_scene",
+                                "id": "0x0041"
+                            },
+                            {
+                                "name": "on_with_timed_off",
+                                "id": "0x0042"
+                            }
+                        ],
+                        "events": []
                     }
                 ],
                 "type": "server"
@@ -3172,7 +3227,40 @@
                     {
                         "name": "lighting",
                         "id": "0x0001",
-                        "code": "LT"
+                        "code": "LT",
+                        "attributes": [
+                            {
+                                "name": "global_scene_control",
+                                "id": "0x4000"
+                            },
+                            {
+                                "name": "on_time",
+                                "id": "0x4001"
+                            },
+                            {
+                                "name": "off_wait_time",
+                                "id": "0x4002"
+                            },
+                            {
+                                "name": "start_up_on_off",
+                                "id": "0x4003"
+                            }
+                        ],
+                        "commands": [
+                            {
+                                "name": "off_with_effect",
+                                "id": "0x0040"
+                            },
+                            {
+                                "name": "on_with_recall_global_scene",
+                                "id": "0x0041"
+                            },
+                            {
+                                "name": "on_with_timed_off",
+                                "id": "0x0042"
+                            }
+                        ],
+                        "events": []
                     }
                 ],
                 "type": "server"
@@ -3234,12 +3322,27 @@
                     {
                         "name": "lighting",
                         "id": "0x0002",
-                        "code": "LT"
+                        "code": "LT",
+                        "attributes": [
+                            {
+                                "name": "remaining_time",
+                                "id": "0x0001"
+                            },
+                            {
+                                "name": "start_up_current_level",
+                                "id": "0x4000"
+                            }
+                        ],
+                        "commands": [],
+                        "events": []
                     },
                     {
                         "name": "on_off",
                         "id": "0x0001",
-                        "code": "OO"
+                        "code": "OO",
+                        "attributes": [],
+                        "commands": [],
+                        "events": []
                     }
                 ],
                 "type": "server"
@@ -3815,7 +3918,40 @@
                     {
                         "name": "lighting",
                         "id": "0x0001",
-                        "code": "LT"
+                        "code": "LT",
+                        "attributes": [
+                            {
+                                "name": "global_scene_control",
+                                "id": "0x4000"
+                            },
+                            {
+                                "name": "on_time",
+                                "id": "0x4001"
+                            },
+                            {
+                                "name": "off_wait_time",
+                                "id": "0x4002"
+                            },
+                            {
+                                "name": "start_up_on_off",
+                                "id": "0x4003"
+                            }
+                        ],
+                        "commands": [
+                            {
+                                "name": "off_with_effect",
+                                "id": "0x0040"
+                            },
+                            {
+                                "name": "on_with_recall_global_scene",
+                                "id": "0x0041"
+                            },
+                            {
+                                "name": "on_with_timed_off",
+                                "id": "0x0042"
+                            }
+                        ],
+                        "events": []
                     }
                 ],
                 "type": "server"
@@ -3923,7 +4059,40 @@
                     {
                         "name": "lighting",
                         "id": "0x0001",
-                        "code": "LT"
+                        "code": "LT",
+                        "attributes": [
+                            {
+                                "name": "global_scene_control",
+                                "id": "0x4000"
+                            },
+                            {
+                                "name": "on_time",
+                                "id": "0x4001"
+                            },
+                            {
+                                "name": "off_wait_time",
+                                "id": "0x4002"
+                            },
+                            {
+                                "name": "start_up_on_off",
+                                "id": "0x4003"
+                            }
+                        ],
+                        "commands": [
+                            {
+                                "name": "off_with_effect",
+                                "id": "0x0040"
+                            },
+                            {
+                                "name": "on_with_recall_global_scene",
+                                "id": "0x0041"
+                            },
+                            {
+                                "name": "on_with_timed_off",
+                                "id": "0x0042"
+                            }
+                        ],
+                        "events": []
                     }
                 ],
                 "type": "server"
@@ -3985,12 +4154,27 @@
                     {
                         "name": "on_off",
                         "id": "0x0001",
-                        "code": "OO"
+                        "code": "OO",
+                        "attributes": [],
+                        "commands": [],
+                        "events": []
                     },
                     {
                         "name": "lighting",
                         "id": "0x0002",
-                        "code": "LT"
+                        "code": "LT",
+                        "attributes": [
+                            {
+                                "name": "remaining_time",
+                                "id": "0x0001"
+                            },
+                            {
+                                "name": "start_up_current_level",
+                                "id": "0x4000"
+                            }
+                        ],
+                        "commands": [],
+                        "events": []
                     }
                 ],
                 "type": "server"
@@ -4098,7 +4282,40 @@
                     {
                         "name": "lighting",
                         "id": "0x0001",
-                        "code": "LT"
+                        "code": "LT",
+                        "attributes": [
+                            {
+                                "name": "global_scene_control",
+                                "id": "0x4000"
+                            },
+                            {
+                                "name": "on_time",
+                                "id": "0x4001"
+                            },
+                            {
+                                "name": "off_wait_time",
+                                "id": "0x4002"
+                            },
+                            {
+                                "name": "start_up_on_off",
+                                "id": "0x4003"
+                            }
+                        ],
+                        "commands": [
+                            {
+                                "name": "off_with_effect",
+                                "id": "0x0040"
+                            },
+                            {
+                                "name": "on_with_recall_global_scene",
+                                "id": "0x0041"
+                            },
+                            {
+                                "name": "on_with_timed_off",
+                                "id": "0x0042"
+                            }
+                        ],
+                        "events": []
                     }
                 ],
                 "type": "server"
@@ -4160,12 +4377,27 @@
                     {
                         "name": "on_off",
                         "id": "0x0001",
-                        "code": "OO"
+                        "code": "OO",
+                        "attributes": [],
+                        "commands": [],
+                        "events": []
                     },
                     {
                         "name": "lighting",
                         "id": "0x0002",
-                        "code": "LT"
+                        "code": "LT",
+                        "attributes": [
+                            {
+                                "name": "remaining_time",
+                                "id": "0x0001"
+                            },
+                            {
+                                "name": "start_up_current_level",
+                                "id": "0x4000"
+                            }
+                        ],
+                        "commands": [],
+                        "events": []
                     }
                 ],
                 "type": "server"
@@ -4202,7 +4434,48 @@
                     {
                         "name": "color_temperature",
                         "id": "0x0010",
-                        "code": "CT"
+                        "code": "CT",
+                        "attributes": [
+                            {
+                                "name": "color_temperature_mireds",
+                                "id": "0x0007"
+                            },
+                            {
+                                "name": "color_temp_physical_min_mireds",
+                                "id": "0x400B"
+                            },
+                            {
+                                "name": "color_temp_physical_max_mireds",
+                                "id": "0x400C"
+                            },
+                            {
+                                "name": "couple_color_temp_to_level_min_mireds",
+                                "id": "0x400D"
+                            },
+                            {
+                                "name": "start_up_color_temperature_mireds",
+                                "id": "0x4010"
+                            }
+                        ],
+                        "commands": [
+                            {
+                                "name": "move_to_color_temperature",
+                                "id": "0x000A"
+                            },
+                            {
+                                "name": "stop_move_step",
+                                "id": "0x0047"
+                            },
+                            {
+                                "name": "move_color_temperature",
+                                "id": "0x004B"
+                            },
+                            {
+                                "name": "step_color_temperature",
+                                "id": "0x004C"
+                            }
+                        ],
+                        "events": []
                     }
                 ],
                 "type": "server"
@@ -4310,7 +4583,40 @@
                     {
                         "name": "lighting",
                         "id": "0x0001",
-                        "code": "LT"
+                        "code": "LT",
+                        "attributes": [
+                            {
+                                "name": "global_scene_control",
+                                "id": "0x4000"
+                            },
+                            {
+                                "name": "on_time",
+                                "id": "0x4001"
+                            },
+                            {
+                                "name": "off_wait_time",
+                                "id": "0x4002"
+                            },
+                            {
+                                "name": "start_up_on_off",
+                                "id": "0x4003"
+                            }
+                        ],
+                        "commands": [
+                            {
+                                "name": "off_with_effect",
+                                "id": "0x0040"
+                            },
+                            {
+                                "name": "on_with_recall_global_scene",
+                                "id": "0x0041"
+                            },
+                            {
+                                "name": "on_with_timed_off",
+                                "id": "0x0042"
+                            }
+                        ],
+                        "events": []
                     }
                 ],
                 "type": "server"
@@ -4372,12 +4678,27 @@
                     {
                         "name": "on_off",
                         "id": "0x0001",
-                        "code": "OO"
+                        "code": "OO",
+                        "attributes": [],
+                        "commands": [],
+                        "events": []
                     },
                     {
                         "name": "lighting",
                         "id": "0x0002",
-                        "code": "LT"
+                        "code": "LT",
+                        "attributes": [
+                            {
+                                "name": "remaining_time",
+                                "id": "0x0001"
+                            },
+                            {
+                                "name": "start_up_current_level",
+                                "id": "0x4000"
+                            }
+                        ],
+                        "commands": [],
+                        "events": []
                     }
                 ],
                 "type": "server"
@@ -4414,12 +4735,82 @@
                     {
                         "name": "xy",
                         "id": "0x0008",
-                        "code": "XY"
+                        "code": "XY",
+                        "attributes": [
+                            {
+                                "name": "current_x",
+                                "id": "0x0003"
+                            },
+                            {
+                                "name": "current_y",
+                                "id": "0x0004"
+                            }
+                        ],
+                        "commands": [
+                            {
+                                "name": "move_to_color",
+                                "id": "0x0007"
+                            },
+                            {
+                                "name": "move_color",
+                                "id": "0x0008"
+                            },
+                            {
+                                "name": "step_color",
+                                "id": "0x0009"
+                            },
+                            {
+                                "name": "stop_move_step",
+                                "id": "0x0047"
+                            }
+                        ],
+                        "events": []
                     },
                     {
                         "name": "color_temperature",
                         "id": "0x0010",
-                        "code": "CT"
+                        "code": "CT",
+                        "attributes": [
+                            {
+                                "name": "color_temperature_mireds",
+                                "id": "0x0007"
+                            },
+                            {
+                                "name": "color_temp_physical_min_mireds",
+                                "id": "0x400B"
+                            },
+                            {
+                                "name": "color_temp_physical_max_mireds",
+                                "id": "0x400C"
+                            },
+                            {
+                                "name": "couple_color_temp_to_level_min_mireds",
+                                "id": "0x400D"
+                            },
+                            {
+                                "name": "start_up_color_temperature_mireds",
+                                "id": "0x4010"
+                            }
+                        ],
+                        "commands": [
+                            {
+                                "name": "move_to_color_temperature",
+                                "id": "0x000A"
+                            },
+                            {
+                                "name": "stop_move_step",
+                                "id": "0x0047"
+                            },
+                            {
+                                "name": "move_color_temperature",
+                                "id": "0x004B"
+                            },
+                            {
+                                "name": "step_color_temperature",
+                                "id": "0x004C"
+                            }
+                        ],
+                        "events": []
                     }
                 ],
                 "type": "server"
@@ -4527,7 +4918,40 @@
                     {
                         "name": "lighting",
                         "id": "0x0001",
-                        "code": "LT"
+                        "code": "LT",
+                        "attributes": [
+                            {
+                                "name": "global_scene_control",
+                                "id": "0x4000"
+                            },
+                            {
+                                "name": "on_time",
+                                "id": "0x4001"
+                            },
+                            {
+                                "name": "off_wait_time",
+                                "id": "0x4002"
+                            },
+                            {
+                                "name": "start_up_on_off",
+                                "id": "0x4003"
+                            }
+                        ],
+                        "commands": [
+                            {
+                                "name": "off_with_effect",
+                                "id": "0x0040"
+                            },
+                            {
+                                "name": "on_with_recall_global_scene",
+                                "id": "0x0041"
+                            },
+                            {
+                                "name": "on_with_timed_off",
+                                "id": "0x0042"
+                            }
+                        ],
+                        "events": []
                     }
                 ],
                 "type": "server"
@@ -4635,7 +5059,40 @@
                     {
                         "name": "lighting",
                         "id": "0x0001",
-                        "code": "LT"
+                        "code": "LT",
+                        "attributes": [
+                            {
+                                "name": "global_scene_control",
+                                "id": "0x4000"
+                            },
+                            {
+                                "name": "on_time",
+                                "id": "0x4001"
+                            },
+                            {
+                                "name": "off_wait_time",
+                                "id": "0x4002"
+                            },
+                            {
+                                "name": "start_up_on_off",
+                                "id": "0x4003"
+                            }
+                        ],
+                        "commands": [
+                            {
+                                "name": "off_with_effect",
+                                "id": "0x0040"
+                            },
+                            {
+                                "name": "on_with_recall_global_scene",
+                                "id": "0x0041"
+                            },
+                            {
+                                "name": "on_with_timed_off",
+                                "id": "0x0042"
+                            }
+                        ],
+                        "events": []
                     }
                 ],
                 "type": "server"
@@ -4697,12 +5154,27 @@
                     {
                         "name": "on_off",
                         "id": "0x0001",
-                        "code": "OO"
+                        "code": "OO",
+                        "attributes": [],
+                        "commands": [],
+                        "events": []
                     },
                     {
                         "name": "lighting",
                         "id": "0x0002",
-                        "code": "LT"
+                        "code": "LT",
+                        "attributes": [
+                            {
+                                "name": "remaining_time",
+                                "id": "0x0001"
+                            },
+                            {
+                                "name": "start_up_current_level",
+                                "id": "0x4000"
+                            }
+                        ],
+                        "commands": [],
+                        "events": []
                     }
                 ],
                 "type": "server"
@@ -4985,7 +5457,48 @@
                     {
                         "name": "audio",
                         "id": "0x0001",
-                        "code": "ADO"
+                        "code": "ADO",
+                        "attributes": [
+                            {
+                                "name": "microphone_capabilities",
+                                "id": "0x0007"
+                            },
+                            {
+                                "name": "allocated_audio_streams",
+                                "id": "0x0010"
+                            },
+                            {
+                                "name": "microphone_muted",
+                                "id": "0x001D"
+                            },
+                            {
+                                "name": "microphone_volume_level",
+                                "id": "0x001E"
+                            },
+                            {
+                                "name": "microphone_max_level",
+                                "id": "0x001F"
+                            },
+                            {
+                                "name": "microphone_min_level",
+                                "id": "0x0020"
+                            }
+                        ],
+                        "commands": [
+                            {
+                                "name": "audio_stream_allocate",
+                                "id": "0x0000"
+                            },
+                            {
+                                "name": "audio_stream_allocate_response",
+                                "id": "0x0001"
+                            },
+                            {
+                                "name": "audio_stream_deallocate",
+                                "id": "0x0002"
+                            }
+                        ],
+                        "events": []
                     }
                 ],
                 "type": "server"
@@ -5284,17 +5797,172 @@
                     {
                         "name": "video",
                         "id": "0x0002",
-                        "code": "VDO"
+                        "code": "VDO",
+                        "attributes": [
+                            {
+                                "name": "max_concurrent_encoders",
+                                "id": "0x0000"
+                            },
+                            {
+                                "name": "max_encoded_pixel_rate",
+                                "id": "0x0001"
+                            },
+                            {
+                                "name": "video_sensor_params",
+                                "id": "0x0002"
+                            },
+                            {
+                                "name": "night_vision_capable",
+                                "id": "0x0003"
+                            },
+                            {
+                                "name": "min_viewport",
+                                "id": "0x0004"
+                            },
+                            {
+                                "name": "rate_distortion_trade_off_points",
+                                "id": "0x0005"
+                            },
+                            {
+                                "name": "current_frame_rate",
+                                "id": "0x000C"
+                            },
+                            {
+                                "name": "allocated_video_streams",
+                                "id": "0x000F"
+                            },
+                            {
+                                "name": "ranked_video_stream_priorities_list",
+                                "id": "0x0012"
+                            },
+                            {
+                                "name": "viewport",
+                                "id": "0x0018"
+                            },
+                            {
+                                "name": "local_video_recording_enabled",
+                                "id": "0x0025"
+                            }
+                        ],
+                        "commands": [
+                            {
+                                "name": "video_stream_allocate",
+                                "id": "0x0003"
+                            },
+                            {
+                                "name": "video_stream_allocate_response",
+                                "id": "0x0004"
+                            },
+                            {
+                                "name": "video_stream_modify",
+                                "id": "0x0005"
+                            },
+                            {
+                                "name": "video_stream_deallocate",
+                                "id": "0x0006"
+                            }
+                        ],
+                        "events": []
                     },
                     {
                         "name": "audio",
                         "id": "0x0001",
-                        "code": "ADO"
+                        "code": "ADO",
+                        "attributes": [
+                            {
+                                "name": "microphone_capabilities",
+                                "id": "0x0007"
+                            },
+                            {
+                                "name": "allocated_audio_streams",
+                                "id": "0x0010"
+                            },
+                            {
+                                "name": "microphone_muted",
+                                "id": "0x001D"
+                            },
+                            {
+                                "name": "microphone_volume_level",
+                                "id": "0x001E"
+                            },
+                            {
+                                "name": "microphone_max_level",
+                                "id": "0x001F"
+                            },
+                            {
+                                "name": "microphone_min_level",
+                                "id": "0x0020"
+                            }
+                        ],
+                        "commands": [
+                            {
+                                "name": "audio_stream_allocate",
+                                "id": "0x0000"
+                            },
+                            {
+                                "name": "audio_stream_allocate_response",
+                                "id": "0x0001"
+                            },
+                            {
+                                "name": "audio_stream_deallocate",
+                                "id": "0x0002"
+                            }
+                        ],
+                        "events": []
                     },
                     {
                         "name": "snapshot",
                         "id": "0x0004",
-                        "code": "SNP"
+                        "code": "SNP",
+                        "attributes": [
+                            {
+                                "name": "max_concurrent_encoders",
+                                "id": "0x0000"
+                            },
+                            {
+                                "name": "max_encoded_pixel_rate",
+                                "id": "0x0001"
+                            },
+                            {
+                                "name": "snapshot_capabilities",
+                                "id": "0x000A"
+                            },
+                            {
+                                "name": "allocated_snapshot_streams",
+                                "id": "0x0011"
+                            },
+                            {
+                                "name": "local_snapshot_recording_enabled",
+                                "id": "0x0026"
+                            }
+                        ],
+                        "commands": [
+                            {
+                                "name": "snapshot_stream_allocate",
+                                "id": "0x0007"
+                            },
+                            {
+                                "name": "snapshot_stream_allocate_response",
+                                "id": "0x0008"
+                            },
+                            {
+                                "name": "snapshot_stream_modify",
+                                "id": "0x0009"
+                            },
+                            {
+                                "name": "snapshot_stream_deallocate",
+                                "id": "0x000A"
+                            },
+                            {
+                                "name": "capture_snapshot",
+                                "id": "0x000C"
+                            },
+                            {
+                                "name": "capture_snapshot_response",
+                                "id": "0x000D"
+                            }
+                        ],
+                        "events": []
                     }
                 ],
                 "type": "server"
@@ -5538,7 +6206,56 @@
                     {
                         "name": "snapshot",
                         "id": "0x0004",
-                        "code": "SNP"
+                        "code": "SNP",
+                        "attributes": [
+                            {
+                                "name": "max_concurrent_encoders",
+                                "id": "0x0000"
+                            },
+                            {
+                                "name": "max_encoded_pixel_rate",
+                                "id": "0x0001"
+                            },
+                            {
+                                "name": "snapshot_capabilities",
+                                "id": "0x000A"
+                            },
+                            {
+                                "name": "allocated_snapshot_streams",
+                                "id": "0x0011"
+                            },
+                            {
+                                "name": "local_snapshot_recording_enabled",
+                                "id": "0x0026"
+                            }
+                        ],
+                        "commands": [
+                            {
+                                "name": "snapshot_stream_allocate",
+                                "id": "0x0007"
+                            },
+                            {
+                                "name": "snapshot_stream_allocate_response",
+                                "id": "0x0008"
+                            },
+                            {
+                                "name": "snapshot_stream_modify",
+                                "id": "0x0009"
+                            },
+                            {
+                                "name": "snapshot_stream_deallocate",
+                                "id": "0x000A"
+                            },
+                            {
+                                "name": "capture_snapshot",
+                                "id": "0x000C"
+                            },
+                            {
+                                "name": "capture_snapshot_response",
+                                "id": "0x000D"
+                            }
+                        ],
+                        "events": []
                     }
                 ],
                 "type": "server"
@@ -7637,7 +8354,19 @@
                     {
                         "name": "heating",
                         "id": "0x0001",
-                        "code": "HEAT"
+                        "code": "HEAT",
+                        "attributes": [
+                            {
+                                "name": "occupied_heating_setpoint",
+                                "id": "0x0012"
+                            },
+                            {
+                                "name": "unoccupied_heating_setpoint",
+                                "id": "0x0014"
+                            }
+                        ],
+                        "commands": [],
+                        "events": []
                     }
                 ],
                 "type": "server"
@@ -7840,7 +8569,15 @@
                     {
                         "name": "tag_list",
                         "id": "0x0001",
-                        "code": "TAGLIST"
+                        "code": "TAGLIST",
+                        "attributes": [
+                            {
+                                "name": "tag_list",
+                                "id": "0x0004"
+                            }
+                        ],
+                        "commands": [],
+                        "events": []
                     }
                 ],
                 "type": "server"

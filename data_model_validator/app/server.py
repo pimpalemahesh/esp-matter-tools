@@ -31,6 +31,7 @@ VALIDATION_RESULTS_FILE = os.path.join(OUTPUT_DIR, "validation_results.json")
 # Ensure output directory exists
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
+
 # Clear existing JSON files on app start (refresh behavior)
 def clear_existing_files():
     """Clear existing JSON files to reset the app state"""
@@ -43,6 +44,7 @@ def clear_existing_files():
             logger.info("Cleared existing validation_results.json")
     except Exception as e:
         logger.error(f"Error clearing existing files: {e}")
+
 
 # Clear files on app start
 clear_existing_files()
@@ -147,22 +149,14 @@ def validate_compliance():
         valid_versions = ["1.3", "1.4", "1.4.1", "1.4.2", "master"]
         if chip_version not in valid_versions:
             return (
-                jsonify(
-                    {
-                        "error": f'Invalid chip_version. Must be one of: {", ".join(valid_versions)}'
-                    }
-                ),
+                jsonify({"error": f'Invalid chip_version. Must be one of: {", ".join(valid_versions)}'}),
                 400,
             )
 
         # Check if parsed data exists
         if not os.path.exists(PARSED_DATA_FILE):
             return (
-                jsonify(
-                    {
-                        "error": "No parsed data found. Please upload and parse a wildcard file first."
-                    }
-                ),
+                jsonify({"error": "No parsed data found. Please upload and parse a wildcard file first."}),
                 400,
             )
 
@@ -170,11 +164,7 @@ def validate_compliance():
         requirements_file = f"data/element_requirements_{chip_version}.json"
         if not os.path.exists(requirements_file):
             return (
-                jsonify(
-                    {
-                        "error": f"Version {chip_version} is not supported yet. Currently supported versions will be available once the element requirements are generated."
-                    }
-                ),
+                jsonify({"error": f"Version {chip_version} is not supported yet. Currently supported versions will be available once the element requirements are generated."}),
                 400,
             )
 
@@ -182,11 +172,7 @@ def validate_compliance():
         element_requirements = load_element_requirements(chip_version)
         if not element_requirements:
             return (
-                jsonify(
-                    {
-                        "error": f"Failed to load element requirements for version {chip_version}."
-                    }
-                ),
+                jsonify({"error": f"Failed to load element requirements for version {chip_version}."}),
                 500,
             )
 
@@ -195,9 +181,7 @@ def validate_compliance():
             parsed_data = json.load(f)
 
         # Perform validation
-        validation_data = validate_device_compliance(
-            parsed_data, element_requirements, chip_version
-        )
+        validation_data = validate_device_compliance(parsed_data, element_requirements, chip_version)
 
         # Save validation results
         with open(VALIDATION_RESULTS_FILE, "w") as f:

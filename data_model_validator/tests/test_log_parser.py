@@ -398,9 +398,7 @@ class TestParseMetadataLine:
         line = "Endpoint: 0 Cluster: 0x001D"
         result = parse_metadata_line(line)
 
-        assert (
-            result == {}
-        )  # Should return empty dict if pattern doesn't match completely
+        assert result == {}  # Should return empty dict if pattern doesn't match completely
 
 
 class TestProcessAttributeData:
@@ -510,8 +508,4 @@ class TestLogParserErrorHandling:
             pass  # Expected for no valid [TOO] entries
 
         # Logger should have been called (exact calls depend on implementation)
-        assert (
-            mock_logger.info.called
-            or mock_logger.error.called
-            or mock_logger.warning.called
-        )
+        assert mock_logger.info.called or mock_logger.error.called or mock_logger.warning.called

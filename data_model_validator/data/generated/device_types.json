@@ -1,0 +1,1620 @@
+[
+    {
+        "name": "door_lock",
+        "id": "0x000A",
+        "revision": "3",
+        "clusters": [
+            {
+                "name": "identify",
+                "id": "0x0003",
+                "type": "server",
+                "features": [],
+                "commands": [],
+                "attributes": []
+            },
+            {
+                "name": "door_lock",
+                "id": "0x0101",
+                "type": "server",
+                "features": [],
+                "commands": [],
+                "attributes": []
+            }
+        ]
+    },
+    {
+        "name": "door_lock_controller",
+        "id": "0x000B",
+        "revision": "3",
+        "clusters": [
+            {
+                "name": "door_lock",
+                "id": "0x0101",
+                "type": "client",
+                "features": [],
+                "commands": [],
+                "attributes": []
+            }
+        ]
+    },
+    {
+        "name": "aggregator",
+        "id": "0x000E",
+        "revision": "1",
+        "clusters": []
+    },
+    {
+        "name": "generic_switch",
+        "id": "0x000F",
+        "revision": "3",
+        "clusters": [
+            {
+                "name": "identify",
+                "id": "0x0003",
+                "type": "server",
+                "features": [],
+                "commands": [],
+                "attributes": []
+            },
+            {
+                "name": "switch_cluster",
+                "id": "0x003B",
+                "type": "server",
+                "features": [],
+                "commands": [],
+                "attributes": []
+            }
+        ]
+    },
+    {
+        "name": "power_source",
+        "id": "0x0011",
+        "revision": "1",
+        "clusters": [
+            {
+                "name": "power_source",
+                "id": "0x002F",
+                "type": "server",
+                "features": [],
+                "commands": [],
+                "attributes": []
+            }
+        ]
+    },
+    {
+        "name": "ota_requestor",
+        "id": "0x0012",
+        "revision": "1",
+        "clusters": [
+            {
+                "name": "ota_software_update_provider",
+                "id": "0x0029",
+                "type": "client",
+                "features": [],
+                "commands": [],
+                "attributes": []
+            },
+            {
+                "name": "ota_software_update_requestor",
+                "id": "0x002A",
+                "type": "server",
+                "features": [],
+                "commands": [],
+                "attributes": []
+            }
+        ]
+    },
+    {
+        "name": "bridged_node",
+        "id": "0x0013",
+        "revision": "2",
+        "clusters": [
+            {
+                "name": "bridged_device_basic_information",
+                "id": "0x0039",
+                "type": "server",
+                "features": [],
+                "commands": [],
+                "attributes": []
+            }
+        ]
+    },
+    {
+        "name": "ota_provider",
+        "id": "0x0014",
+        "revision": "1",
+        "clusters": [
+            {
+                "name": "ota_software_update_provider",
+                "id": "0x0029",
+                "type": "server",
+                "features": [],
+                "commands": [],
+                "attributes": []
+            }
+        ]
+    },
+    {
+        "name": "contact_sensor",
+        "id": "0x0015",
+        "revision": "2",
+        "clusters": [
+            {
+                "name": "identify",
+                "id": "0x0003",
+                "type": "server",
+                "features": [],
+                "commands": [],
+                "attributes": []
+            },
+            {
+                "name": "boolean_state",
+                "id": "0x0045",
+                "type": "server",
+                "features": [],
+                "commands": [],
+                "attributes": []
+            }
+        ]
+    },
+    {
+        "name": "root_node",
+        "id": "0x0016",
+        "revision": "2",
+        "clusters": [
+            {
+                "name": "access_control",
+                "id": "0x001F",
+                "type": "server",
+                "features": [],
+                "commands": [],
+                "attributes": []
+            },
+            {
+                "name": "basic_information",
+                "id": "0x0028",
+                "type": "server",
+                "features": [],
+                "commands": [],
+                "attributes": []
+            },
+            {
+                "name": "general_commissioning",
+                "id": "0x0030",
+                "type": "server",
+                "features": [],
+                "commands": [],
+                "attributes": []
+            },
+            {
+                "name": "general_diagnostics",
+                "id": "0x0033",
+                "type": "server",
+                "features": [],
+                "commands": [],
+                "attributes": []
+            },
+            {
+                "name": "administrator_commissioning",
+                "id": "0x003C",
+                "type": "server",
+                "features": [],
+                "commands": [],
+                "attributes": []
+            },
+            {
+                "name": "operational_credentials",
+                "id": "0x003E",
+                "type": "server",
+                "features": [],
+                "commands": [],
+                "attributes": []
+            },
+            {
+                "name": "group_key_management",
+                "id": "0x003F",
+                "type": "server",
+                "features": [],
+                "commands": [],
+                "attributes": []
+            }
+        ]
+    },
+    {
+        "name": "speaker",
+        "id": "0x0022",
+        "revision": "1",
+        "clusters": [
+            {
+                "name": "on_off",
+                "id": "0x0006",
+                "type": "server",
+                "features": [],
+                "commands": [],
+                "attributes": []
+            },
+            {
+                "name": "level_control",
+                "id": "0x0008",
+                "type": "server",
+                "features": [],
+                "commands": [],
+                "attributes": []
+            }
+        ]
+    },
+    {
+        "name": "casting_video_player",
+        "id": "0x0023",
+        "revision": "2",
+        "clusters": [
+            {
+                "name": "on_off",
+                "id": "0x0006",
+                "type": "server",
+                "features": [],
+                "commands": [],
+                "attributes": []
+            },
+            {
+                "name": "media_playback",
+                "id": "0x0506",
+                "type": "server",
+                "features": [],
+                "commands": [],
+                "attributes": []
+            },
+            {
+                "name": "keypad_input",
+                "id": "0x0509",
+                "type": "server",
+                "features": [],
+                "commands": [],
+                "attributes": []
+            },
+            {
+                "name": "content_launcher",
+                "id": "0x050A",
+                "type": "server",
+                "features": [],
+                "commands": [],
+                "attributes": []
+            }
+        ]
+    },
+    {
+        "name": "content_app",
+        "id": "0x0024",
+        "revision": "2",
+        "clusters": [
+            {
+                "name": "keypad_input",
+                "id": "0x0509",
+                "type": "server",
+                "features": [],
+                "commands": [],
+                "attributes": []
+            },
+            {
+                "name": "application_launcher",
+                "id": "0x050C",
+                "type": "server",
+                "features": [],
+                "commands": [],
+                "attributes": []
+            },
+            {
+                "name": "application_basic",
+                "id": "0x050D",
+                "type": "server",
+                "features": [],
+                "commands": [],
+                "attributes": []
+            }
+        ]
+    },
+    {
+        "name": "mode_select",
+        "id": "0x0027",
+        "revision": "1",
+        "clusters": [
+            {
+                "name": "mode_select",
+                "id": "0x0050",
+                "type": "server",
+                "features": [],
+                "commands": [],
+                "attributes": []
+            }
+        ]
+    },
+    {
+        "name": "basic_video_player",
+        "id": "0x0028",
+        "revision": "2",
+        "clusters": [
+            {
+                "name": "on_off",
+                "id": "0x0006",
+                "type": "server",
+                "features": [],
+                "commands": [],
+                "attributes": []
+            },
+            {
+                "name": "media_playback",
+                "id": "0x0506",
+                "type": "server",
+                "features": [],
+                "commands": [],
+                "attributes": []
+            },
+            {
+                "name": "keypad_input",
+                "id": "0x0509",
+                "type": "server",
+                "features": [],
+                "commands": [],
+                "attributes": []
+            }
+        ]
+    },
+    {
+        "name": "casting_video_client",
+        "id": "0x0029",
+        "revision": "2",
+        "clusters": [
+            {
+                "name": "on_off",
+                "id": "0x0006",
+                "type": "client",
+                "features": [],
+                "commands": [],
+                "attributes": []
+            },
+            {
+                "name": "keypad_input",
+                "id": "0x0509",
+                "type": "client",
+                "features": [],
+                "commands": [],
+                "attributes": []
+            },
+            {
+                "name": "content_launcher",
+                "id": "0x050A",
+                "type": "client",
+                "features": [],
+                "commands": [],
+                "attributes": []
+            },
+            {
+                "name": "application_basic",
+                "id": "0x050D",
+                "type": "client",
+                "features": [],
+                "commands": [],
+                "attributes": []
+            }
+        ]
+    },
+    {
+        "name": "video_remote_control",
+        "id": "0x002A",
+        "revision": "2",
+        "clusters": [
+            {
+                "name": "on_off",
+                "id": "0x0006",
+                "type": "client",
+                "features": [],
+                "commands": [],
+                "attributes": []
+            },
+            {
+                "name": "media_playback",
+                "id": "0x0506",
+                "type": "client",
+                "features": [],
+                "commands": [],
+                "attributes": []
+            },
+            {
+                "name": "keypad_input",
+                "id": "0x0509",
+                "type": "client",
+                "features": [],
+                "commands": [],
+                "attributes": []
+            }
+        ]
+    },
+    {
+        "name": "fan",
+        "id": "0x002B",
+        "revision": "2",
+        "clusters": [
+            {
+                "name": "identify",
+                "id": "0x0003",
+                "type": "server",
+                "features": [],
+                "commands": [],
+                "attributes": []
+            },
+            {
+                "name": "groups",
+                "id": "0x0004",
+                "type": "server",
+                "features": [],
+                "commands": [],
+                "attributes": []
+            },
+            {
+                "name": "fan_control",
+                "id": "0x0202",
+                "type": "server",
+                "features": [],
+                "commands": [],
+                "attributes": []
+            }
+        ]
+    },
+    {
+        "name": "air_quality_sensor",
+        "id": "0x002C",
+        "revision": "1",
+        "clusters": [
+            {
+                "name": "identify",
+                "id": "0x0003",
+                "type": "server",
+                "features": [],
+                "commands": [],
+                "attributes": []
+            },
+            {
+                "name": "air_quality",
+                "id": "0x005B",
+                "type": "server",
+                "features": [],
+                "commands": [],
+                "attributes": []
+            }
+        ]
+    },
+    {
+        "name": "air_purifier",
+        "id": "0x002D",
+        "revision": "1",
+        "clusters": [
+            {
+                "name": "identify",
+                "id": "0x0003",
+                "type": "server",
+                "features": [],
+                "commands": [],
+                "attributes": []
+            },
+            {
+                "name": "fan_control",
+                "id": "0x0202",
+                "type": "server",
+                "features": [],
+                "commands": [],
+                "attributes": []
+            }
+        ]
+    },
+    {
+        "name": "water_freeze_detector",
+        "id": "0x0041",
+        "revision": "1",
+        "clusters": [
+            {
+                "name": "identify",
+                "id": "0x0003",
+                "type": "server",
+                "features": [],
+                "commands": [],
+                "attributes": []
+            },
+            {
+                "name": "boolean_state",
+                "id": "0x0045",
+                "type": "server",
+                "features": [],
+                "commands": [],
+                "attributes": []
+            }
+        ]
+    },
+    {
+        "name": "water_valve",
+        "id": "0x0042",
+        "revision": "1",
+        "clusters": [
+            {
+                "name": "identify",
+                "id": "0x0003",
+                "type": "server",
+                "features": [],
+                "commands": [],
+                "attributes": []
+            },
+            {
+                "name": "valve_configuration_and_control",
+                "id": "0x0081",
+                "type": "server",
+                "features": [],
+                "commands": [],
+                "attributes": []
+            }
+        ]
+    },
+    {
+        "name": "water_leak_detector",
+        "id": "0x0043",
+        "revision": "1",
+        "clusters": [
+            {
+                "name": "identify",
+                "id": "0x0003",
+                "type": "server",
+                "features": [],
+                "commands": [],
+                "attributes": []
+            },
+            {
+                "name": "boolean_state",
+                "id": "0x0045",
+                "type": "server",
+                "features": [],
+                "commands": [],
+                "attributes": []
+            }
+        ]
+    },
+    {
+        "name": "rain_sensor",
+        "id": "0x0044",
+        "revision": "1",
+        "clusters": [
+            {
+                "name": "identify",
+                "id": "0x0003",
+                "type": "server",
+                "features": [],
+                "commands": [],
+                "attributes": []
+            },
+            {
+                "name": "boolean_state",
+                "id": "0x0045",
+                "type": "server",
+                "features": [],
+                "commands": [],
+                "attributes": []
+            }
+        ]
+    },
+    {
+        "name": "refrigerator",
+        "id": "0x0070",
+        "revision": "1",
+        "clusters": []
+    },
+    {
+        "name": "temperature_controlled_cabinet",
+        "id": "0x0071",
+        "revision": "2",
+        "clusters": [
+            {
+                "name": "temperature_control",
+                "id": "0x0056",
+                "type": "server",
+                "features": [],
+                "commands": [],
+                "attributes": []
+            }
+        ]
+    },
+    {
+        "name": "room_air_conditioner",
+        "id": "0x0072",
+        "revision": "2",
+        "clusters": [
+            {
+                "name": "identify",
+                "id": "0x0003",
+                "type": "server",
+                "features": [],
+                "commands": [],
+                "attributes": []
+            },
+            {
+                "name": "on_off",
+                "id": "0x0006",
+                "type": "server",
+                "features": [
+                    "dead_front_behavior"
+                ],
+                "commands": [],
+                "attributes": []
+            },
+            {
+                "name": "thermostat",
+                "id": "0x0201",
+                "type": "server",
+                "features": [],
+                "commands": [],
+                "attributes": []
+            }
+        ]
+    },
+    {
+        "name": "laundry_washer",
+        "id": "0x0073",
+        "revision": "1",
+        "clusters": [
+            {
+                "name": "operational_state",
+                "id": "0x0060",
+                "type": "server",
+                "features": [],
+                "commands": [],
+                "attributes": []
+            }
+        ]
+    },
+    {
+        "name": "robotic_vacuum_cleaner",
+        "id": "0x0074",
+        "revision": "2",
+        "clusters": [
+            {
+                "name": "identify",
+                "id": "0x0003",
+                "type": "server",
+                "features": [],
+                "commands": [],
+                "attributes": []
+            },
+            {
+                "name": "rvc_run_mode",
+                "id": "0x0054",
+                "type": "server",
+                "features": [],
+                "commands": [],
+                "attributes": []
+            },
+            {
+                "name": "rvc_operational_state",
+                "id": "0x0061",
+                "type": "server",
+                "features": [],
+                "commands": [],
+                "attributes": []
+            }
+        ]
+    },
+    {
+        "name": "dishwasher",
+        "id": "0x0075",
+        "revision": "1",
+        "clusters": [
+            {
+                "name": "operational_state",
+                "id": "0x0060",
+                "type": "server",
+                "features": [],
+                "commands": [],
+                "attributes": []
+            }
+        ]
+    },
+    {
+        "name": "smoke_co_alarm",
+        "id": "0x0076",
+        "revision": "1",
+        "clusters": [
+            {
+                "name": "identify",
+                "id": "0x0003",
+                "type": "server",
+                "features": [],
+                "commands": [],
+                "attributes": []
+            },
+            {
+                "name": "smoke_co_alarm",
+                "id": "0x005C",
+                "type": "server",
+                "features": [],
+                "commands": [],
+                "attributes": []
+            }
+        ]
+    },
+    {
+        "name": "cook_surface",
+        "id": "0x0077",
+        "revision": "1",
+        "clusters": []
+    },
+    {
+        "name": "cooktop",
+        "id": "0x0078",
+        "revision": "1",
+        "clusters": [
+            {
+                "name": "on_off",
+                "id": "0x0006",
+                "type": "server",
+                "features": [
+                    "offonly"
+                ],
+                "commands": [],
+                "attributes": []
+            }
+        ]
+    },
+    {
+        "name": "microwave_oven",
+        "id": "0x0079",
+        "revision": "1",
+        "clusters": [
+            {
+                "name": "microwave_oven_mode",
+                "id": "0x005E",
+                "type": "server",
+                "features": [],
+                "commands": [],
+                "attributes": []
+            },
+            {
+                "name": "microwave_oven_control",
+                "id": "0x005F",
+                "type": "server",
+                "features": [],
+                "commands": [],
+                "attributes": []
+            },
+            {
+                "name": "operational_state",
+                "id": "0x0060",
+                "type": "server",
+                "features": [],
+                "commands": [],
+                "attributes": []
+            }
+        ]
+    },
+    {
+        "name": "extractor_hood",
+        "id": "0x007A",
+        "revision": "1",
+        "clusters": [
+            {
+                "name": "fan_control",
+                "id": "0x0202",
+                "type": "server",
+                "features": [],
+                "commands": [],
+                "attributes": []
+            }
+        ]
+    },
+    {
+        "name": "oven",
+        "id": "0x007B",
+        "revision": "1",
+        "clusters": []
+    },
+    {
+        "name": "laundry_dryer",
+        "id": "0x007C",
+        "revision": "1",
+        "clusters": [
+            {
+                "name": "operational_state",
+                "id": "0x0060",
+                "type": "server",
+                "features": [],
+                "commands": [],
+                "attributes": []
+            }
+        ]
+    },
+    {
+        "name": "on_off_light",
+        "id": "0x0100",
+        "revision": "3",
+        "clusters": [
+            {
+                "name": "identify",
+                "id": "0x0003",
+                "type": "server",
+                "features": [],
+                "commands": [
+                    "trigger_effect"
+                ],
+                "attributes": []
+            },
+            {
+                "name": "groups",
+                "id": "0x0004",
+                "type": "server",
+                "features": [],
+                "commands": [],
+                "attributes": []
+            },
+            {
+                "name": "on_off",
+                "id": "0x0006",
+                "type": "server",
+                "features": [
+                    "lighting"
+                ],
+                "commands": [],
+                "attributes": []
+            }
+        ]
+    },
+    {
+        "name": "dimmable_light",
+        "id": "0x0101",
+        "revision": "3",
+        "clusters": [
+            {
+                "name": "identify",
+                "id": "0x0003",
+                "type": "server",
+                "features": [],
+                "commands": [
+                    "trigger_effect"
+                ],
+                "attributes": []
+            },
+            {
+                "name": "groups",
+                "id": "0x0004",
+                "type": "server",
+                "features": [],
+                "commands": [],
+                "attributes": []
+            },
+            {
+                "name": "on_off",
+                "id": "0x0006",
+                "type": "server",
+                "features": [
+                    "lighting"
+                ],
+                "commands": [],
+                "attributes": []
+            },
+            {
+                "name": "level_control",
+                "id": "0x0008",
+                "type": "server",
+                "features": [
+                    "lighting",
+                    "on_off"
+                ],
+                "commands": [],
+                "attributes": []
+            }
+        ]
+    },
+    {
+        "name": "on_off_light_switch",
+        "id": "0x0103",
+        "revision": "3",
+        "clusters": [
+            {
+                "name": "identify",
+                "id": "0x0003",
+                "type": "server",
+                "features": [],
+                "commands": [],
+                "attributes": []
+            },
+            {
+                "name": "identify",
+                "id": "0x0003",
+                "type": "client",
+                "features": [],
+                "commands": [],
+                "attributes": []
+            },
+            {
+                "name": "on_off",
+                "id": "0x0006",
+                "type": "client",
+                "features": [],
+                "commands": [],
+                "attributes": []
+            }
+        ]
+    },
+    {
+        "name": "dimmer_switch",
+        "id": "0x0104",
+        "revision": "3",
+        "clusters": [
+            {
+                "name": "identify",
+                "id": "0x0003",
+                "type": "server",
+                "features": [],
+                "commands": [],
+                "attributes": []
+            },
+            {
+                "name": "identify",
+                "id": "0x0003",
+                "type": "client",
+                "features": [],
+                "commands": [],
+                "attributes": []
+            },
+            {
+                "name": "on_off",
+                "id": "0x0006",
+                "type": "client",
+                "features": [],
+                "commands": [],
+                "attributes": []
+            },
+            {
+                "name": "level_control",
+                "id": "0x0008",
+                "type": "client",
+                "features": [],
+                "commands": [],
+                "attributes": []
+            }
+        ]
+    },
+    {
+        "name": "color_dimmer_switch",
+        "id": "0x0105",
+        "revision": "3",
+        "clusters": [
+            {
+                "name": "identify",
+                "id": "0x0003",
+                "type": "server",
+                "features": [],
+                "commands": [],
+                "attributes": []
+            },
+            {
+                "name": "identify",
+                "id": "0x0003",
+                "type": "client",
+                "features": [],
+                "commands": [],
+                "attributes": []
+            },
+            {
+                "name": "on_off",
+                "id": "0x0006",
+                "type": "client",
+                "features": [],
+                "commands": [],
+                "attributes": []
+            },
+            {
+                "name": "level_control",
+                "id": "0x0008",
+                "type": "client",
+                "features": [],
+                "commands": [],
+                "attributes": []
+            },
+            {
+                "name": "color_control",
+                "id": "0x0300",
+                "type": "client",
+                "features": [],
+                "commands": [],
+                "attributes": []
+            }
+        ]
+    },
+    {
+        "name": "light_sensor",
+        "id": "0x0106",
+        "revision": "3",
+        "clusters": [
+            {
+                "name": "identify",
+                "id": "0x0003",
+                "type": "server",
+                "features": [],
+                "commands": [],
+                "attributes": []
+            },
+            {
+                "name": "illuminance_measurement",
+                "id": "0x0400",
+                "type": "server",
+                "features": [],
+                "commands": [],
+                "attributes": []
+            }
+        ]
+    },
+    {
+        "name": "occupancy_sensor",
+        "id": "0x0107",
+        "revision": "3",
+        "clusters": [
+            {
+                "name": "identify",
+                "id": "0x0003",
+                "type": "server",
+                "features": [],
+                "commands": [],
+                "attributes": []
+            },
+            {
+                "name": "occupancy_sensing",
+                "id": "0x0406",
+                "type": "server",
+                "features": [],
+                "commands": [],
+                "attributes": []
+            }
+        ]
+    },
+    {
+        "name": "on_off_plug_in_unit",
+        "id": "0x010A",
+        "revision": "3",
+        "clusters": [
+            {
+                "name": "identify",
+                "id": "0x0003",
+                "type": "server",
+                "features": [],
+                "commands": [
+                    "trigger_effect"
+                ],
+                "attributes": []
+            },
+            {
+                "name": "groups",
+                "id": "0x0004",
+                "type": "server",
+                "features": [],
+                "commands": [],
+                "attributes": []
+            },
+            {
+                "name": "on_off",
+                "id": "0x0006",
+                "type": "server",
+                "features": [
+                    "lighting"
+                ],
+                "commands": [],
+                "attributes": []
+            }
+        ]
+    },
+    {
+        "name": "dimmable_plug_in_unit",
+        "id": "0x010B",
+        "revision": "4",
+        "clusters": [
+            {
+                "name": "identify",
+                "id": "0x0003",
+                "type": "server",
+                "features": [],
+                "commands": [
+                    "trigger_effect"
+                ],
+                "attributes": []
+            },
+            {
+                "name": "groups",
+                "id": "0x0004",
+                "type": "server",
+                "features": [],
+                "commands": [],
+                "attributes": []
+            },
+            {
+                "name": "on_off",
+                "id": "0x0006",
+                "type": "server",
+                "features": [
+                    "lighting"
+                ],
+                "commands": [],
+                "attributes": []
+            },
+            {
+                "name": "level_control",
+                "id": "0x0008",
+                "type": "server",
+                "features": [
+                    "on_off",
+                    "lighting"
+                ],
+                "commands": [],
+                "attributes": []
+            }
+        ]
+    },
+    {
+        "name": "color_temperature_light",
+        "id": "0x010C",
+        "revision": "4",
+        "clusters": [
+            {
+                "name": "identify",
+                "id": "0x0003",
+                "type": "server",
+                "features": [],
+                "commands": [
+                    "trigger_effect"
+                ],
+                "attributes": []
+            },
+            {
+                "name": "groups",
+                "id": "0x0004",
+                "type": "server",
+                "features": [],
+                "commands": [],
+                "attributes": []
+            },
+            {
+                "name": "on_off",
+                "id": "0x0006",
+                "type": "server",
+                "features": [
+                    "lighting"
+                ],
+                "commands": [],
+                "attributes": []
+            },
+            {
+                "name": "level_control",
+                "id": "0x0008",
+                "type": "server",
+                "features": [
+                    "on_off",
+                    "lighting"
+                ],
+                "commands": [],
+                "attributes": []
+            },
+            {
+                "name": "color_control",
+                "id": "0x0300",
+                "type": "server",
+                "features": [
+                    "color_temperature"
+                ],
+                "commands": [],
+                "attributes": []
+            }
+        ]
+    },
+    {
+        "name": "extended_color_light",
+        "id": "0x010D",
+        "revision": "4",
+        "clusters": [
+            {
+                "name": "identify",
+                "id": "0x0003",
+                "type": "server",
+                "features": [],
+                "commands": [
+                    "trigger_effect"
+                ],
+                "attributes": []
+            },
+            {
+                "name": "groups",
+                "id": "0x0004",
+                "type": "server",
+                "features": [],
+                "commands": [],
+                "attributes": []
+            },
+            {
+                "name": "on_off",
+                "id": "0x0006",
+                "type": "server",
+                "features": [
+                    "lighting"
+                ],
+                "commands": [],
+                "attributes": []
+            },
+            {
+                "name": "level_control",
+                "id": "0x0008",
+                "type": "server",
+                "features": [
+                    "on_off",
+                    "lighting"
+                ],
+                "commands": [],
+                "attributes": []
+            },
+            {
+                "name": "color_control",
+                "id": "0x0300",
+                "type": "server",
+                "features": [
+                    "xy",
+                    "color_temperature"
+                ],
+                "commands": [],
+                "attributes": []
+            }
+        ]
+    },
+    {
+        "name": "window_covering",
+        "id": "0x0202",
+        "revision": "3",
+        "clusters": [
+            {
+                "name": "identify",
+                "id": "0x0003",
+                "type": "server",
+                "features": [],
+                "commands": [],
+                "attributes": []
+            },
+            {
+                "name": "window_covering",
+                "id": "0x0102",
+                "type": "server",
+                "features": [],
+                "commands": [],
+                "attributes": []
+            }
+        ]
+    },
+    {
+        "name": "window_covering_controller",
+        "id": "0x0203",
+        "revision": "3",
+        "clusters": [
+            {
+                "name": "window_covering",
+                "id": "0x0102",
+                "type": "client",
+                "features": [],
+                "commands": [],
+                "attributes": []
+            }
+        ]
+    },
+    {
+        "name": "thermostat",
+        "id": "0x0301",
+        "revision": "3",
+        "clusters": [
+            {
+                "name": "identify",
+                "id": "0x0003",
+                "type": "server",
+                "features": [],
+                "commands": [],
+                "attributes": []
+            },
+            {
+                "name": "thermostat",
+                "id": "0x0201",
+                "type": "server",
+                "features": [],
+                "commands": [],
+                "attributes": []
+            }
+        ]
+    },
+    {
+        "name": "temperature_sensor",
+        "id": "0x0302",
+        "revision": "2",
+        "clusters": [
+            {
+                "name": "identify",
+                "id": "0x0003",
+                "type": "server",
+                "features": [],
+                "commands": [],
+                "attributes": []
+            },
+            {
+                "name": "temperature_measurement",
+                "id": "0x0402",
+                "type": "server",
+                "features": [],
+                "commands": [],
+                "attributes": []
+            }
+        ]
+    },
+    {
+        "name": "pump",
+        "id": "0x0303",
+        "revision": "3",
+        "clusters": [
+            {
+                "name": "identify",
+                "id": "0x0003",
+                "type": "server",
+                "features": [],
+                "commands": [],
+                "attributes": []
+            },
+            {
+                "name": "on_off",
+                "id": "0x0006",
+                "type": "server",
+                "features": [],
+                "commands": [],
+                "attributes": []
+            },
+            {
+                "name": "pump_configuration_and_control",
+                "id": "0x0200",
+                "type": "server",
+                "features": [],
+                "commands": [],
+                "attributes": []
+            }
+        ]
+    },
+    {
+        "name": "pump_controller",
+        "id": "0x0304",
+        "revision": "3",
+        "clusters": [
+            {
+                "name": "identify",
+                "id": "0x0003",
+                "type": "server",
+                "features": [],
+                "commands": [],
+                "attributes": []
+            },
+            {
+                "name": "on_off",
+                "id": "0x0006",
+                "type": "client",
+                "features": [],
+                "commands": [],
+                "attributes": []
+            },
+            {
+                "name": "binding",
+                "id": "0x001E",
+                "type": "client",
+                "features": [],
+                "commands": [],
+                "attributes": []
+            },
+            {
+                "name": "pump_configuration_and_control",
+                "id": "0x0200",
+                "type": "client",
+                "features": [],
+                "commands": [],
+                "attributes": []
+            }
+        ]
+    },
+    {
+        "name": "pressure_sensor",
+        "id": "0x0305",
+        "revision": "2",
+        "clusters": [
+            {
+                "name": "identify",
+                "id": "0x0003",
+                "type": "server",
+                "features": [],
+                "commands": [],
+                "attributes": []
+            },
+            {
+                "name": "pressure_measurement",
+                "id": "0x0403",
+                "type": "server",
+                "features": [],
+                "commands": [],
+                "attributes": []
+            }
+        ]
+    },
+    {
+        "name": "flow_sensor",
+        "id": "0x0306",
+        "revision": "2",
+        "clusters": [
+            {
+                "name": "identify",
+                "id": "0x0003",
+                "type": "server",
+                "features": [],
+                "commands": [],
+                "attributes": []
+            },
+            {
+                "name": "flow_measurement",
+                "id": "0x0404",
+                "type": "server",
+                "features": [],
+                "commands": [],
+                "attributes": []
+            }
+        ]
+    },
+    {
+        "name": "humidity_sensor",
+        "id": "0x0307",
+        "revision": "2",
+        "clusters": [
+            {
+                "name": "identify",
+                "id": "0x0003",
+                "type": "server",
+                "features": [],
+                "commands": [],
+                "attributes": []
+            },
+            {
+                "name": "relative_humidity_measurement",
+                "id": "0x0405",
+                "type": "server",
+                "features": [],
+                "commands": [],
+                "attributes": []
+            }
+        ]
+    },
+    {
+        "name": "energy_evse",
+        "id": "0x050C",
+        "revision": "1",
+        "clusters": [
+            {
+                "name": "energy_evse",
+                "id": "0x0099",
+                "type": "server",
+                "features": [],
+                "commands": [],
+                "attributes": []
+            },
+            {
+                "name": "energy_evse_mode",
+                "id": "0x009D",
+                "type": "server",
+                "features": [],
+                "commands": [],
+                "attributes": []
+            }
+        ]
+    },
+    {
+        "name": "device_energy_management",
+        "id": "0x050D",
+        "revision": "1",
+        "clusters": []
+    },
+    {
+        "name": "electrical_sensor",
+        "id": "0x0510",
+        "revision": "1",
+        "clusters": [
+            {
+                "name": "power_topology",
+                "id": "0x009C",
+                "type": "server",
+                "features": [],
+                "commands": [],
+                "attributes": []
+            }
+        ]
+    },
+    {
+        "name": "control_bridge",
+        "id": "0x0840",
+        "revision": "3",
+        "clusters": [
+            {
+                "name": "identify",
+                "id": "0x0003",
+                "type": "server",
+                "features": [],
+                "commands": [],
+                "attributes": []
+            },
+            {
+                "name": "identify",
+                "id": "0x0003",
+                "type": "client",
+                "features": [],
+                "commands": [],
+                "attributes": []
+            },
+            {
+                "name": "groups",
+                "id": "0x0004",
+                "type": "client",
+                "features": [],
+                "commands": [],
+                "attributes": []
+            },
+            {
+                "name": "on_off",
+                "id": "0x0006",
+                "type": "client",
+                "features": [],
+                "commands": [],
+                "attributes": []
+            },
+            {
+                "name": "level_control",
+                "id": "0x0008",
+                "type": "client",
+                "features": [],
+                "commands": [],
+                "attributes": []
+            },
+            {
+                "name": "color_control",
+                "id": "0x0300",
+                "type": "client",
+                "features": [],
+                "commands": [],
+                "attributes": []
+            }
+        ]
+    },
+    {
+        "name": "on_off_sensor",
+        "id": "0x0850",
+        "revision": "3",
+        "clusters": [
+            {
+                "name": "identify",
+                "id": "0x0003",
+                "type": "server",
+                "features": [],
+                "commands": [],
+                "attributes": []
+            },
+            {
+                "name": "identify",
+                "id": "0x0003",
+                "type": "client",
+                "features": [],
+                "commands": [],
+                "attributes": []
+            },
+            {
+                "name": "on_off",
+                "id": "0x0006",
+                "type": "client",
+                "features": [],
+                "commands": [],
+                "attributes": []
+            }
+        ]
+    }
+]

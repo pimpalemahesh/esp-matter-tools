@@ -402,7 +402,10 @@ function buildMissingElementsSection(missingElements) {
         attribute: [],
         command: [],
         feature: [],
-        cluster: []
+        cluster: [],
+        feature_attribute: [],
+        feature_command: [],
+        feature_event: []
     };
     
     missingElements.forEach(element => {
@@ -415,23 +418,72 @@ function buildMissingElementsSection(missingElements) {
     // Display each type of missing element
     Object.entries(groupedElements).forEach(([type, elements]) => {
         if (elements.length > 0) {
+            let typeDisplayName = type;
+            let iconClass = 'network-wired';
+            
+            switch(type) {
+                case 'attribute':
+                    typeDisplayName = 'Attributes';
+                    iconClass = 'list';
+                    break;
+                case 'command':
+                    typeDisplayName = 'Commands';
+                    iconClass = 'terminal';
+                    break;
+                case 'feature':
+                    typeDisplayName = 'Features';
+                    iconClass = 'cog';
+                    break;
+                case 'cluster':
+                    typeDisplayName = 'Clusters';
+                    iconClass = 'network-wired';
+                    break;
+                case 'feature_attribute':
+                    typeDisplayName = 'Feature-Specific Attributes';
+                    iconClass = 'list-alt';
+                    break;
+                case 'feature_command':
+                    typeDisplayName = 'Feature-Specific Commands';
+                    iconClass = 'code';
+                    break;
+                case 'feature_event':
+                    typeDisplayName = 'Feature-Specific Events';
+                    iconClass = 'bell';
+                    break;
+            }
+            
             html += `
                 <div class="missing-type-section">
-                    <h4 style="color: var(--error-color); text-transform: capitalize; margin: 15px 0 10px 0;">
-                        <i class="fas fa-${type === 'attribute' ? 'list' : type === 'command' ? 'terminal' : type === 'feature' ? 'cog' : 'network-wired'}"></i>
-                        Missing ${type}s (${elements.length})
+                    <h4 style="color: var(--error-color); margin: 15px 0 10px 0;">
+                        <i class="fas fa-${iconClass}"></i>
+                        ${typeDisplayName} (${elements.length})
                     </h4>
             `;
             
             elements.forEach(element => {
-                html += `
-                    <div class="modal-item missing-element">
-                        <div class="modal-item-header">
-                            <span class="modal-id-badge error">${element.id || 'Unknown ID'}</span>
-                            <span class="modal-name error">${element.name || 'Unknown Name'}</span>
+                // Special handling for feature-specific elements
+                if (type.startsWith('feature_')) {
+                    html += `
+                        <div class="modal-item missing-element">
+                            <div class="modal-item-header">
+                                <span class="modal-id-badge error">${element.id || 'Unknown ID'}</span>
+                                <span class="modal-name error">${element.name || 'Unknown Name'}</span>
+                            </div>
+                            <div class="feature-context" style="margin-top: 5px; font-size: 0.9em; color: var(--text-secondary); background: var(--background-secondary); padding: 5px 8px; border-radius: 4px;">
+                                <i class="fas fa-cog"></i> Required by feature: <strong>${element.feature_name || 'Unknown Feature'}</strong> (${element.feature_id || 'Unknown ID'})
+                            </div>
                         </div>
-                    </div>
-                `;
+                    `;
+                } else {
+                    html += `
+                        <div class="modal-item missing-element">
+                            <div class="modal-item-header">
+                                <span class="modal-id-badge error">${element.id || 'Unknown ID'}</span>
+                                <span class="modal-name error">${element.name || 'Unknown Name'}</span>
+                            </div>
+                        </div>
+                    `;
+                }
             });
             
             html += '</div>';

@@ -32,10 +32,7 @@ class TestConvertToSnakeCase:
 
     def test_convert_with_numbers(self):
         """Test converting strings with numbers"""
-        assert (
-            convert_to_snake_case("PM2.5 Concentration Measurement")
-            == "pm_2.5_concentration_measurement"
-        )
+        assert convert_to_snake_case("PM2.5 Concentration Measurement") == "pm_2.5_concentration_measurement"
         assert convert_to_snake_case("Test123Name") == "test_123_name"
         assert convert_to_snake_case("HTTP2Connection") == "http_2_connection"
 
@@ -71,9 +68,7 @@ class TestConvertToSnakeCase:
 
     def test_convert_with_multiple_spaces(self):
         """Test converting strings with multiple spaces"""
-        assert (
-            convert_to_snake_case("Test  Multiple   Spaces") == "test_multiple_spaces"
-        )
+        assert convert_to_snake_case("Test  Multiple   Spaces") == "test_multiple_spaces"
         assert convert_to_snake_case("   Leading Spaces") == "_leading_spaces"
         assert convert_to_snake_case("Trailing Spaces   ") == "trailing_spaces_"
 
@@ -129,9 +124,7 @@ class TestCleanLine:
 
     def test_clean_line_with_mixed_whitespace(self):
         """Test cleaning line with mixed whitespace"""
-        assert (
-            clean_line("  \t  Mixed   \n  whitespace  \r  ") == "Mixed   \n  whitespace"
-        )
+        assert clean_line("  \t  Mixed   \n  whitespace  \r  ") == "Mixed   \n  whitespace"
 
 
 class TestConvertValue:
@@ -291,9 +284,7 @@ class TestConvertDeviceTypeToHex:
 
         result = convert_device_type_to_hex(input_obj)
 
-        device_type_list = result["endpoints"][0]["clusters"]["0x001D"]["attributes"][
-            "0x0000"
-        ]["DeviceTypeList"]
+        device_type_list = result["endpoints"][0]["clusters"]["0x001D"]["attributes"]["0x0000"]["DeviceTypeList"]
         assert device_type_list[0]["DeviceType"] == "0x0016"
         assert device_type_list[1]["DeviceType"] == "0x0100"
 
@@ -379,11 +370,7 @@ class TestConvertDeviceTypeToHex:
 
     def test_convert_deeply_nested_structure(self):
         """Test converting deeply nested structure"""
-        input_obj = {
-            "level1": {
-                "level2": {"level3": {"level4": {"DeviceType": 22, "data": "test"}}}
-            }
-        }
+        input_obj = {"level1": {"level2": {"level3": {"level4": {"DeviceType": 22, "data": "test"}}}}}
 
         result = convert_device_type_to_hex(input_obj)
 

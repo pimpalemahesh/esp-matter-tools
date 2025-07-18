@@ -250,9 +250,7 @@ def parse_datamodel_logs(data):
     # Check if this is a compatible file format
     if len(too_lines) == 0:
         logger.error("No [TOO] entries found in the file")
-        raise ValueError(
-            "No [TOO] entries found in the file. This appears to be a different type of log file that is not compatible with this parser."
-        )
+        raise ValueError("No [TOO] entries found in the file. This appears to be a different type of log file that is not compatible with this parser.")
 
     # Extract all [TOO] entries
     endpoint_attribute_data = []
@@ -277,9 +275,7 @@ def parse_datamodel_logs(data):
         if endpoint_attribute_data:
             process_attribute_data(endpoint_attribute_data, endpoints)
 
-        logger.info(
-            f"Parsed {len(endpoints)} endpoints in {time.time() - start_time:.2f}s"
-        )
+        logger.info(f"Parsed {len(endpoints)} endpoints in {time.time() - start_time:.2f}s")
 
     except Exception as e:
         logger.error(f"Error during parsing: {str(e)}")
@@ -328,9 +324,7 @@ def parse_datamodel_logs(data):
                         attr_id = str(attr_id)
 
                 # Remove the endpoint, cluster, and attribute metadata keys
-                clean_attr_data = {
-                    k: v for k, v in attr_data.items() if k not in exclude_keys
-                }
+                clean_attr_data = {k: v for k, v in attr_data.items() if k not in exclude_keys}
 
                 # Post-process certain attributes to ensure consistent formatting
                 for key, value in clean_attr_data.items():
@@ -344,9 +338,7 @@ def parse_datamodel_logs(data):
                                 if "DeviceType" in device_type_obj:
                                     dt_val = device_type_obj["DeviceType"]
                                     if isinstance(dt_val, int):
-                                        device_type_obj["DeviceType"] = (
-                                            f"0x{dt_val:04X}"
-                                        )
+                                        device_type_obj["DeviceType"] = f"0x{dt_val:04X}"
                                 formatted_device_types.append(device_type_obj)
                             else:
                                 formatted_device_types.append(device_type)
