@@ -208,14 +208,21 @@
                                 <div class="cluster-stats">
                                     <div class="compliance-status">
                                         <span><i class="fas fa-list"></i> {{ cluster.cluster_type.title() }}</span>
-                                        {% if cluster.missing_elements %}
+                                        {% if not cluster.is_compliant %}
                                         <span style="color: var(--error-color);">
-                                            <i class="fas fa-exclamation-triangle"></i> 
-                                            {{ cluster.missing_elements|length }} missing
+                                            <i class="fas fa-times"></i> Non-Compliant
+                                            {% if cluster.missing_elements %}
+                                            ({{ cluster.missing_elements|length }} missing)
+                                            {% endif %}
                                         </span>
                                         {% else %}
                                         <span style="color: var(--success-color);">
                                             <i class="fas fa-check"></i> Compliant
+                                            {% if has_event_warnings %}
+                                            <span style="color: var(--warning-color); margin-left: 5px;">
+                                                <i class="fas fa-exclamation-triangle"></i> Warnings
+                                            </span>
+                                            {% endif %}
                                         </span>
                                         {% endif %}
                                     </div>

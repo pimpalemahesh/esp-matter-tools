@@ -484,9 +484,9 @@ body {
 
 .cluster-card.warning {
     border-left-color: var(--warning-color);
-    background: rgba(255, 193, 7, 0.15);
     border-left: 4px solid var(--warning-color);
     border: 1px solid rgba(255, 193, 7, 0.3);
+    /* Remove yellow background - only show warning text in yellow */
 }
 
 .cluster-header {
