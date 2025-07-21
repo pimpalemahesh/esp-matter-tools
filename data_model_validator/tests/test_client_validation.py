@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
-
 import json
 import logging
-import sys
 import os
+import sys
+
+from core.compliance_checker import find_client_cluster
+from core.compliance_checker import validate_cluster
 
 # Add current directory to sys.path to ensure core modules can be imported
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-from core.compliance_checker import find_client_cluster, validate_cluster
 
 # Configure logging to see what's happening
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
@@ -16,8 +16,18 @@ logger = logging.getLogger(__name__)
 
 
 def test_client_cluster_validation():
+    """ """
     # Test data structure based on user's parsed_data.json
-    test_endpoint_clusters = {"0x0002": {"attributes": {"ClientList": [{"id": "0x0029", "name": "ota_software_update_provider"}]}}}
+    test_endpoint_clusters = {
+        "0x0002": {
+            "attributes": {
+                "ClientList": [{
+                    "id": "0x0029",
+                    "name": "ota_software_update_provider"
+                }]
+            }
+        }
+    }
 
     # Test requirement for OTA client cluster
     required_cluster = {

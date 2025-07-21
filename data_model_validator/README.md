@@ -5,6 +5,7 @@ A comprehensive tool for parsing Matter/Zigbee device wildcard logs and validati
 ## 🔍 What This Tool Does
 
 This tool helps you:
+
 - **Parse** device wildcard log files (.txt) into structured data
 - **Validate** device compliance against Matter specifications
 - **Analyze** device clusters, attributes, commands, and features
@@ -14,18 +15,21 @@ This tool helps you:
 ## ✨ Key Features
 
 ### 📄 **Detailed Reports**
+
 - Downloadable JSON reports
 - Visual compliance summaries
 - Per-endpoint breakdown
 - Missing elements highlighting
 
 ### 🚀 **Two Usage Options**
+
 - **Web Interface**: Interactive browser-based tool
 - **CLI Script**: Terminal-based for automation/CI
 
 ## 📋 Installation & Setup
 
 ### Prerequisites
+
 ```bash
 # Python 3.7+ required
 python --version
@@ -37,6 +41,7 @@ pip install -r requirements.txt
 ## 🎯 Usage Options
 
 ### Option 1: Web Interface (Recommended)
+
 ```bash
 # 1. Start the web server
 python run.py
@@ -48,6 +53,7 @@ http://localhost:5000
 ```
 
 ### Option 2: CLI Script
+
 ```bash
 # Run compliance check directly
 python datamodel_parser.py your_file.txt --chip-version 1.4.1
@@ -63,8 +69,10 @@ python datamodel_parser.py --test            # run tests
 ## 🎯 How to Use
 
 ### Step 1: Prepare Your Data
+
 1. **Wildcard Log File**: Have your device's `.txt` wildcard log file ready
 2. **Get Wildcards**: Use chip-tool to read wildcards from device
+
 ```bash
 ./chip-tool any read-by-id 0xFFFFFFFF 0xFFFFFFFF <node-id> 0xFFFF
 ```
@@ -72,12 +80,14 @@ python datamodel_parser.py --test            # run tests
 ### Step 2: Choose Your Method
 
 #### Web Interface
+
 1. **Upload**: Drag & drop or choose your `.txt` file
 2. **Select Version**: Choose CHIP version (1.3, 1.4, 1.4.1, 1.4.2, master)
 3. **Validate**: Click "Validate Compliance"
 4. **Review**: See detailed results and download reports
 
 #### CLI Script
+
 1. **Run**: `python datamodel_parser.py your_file.txt --chip-version 1.4.1`
 2. **Review**: See terminal output and check `output/` directory for JSON files
 
@@ -103,11 +113,13 @@ Data Model Validator/
 ## 🚨 Troubleshooting
 
 ### Common Issues
+
 - **"No module named 'flask'"** → Run `pip install -r requirements.txt`
 - **"No [TOO] entries found"** → Wrong file format, need wildcard log with [TOO] entries
 - **"Version X.X not supported"** → Missing `data/element_requirements_X.X.json` file
 
 ### Understanding Results
+
 - **Compliant**: Device meets all requirements
 - **Non-Compliant**: Missing required clusters/attributes/commands/features
 - **Events**: Skipped (not in wildcard logs) - warnings only
@@ -115,6 +127,7 @@ Data Model Validator/
 ## 🎯 Quick Start Examples
 
 ### Web Tool
+
 ```bash
 pip install -r requirements.txt
 python run.py
@@ -122,6 +135,7 @@ python run.py
 ```
 
 ### CLI Tool
+
 ```bash
 pip install -r requirements.txt
 python datamodel_parser.py device_log.txt --chip-version 1.4.1
@@ -129,6 +143,7 @@ python datamodel_parser.py device_log.txt --chip-version 1.4.1
 ```
 
 ### Run Tests
+
 ```bash
 python datamodel_parser.py --test
-``` 
+```

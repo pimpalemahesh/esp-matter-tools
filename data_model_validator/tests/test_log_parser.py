@@ -1,29 +1,33 @@
-import pytest
 import json
-import sys
 import os
-from unittest.mock import patch, Mock
+import sys
+from unittest.mock import Mock
+from unittest.mock import patch
+
+import pytest
+
+from core.log_parser import convert_cluster_list_to_objects
+from core.log_parser import convert_value
+from core.log_parser import parse_block
+from core.log_parser import parse_datamodel_logs
+from core.log_parser import parse_id_name_string
+from core.log_parser import parse_input
+from core.log_parser import parse_metadata_line
+from core.log_parser import process_attribute_data
 
 # Add current directory to sys.path to ensure core modules can be imported
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-from core.log_parser import (
-    parse_datamodel_logs,
-    parse_input,
-    parse_block,
-    process_attribute_data,
-    convert_value,
-    parse_id_name_string,
-    convert_cluster_list_to_objects,
-    parse_metadata_line,
-)
 
 
 class TestParseDatamodelLogs:
     """Test the main parse_datamodel_logs function"""
 
     def test_parse_valid_log_data(self, sample_log_data):
-        """Test parsing valid log data"""
+        """Test parsing valid log data
+
+        :param sample_log_data:
+
+        """
         result = parse_datamodel_logs(sample_log_data)
 
         assert "endpoints" in result
@@ -43,19 +47,31 @@ class TestParseDatamodelLogs:
         assert "0x001D" in endpoint_1["clusters"]
 
     def test_parse_empty_data(self, invalid_log_data):
-        """Test parsing empty data raises ValueError"""
+        """Test parsing empty data raises ValueError
+
+        :param invalid_log_data:
+
+        """
         with pytest.raises(ValueError, match="No \\[TOO\\] entries found"):
             parse_datamodel_logs(invalid_log_data["empty"])
 
     def test_parse_no_too_entries(self, invalid_log_data):
-        """Test parsing data without [TOO] entries raises ValueError"""
+        """Test parsing data without [TOO] entries raises ValueError
+
+        :param invalid_log_data:
+
+        """
         # Use data that truly doesn't contain [TOO] entries
         clean_data = "Random log data with no special markers"
         with pytest.raises(ValueError, match="No \\[TOO\\] entries found"):
             parse_datamodel_logs(clean_data)
 
     def test_parse_malformed_data_continues(self, invalid_log_data):
-        """Test parsing continues even with some malformed data"""
+        """Test parsing continues even with some malformed data
+
+        :param invalid_log_data:
+
+        """
         # This should not raise an exception but should handle gracefully
         result = parse_datamodel_logs(invalid_log_data["mixed_valid_invalid"])
         assert "endpoints" in result
@@ -398,7 +414,9 @@ class TestParseMetadataLine:
         line = "Endpoint: 0 Cluster: 0x001D"
         result = parse_metadata_line(line)
 
-        assert result == {}  # Should return empty dict if pattern doesn't match completely
+        assert (
+            result == {}
+        )  # Should return empty dict if pattern doesn't match completely
 
 
 class TestProcessAttributeData:
@@ -470,7 +488,11 @@ class TestLogParserErrorHandling:
     """Test error handling in log parser"""
 
     def test_parse_with_exception_handling(self, mock_logger):
-        """Test that exceptions are handled gracefully"""
+        """Test that exceptions are handled gracefully
+
+        :param mock_logger:
+
+        """
         invalid_data = "[TOO] Endpoint: abc Cluster: invalid"
 
         # Should handle gracefully and not crash
@@ -483,7 +505,11 @@ class TestLogParserErrorHandling:
             assert "No [TOO] entries found" in str(e)
 
     def test_convert_value_exception_handling(self, mock_logger):
-        """Test that convert_value handles exceptions gracefully"""
+        """Test that convert_value handles exceptions gracefully
+
+        :param mock_logger:
+
+        """
         # Test with various problematic inputs
         problematic_inputs = [
             "{'invalid': json}",
@@ -499,7 +525,11 @@ class TestLogParserErrorHandling:
 
     @patch("core.log_parser.logger")
     def test_logging_on_errors(self, mock_logger):
-        """Test that errors are logged appropriately"""
+        """Test that errors are logged appropriately
+
+        :param mock_logger:
+
+        """
         invalid_data = "[TOO] Some malformed data that causes processing errors"
 
         try:
@@ -508,4 +538,5 @@ class TestLogParserErrorHandling:
             pass  # Expected for no valid [TOO] entries
 
         # Logger should have been called (exact calls depend on implementation)
-        assert mock_logger.info.called or mock_logger.error.called or mock_logger.warning.called
+        assert (mock_logger.info.called or mock_logger.error.called
+                or mock_logger.warning.called)

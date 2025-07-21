@@ -1,1 +1,1 @@
-# Test package for Matter Device Compliance Parser 
+# Test package for Matter Device Compliance Parser

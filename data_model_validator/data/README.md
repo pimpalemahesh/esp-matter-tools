@@ -7,7 +7,7 @@ This directory should contain the element requirements JSON files for different 
 Place the following files in this directory for version support:
 
 - `element_requirements_1.3.json` - Element requirements for version 1.3
-- `element_requirements_1.4.json` - Element requirements for version 1.4  
+- `element_requirements_1.4.json` - Element requirements for version 1.4
 - `element_requirements_1.4.1.json` - Element requirements for version 1.4.1
 - `element_requirements_1.4.2.json` - Element requirements for version 1.4.2
 - `element_requirements_master.json` - Element requirements for master version
@@ -49,4 +49,4 @@ This will generate `output/element_requirements_1.4.1.json` which should be copi
 
 - When a version's element requirements file is present, it will appear as a supported option in the UI
 - If a user selects a version without a corresponding file, they'll see a "not supported yet" message
-- Add new files here to enable support for additional versions 
+- Add new files here to enable support for additional versions

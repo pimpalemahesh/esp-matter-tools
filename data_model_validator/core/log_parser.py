@@ -1,15 +1,14 @@
-import re
 import json
 import logging
+import re
 import time
 
+from utils.helper import clean_line
+from utils.helper import convert_cluster_id_to_hex
+from utils.helper import convert_device_type_to_hex
+from utils.helper import convert_to_snake_case
+
 # Import common utility functions
-from utils.helper import (
-    clean_line,
-    convert_cluster_id_to_hex,
-    convert_device_type_to_hex,
-    convert_to_snake_case,
-)
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -19,7 +18,11 @@ logger = logging.getLogger(__name__)
 
 
 def parse_id_name_string(val):
-    """Parse strings like '0 (Off)' to extract ID and name"""
+    """Parse strings like '0 (Off)' to extract ID and name
+
+    :param val:
+
+    """
     val = clean_line(val)
 
     # Check if it matches the pattern "ID (Name)"
@@ -56,7 +59,11 @@ def parse_id_name_string(val):
 
 
 def convert_value(val):
-    """Convert string values to appropriate types (with parsing-specific logic)"""
+    """Convert string values to appropriate types (with parsing-specific logic)
+
+    :param val:
+
+    """
     try:
         val = clean_line(val)
         if val.lower() == "null":
@@ -80,7 +87,11 @@ def convert_value(val):
 
 
 def convert_cluster_list_to_objects(cluster_list):
-    """Convert a list of cluster IDs to objects with id fields"""
+    """Convert a list of cluster IDs to objects with id fields
+
+    :param cluster_list:
+
+    """
     if not isinstance(cluster_list, list):
         return cluster_list
 
@@ -105,7 +116,11 @@ def convert_cluster_list_to_objects(cluster_list):
 
 
 def parse_metadata_line(line):
-    """Parse metadata line to extract endpoint, cluster, and attribute info"""
+    """Parse metadata line to extract endpoint, cluster, and attribute info
+
+    :param line:
+
+    """
     pattern = r"Endpoint:\s*(\d+)\s+Cluster:\s*(0x[\dA-Fa-f_]+)\s+Attribute\s*(0x[\dA-Fa-f_]+)\s+DataVersion:\s*(\d+)"
     match = re.match(pattern, line.strip())
     if match:
@@ -118,7 +133,12 @@ def parse_metadata_line(line):
 
 
 def parse_block(lines, index=0):
-    """Parse a block of structured text into a dictionary"""
+    """Parse a block of structured text into a dictionary
+
+    :param lines: param index:  (Default value = 0)
+    :param index:  (Default value = 0)
+
+    """
     result = {}
     lines_len = len(lines)
 
@@ -182,7 +202,11 @@ def parse_block(lines, index=0):
 
 
 def parse_input(text):
-    """Parse input text containing metadata and structured data"""
+    """Parse input text containing metadata and structured data
+
+    :param text:
+
+    """
     lines = text.strip().splitlines()
     top_level = {}
 
@@ -197,7 +221,12 @@ def parse_input(text):
 
 
 def process_attribute_data(attribute_lines, endpoints):
-    """Process a single attribute's data and add it to the endpoints structure"""
+    """Process a single attribute's data and add it to the endpoints structure
+
+    :param attribute_lines: param endpoints:
+    :param endpoints:
+
+    """
     if not attribute_lines:
         return
 
@@ -231,11 +260,11 @@ def process_attribute_data(attribute_lines, endpoints):
 def parse_datamodel_logs(data):
     """Parse the complete datamodel logs and organize by endpoint and cluster.
 
-    Args:
-        data (str): Raw log data containing [TOO] entries
+    :param data: Raw log data containing [TOO] entries
+    :type data: str
+    :returns: Structured data organized by endpoints and clusters
+    :rtype: dict
 
-    Returns:
-        dict: Structured data organized by endpoints and clusters
     """
     start_time = time.time()
     logger.info("Starting datamodel parsing...")
@@ -250,7 +279,9 @@ def parse_datamodel_logs(data):
     # Check if this is a compatible file format
     if len(too_lines) == 0:
         logger.error("No [TOO] entries found in the file")
-        raise ValueError("No [TOO] entries found in the file. This appears to be a different type of log file that is not compatible with this parser.")
+        raise ValueError(
+            "No [TOO] entries found in the file. This appears to be a different type of log file that is not compatible with this parser."
+        )
 
     # Extract all [TOO] entries
     endpoint_attribute_data = []
@@ -260,7 +291,8 @@ def parse_datamodel_logs(data):
         for line in too_lines:
             processed_count += 1
             if processed_count % 500 == 0:
-                logger.info(f"Processed {processed_count}/{len(too_lines)} entries")
+                logger.info(
+                    f"Processed {processed_count}/{len(too_lines)} entries")
 
             info = line.split("[TOO]", 1)[-1]
             if "Endpoint" in info:
@@ -275,7 +307,9 @@ def parse_datamodel_logs(data):
         if endpoint_attribute_data:
             process_attribute_data(endpoint_attribute_data, endpoints)
 
-        logger.info(f"Parsed {len(endpoints)} endpoints in {time.time() - start_time:.2f}s")
+        logger.info(
+            f"Parsed {len(endpoints)} endpoints in {time.time() - start_time:.2f}s"
+        )
 
     except Exception as e:
         logger.error(f"Error during parsing: {str(e)}")
@@ -324,12 +358,17 @@ def parse_datamodel_logs(data):
                         attr_id = str(attr_id)
 
                 # Remove the endpoint, cluster, and attribute metadata keys
-                clean_attr_data = {k: v for k, v in attr_data.items() if k not in exclude_keys}
+                clean_attr_data = {
+                    k: v
+                    for k, v in attr_data.items() if k not in exclude_keys
+                }
 
                 # Post-process certain attributes to ensure consistent formatting
                 for key, value in clean_attr_data.items():
-                    if key in ["ServerList", "ClientList"] and isinstance(value, list):
-                        clean_attr_data[key] = convert_cluster_list_to_objects(value)
+                    if key in ["ServerList", "ClientList"] and isinstance(
+                            value, list):
+                        clean_attr_data[key] = convert_cluster_list_to_objects(
+                            value)
                     elif key == "DeviceTypeList" and isinstance(value, list):
                         formatted_device_types = []
                         for device_type in value:
@@ -338,7 +377,8 @@ def parse_datamodel_logs(data):
                                 if "DeviceType" in device_type_obj:
                                     dt_val = device_type_obj["DeviceType"]
                                     if isinstance(dt_val, int):
-                                        device_type_obj["DeviceType"] = f"0x{dt_val:04X}"
+                                        device_type_obj["DeviceType"] = (
+                                            f"0x{dt_val:04X}")
                                 formatted_device_types.append(device_type_obj)
                             else:
                                 formatted_device_types.append(device_type)

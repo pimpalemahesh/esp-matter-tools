@@ -1,18 +1,18 @@
-import pytest
-import sys
 import os
-from unittest.mock import patch, Mock
+import sys
+from unittest.mock import Mock
+from unittest.mock import patch
+
+import pytest
+
+from utils.helper import clean_line
+from utils.helper import convert_cluster_id_to_hex
+from utils.helper import convert_device_type_to_hex
+from utils.helper import convert_to_snake_case
+from utils.helper import convert_value
 
 # Add current directory to sys.path to ensure utils modules can be imported
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-from utils.helper import (
-    convert_to_snake_case,
-    clean_line,
-    convert_value,
-    convert_cluster_id_to_hex,
-    convert_device_type_to_hex,
-)
 
 
 class TestConvertToSnakeCase:
@@ -27,12 +27,14 @@ class TestConvertToSnakeCase:
     def test_convert_with_spaces(self):
         """Test converting strings with spaces"""
         assert convert_to_snake_case("Device Type List") == "device_type_list"
-        assert convert_to_snake_case("Basic Information") == "basic_information"
+        assert convert_to_snake_case(
+            "Basic Information") == "basic_information"
         assert convert_to_snake_case("On Off") == "on_off"
 
     def test_convert_with_numbers(self):
         """Test converting strings with numbers"""
-        assert convert_to_snake_case("PM2.5 Concentration Measurement") == "pm_2.5_concentration_measurement"
+        assert (convert_to_snake_case("PM2.5 Concentration Measurement") ==
+                "pm_2.5_concentration_measurement")
         assert convert_to_snake_case("Test123Name") == "test_123_name"
         assert convert_to_snake_case("HTTP2Connection") == "http_2_connection"
 
@@ -54,7 +56,8 @@ class TestConvertToSnakeCase:
     def test_convert_already_snake_case(self):
         """Test converting already snake_case strings"""
         assert convert_to_snake_case("snake_case") == "snake_case"
-        assert convert_to_snake_case("already_converted") == "already_converted"
+        assert convert_to_snake_case(
+            "already_converted") == "already_converted"
 
     def test_convert_empty_string(self):
         """Test converting empty string"""
@@ -68,9 +71,11 @@ class TestConvertToSnakeCase:
 
     def test_convert_with_multiple_spaces(self):
         """Test converting strings with multiple spaces"""
-        assert convert_to_snake_case("Test  Multiple   Spaces") == "test_multiple_spaces"
+        assert (convert_to_snake_case("Test  Multiple   Spaces") ==
+                "test_multiple_spaces")
         assert convert_to_snake_case("   Leading Spaces") == "_leading_spaces"
-        assert convert_to_snake_case("Trailing Spaces   ") == "trailing_spaces_"
+        assert convert_to_snake_case(
+            "Trailing Spaces   ") == "trailing_spaces_"
 
     def test_convert_with_consecutive_caps(self):
         """Test converting strings with consecutive capital letters"""
@@ -103,8 +108,10 @@ class TestCleanLine:
 
     def test_clean_multiple_escape_sequences(self):
         """Test cleaning lines with multiple escape sequences"""
-        assert clean_line("Text\x1b[0mwith\x1b[0mmultiple") == "Textwithmultiple"
-        assert clean_line("Mixed\x1b[0mESC[0m\u241b[0mescapes") == "Mixedescapes"
+        assert clean_line(
+            "Text\x1b[0mwith\x1b[0mmultiple") == "Textwithmultiple"
+        assert clean_line(
+            "Mixed\x1b[0mESC[0m\u241b[0mescapes") == "Mixedescapes"
 
     def test_clean_empty_line(self):
         """Test cleaning empty line"""
@@ -124,7 +131,8 @@ class TestCleanLine:
 
     def test_clean_line_with_mixed_whitespace(self):
         """Test cleaning line with mixed whitespace"""
-        assert clean_line("  \t  Mixed   \n  whitespace  \r  ") == "Mixed   \n  whitespace"
+        assert (clean_line("  \t  Mixed   \n  whitespace  \r  ") ==
+                "Mixed   \n  whitespace")
 
 
 class TestConvertValue:
@@ -170,7 +178,8 @@ class TestConvertValue:
     def test_convert_values_with_escape_sequences(self):
         """Test converting values with escape sequences"""
         assert convert_value("text\x1b[0mwith escape") == "textwith escape"
-        assert convert_value("123\x1b[0m") == 123  # Should clean then convert to int
+        # Should clean then convert to int
+        assert convert_value("123\x1b[0m") == 123
 
     def test_convert_values_with_whitespace(self):
         """Test converting values with whitespace"""
@@ -192,14 +201,20 @@ class TestConvertValue:
 
     @patch("utils.helper.logger")
     def test_convert_with_logging(self, mock_logger):
-        """Test that exceptions are logged"""
+        """Test that exceptions are logged
+
+        :param mock_logger:
+
+        """
         # Force an exception by patching clean_line to raise
-        with patch("utils.helper.clean_line", side_effect=Exception("Test error")):
+        with patch("utils.helper.clean_line",
+                   side_effect=Exception("Test error")):
             result = convert_value("test")
 
             # Should log warning
             mock_logger.warning.assert_called_once()
-            assert "Error converting value" in str(mock_logger.warning.call_args)
+            assert "Error converting value" in str(
+                mock_logger.warning.call_args)
 
 
 class TestConvertClusterIdToHex:
@@ -263,37 +278,50 @@ class TestConvertDeviceTypeToHex:
     def test_convert_nested_device_type(self):
         """Test converting nested device type"""
         input_obj = {
-            "endpoints": [
-                {
-                    "endpoint": 0,
-                    "clusters": {
-                        "0x001D": {
-                            "attributes": {
-                                "0x0000": {
-                                    "DeviceTypeList": [
-                                        {"DeviceType": 22, "Revision": 1},
-                                        {"DeviceType": 256, "Revision": 1},
-                                    ]
-                                }
+            "endpoints": [{
+                "endpoint": 0,
+                "clusters": {
+                    "0x001D": {
+                        "attributes": {
+                            "0x0000": {
+                                "DeviceTypeList": [
+                                    {
+                                        "DeviceType": 22,
+                                        "Revision": 1
+                                    },
+                                    {
+                                        "DeviceType": 256,
+                                        "Revision": 1
+                                    },
+                                ]
                             }
                         }
-                    },
-                }
-            ]
+                    }
+                },
+            }]
         }
 
         result = convert_device_type_to_hex(input_obj)
 
-        device_type_list = result["endpoints"][0]["clusters"]["0x001D"]["attributes"]["0x0000"]["DeviceTypeList"]
+        device_type_list = result["endpoints"][0]["clusters"]["0x001D"][
+            "attributes"]["0x0000"]["DeviceTypeList"]
         assert device_type_list[0]["DeviceType"] == "0x0016"
         assert device_type_list[1]["DeviceType"] == "0x0100"
 
     def test_convert_list_with_device_types(self):
         """Test converting list with device types"""
         input_obj = [
-            {"DeviceType": 22, "Revision": 1},
-            {"DeviceType": 256, "Revision": 1},
-            {"SomeOtherKey": "value"},
+            {
+                "DeviceType": 22,
+                "Revision": 1
+            },
+            {
+                "DeviceType": 256,
+                "Revision": 1
+            },
+            {
+                "SomeOtherKey": "value"
+            },
         ]
 
         result = convert_device_type_to_hex(input_obj)
@@ -307,7 +335,9 @@ class TestConvertDeviceTypeToHex:
         input_obj = {
             "SomeKey": "value",
             "AnotherKey": 123,
-            "NestedDict": {"InnerKey": "inner_value"},
+            "NestedDict": {
+                "InnerKey": "inner_value"
+            },
         }
 
         result = convert_device_type_to_hex(input_obj)
@@ -340,8 +370,12 @@ class TestConvertDeviceTypeToHex:
             "bool_value": True,
             "none_value": None,
             "list_value": [1, 2, 3],
-            "dict_value": {"nested": "value"},
-            "device_type_value": {"DeviceType": 22},
+            "dict_value": {
+                "nested": "value"
+            },
+            "device_type_value": {
+                "DeviceType": 22
+            },
         }
 
         result = convert_device_type_to_hex(input_obj)
@@ -370,11 +404,23 @@ class TestConvertDeviceTypeToHex:
 
     def test_convert_deeply_nested_structure(self):
         """Test converting deeply nested structure"""
-        input_obj = {"level1": {"level2": {"level3": {"level4": {"DeviceType": 22, "data": "test"}}}}}
+        input_obj = {
+            "level1": {
+                "level2": {
+                    "level3": {
+                        "level4": {
+                            "DeviceType": 22,
+                            "data": "test"
+                        }
+                    }
+                }
+            }
+        }
 
         result = convert_device_type_to_hex(input_obj)
 
-        assert result["level1"]["level2"]["level3"]["level4"]["DeviceType"] == "0x0016"
+        assert result["level1"]["level2"]["level3"]["level4"][
+            "DeviceType"] == "0x0016"
         assert result["level1"]["level2"]["level3"]["level4"]["data"] == "test"
 
     def test_convert_large_device_type_values(self):
@@ -450,15 +496,21 @@ class TestHelperErrorHandling:
 
     @patch("utils.helper.logger")
     def test_logging_in_error_conditions(self, mock_logger):
-        """Test that errors are logged appropriately"""
+        """Test that errors are logged appropriately
+
+        :param mock_logger:
+
+        """
         # Force an error in convert_value
         problematic_input = "test_input"
-        with patch("utils.helper.clean_line", side_effect=Exception("Test error")):
+        with patch("utils.helper.clean_line",
+                   side_effect=Exception("Test error")):
             result = convert_value(problematic_input)
 
             # Should log warning
             mock_logger.warning.assert_called_once()
-            assert "Error converting value" in str(mock_logger.warning.call_args)
+            assert "Error converting value" in str(
+                mock_logger.warning.call_args)
 
             # Should return string representation
             assert result == "test_input"

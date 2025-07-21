@@ -823,72 +823,72 @@ body {
     .container {
         padding: 10px;
     }
-    
+
     .header h1 {
         font-size: 2em;
     }
-    
+
     .upload-area {
         padding: 40px 15px;
     }
-    
+
     .summary-stats {
         grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
         gap: 15px;
     }
-    
+
     .clusters-grid {
         grid-template-columns: 1fr;
     }
-    
+
     .cluster-stats {
         grid-template-columns: repeat(2, 1fr);
         gap: 10px;
         padding: 15px;
     }
-    
+
     .stat-item {
         padding: 8px;
     }
-    
+
     .stat-count {
         font-size: 1.2em;
     }
-    
+
     .cluster-header {
         padding: 15px;
     }
-    
+
     .cluster-actions {
         gap: 8px;
     }
-    
+
     .item-header-enhanced {
         padding: 10px 12px;
         flex-wrap: wrap;
     }
-    
+
     .item-name-enhanced {
         min-width: 100px;
         font-size: 0.9em;
     }
-    
+
     .item-values {
         padding: 12px;
     }
-    
+
     .item-value {
         flex-direction: column;
         align-items: flex-start;
         gap: 5px;
     }
-    
+
     .value-label {
         text-align: left;
         min-width: auto;
         font-weight: 600;
     }
-    
+
     .value-data {
         max-width: 100%;
         width: 100%;
@@ -921,11 +921,11 @@ body {
     .cluster-stats {
         grid-template-columns: 1fr;
     }
-    
+
     .cluster-description {
         display: none;
     }
-    
+
     .cluster-actions {
         flex-direction: column;
         gap: 5px;
@@ -1450,30 +1450,30 @@ body {
     .modal {
         padding: 10px;
     }
-    
+
     .modal-content {
         max-width: 100%;
         max-height: 95vh;
     }
-    
+
     .modal-header {
         padding: 15px;
     }
-    
+
     .modal-header h2 {
         font-size: 1.1rem;
     }
-    
+
     .modal-section {
         padding: 15px;
     }
-    
+
     .modal-value {
         flex-direction: column;
         gap: 5px;
     }
-    
+
     .modal-value-label {
         min-width: auto;
     }
-} 
+}

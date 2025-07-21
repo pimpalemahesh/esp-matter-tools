@@ -14,20 +14,17 @@ Features:
 - Complete detailed output (no truncation)
 - Proper exit codes for CI/CD integration
 """
-
+import argparse
 import json
 import logging
 import os
 import sys
-import argparse
 import time
 
-# Import core modules
+from core.compliance_checker import load_element_requirements
+from core.compliance_checker import validate_device_compliance
 from core.log_parser import parse_datamodel_logs
-from core.compliance_checker import (
-    validate_device_compliance,
-    load_element_requirements,
-)
+# Import core modules
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -35,16 +32,17 @@ logger = logging.getLogger(__name__)
 
 
 def run_compliance_check(input_file, chip_version="1.4.1", verbose=False):
-    """
-    Run compliance check using core modules
+    """Run compliance check using core modules
 
-    Args:
-        input_file (str): Path to input file
-        chip_version (str): Chip version for requirements
-        verbose (bool): Enable verbose logging
+    :param input_file: Path to input file
+    :type input_file: str
+    :param chip_version: Chip version for requirements (Default value = "1.4.1")
+    :type chip_version: str
+    :param verbose: Enable verbose logging (Default value = False)
+    :type verbose: bool
+    :returns: Results with status and data
+    :rtype: dict
 
-    Returns:
-        dict: Results with status and data
     """
     try:
         # Set logging level
@@ -82,21 +80,27 @@ def run_compliance_check(input_file, chip_version="1.4.1", verbose=False):
         logger.info("Parsed data saved to: output/parsed_data.json")
 
         # Load requirements using core module
-        logger.info(f"Loading element requirements for chip version: {chip_version}")
+        logger.info(
+            f"Loading element requirements for chip version: {chip_version}")
         element_requirements = load_element_requirements(chip_version)
 
         if not element_requirements:
-            raise ValueError(f"No element requirements found for chip version: {chip_version}")
+            raise ValueError(
+                f"No element requirements found for chip version: {chip_version}"
+            )
 
         # Validate compliance using core module
         logger.info("Starting compliance validation...")
-        validation_data = validate_device_compliance(parsed_data, element_requirements, chip_version)
+        validation_data = validate_device_compliance(parsed_data,
+                                                     element_requirements,
+                                                     chip_version)
         logger.info("Compliance validation completed")
 
         # Automatically save validation results
         with open("output/validation_results.json", "w") as f:
             json.dump(validation_data, f, indent=2)
-        logger.info("Validation results saved to: output/validation_results.json")
+        logger.info(
+            "Validation results saved to: output/validation_results.json")
 
         return {
             "status": "success",
@@ -111,7 +115,11 @@ def run_compliance_check(input_file, chip_version="1.4.1", verbose=False):
 
 
 def print_compliance_summary(validation_data):
-    """Print comprehensive compliance summary to terminal with complete details"""
+    """Print comprehensive compliance summary to terminal with complete details
+
+    :param validation_data:
+
+    """
     if not validation_data:
         print("No validation data available")
         return
@@ -176,41 +184,60 @@ def print_compliance_summary(validation_data):
                     dt_name = dt.get("device_type_name", "unknown")
                     dt_compliant = dt.get("is_compliant", False)
                     dt_status = "✅" if dt_compliant else "❌"
-                    print(f"\n  📋 Device Type: {dt_status} {dt_name} (ID: {dt_id})")
+                    print(
+                        f"\n  📋 Device Type: {dt_status} {dt_name} (ID: {dt_id})"
+                    )
 
                     # Show cluster validation details
                     cluster_validations = dt.get("cluster_validations", [])
                     if cluster_validations:
-                        print(f"    🔧 Cluster Validations ({len(cluster_validations)} clusters):")
+                        print(
+                            f"    🔧 Cluster Validations ({len(cluster_validations)} clusters):"
+                        )
 
                         for cluster in cluster_validations:
                             cluster_id = cluster.get("cluster_id", "unknown")
-                            cluster_name = cluster.get("cluster_name", "unknown")
-                            cluster_type = cluster.get("cluster_type", "server")
-                            cluster_compliant = cluster.get("is_compliant", False)
+                            cluster_name = cluster.get("cluster_name",
+                                                       "unknown")
+                            cluster_type = cluster.get("cluster_type",
+                                                       "server")
+                            cluster_compliant = cluster.get(
+                                "is_compliant", False)
                             cluster_status = "✅" if cluster_compliant else "❌"
 
-                            print(f"      {cluster_status} {cluster_name} ({cluster_id}) [{cluster_type}]")
+                            print(
+                                f"      {cluster_status} {cluster_name} ({cluster_id}) [{cluster_type}]"
+                            )
 
                             # Show ALL missing elements for this cluster - NO TRUNCATION
-                            cluster_missing = cluster.get("missing_elements", [])
+                            cluster_missing = cluster.get(
+                                "missing_elements", [])
                             if cluster_missing:
                                 for elem in cluster_missing:  # Show ALL elements
                                     elem_type = elem.get("type", "unknown")
                                     elem_id = elem.get("id", "unknown")
                                     elem_name = elem.get("name", "unknown")
-                                    print(f"        🔸 Missing {elem_type}: {elem_name} ({elem_id})")
+                                    print(
+                                        f"        🔸 Missing {elem_type}: {elem_name} ({elem_id})"
+                                    )
 
                             # Show ALL revision issues for this cluster
-                            cluster_revision_issues = cluster.get("revision_issues", [])
+                            cluster_revision_issues = cluster.get(
+                                "revision_issues", [])
                             if cluster_revision_issues:
                                 for rev_issue in cluster_revision_issues:
-                                    severity = rev_issue.get("severity", "info")
-                                    message = rev_issue.get("message", "Unknown revision issue")
+                                    severity = rev_issue.get(
+                                        "severity", "info")
+                                    message = rev_issue.get(
+                                        "message", "Unknown revision issue")
                                     if severity == "error":
-                                        print(f"        🔸 Revision Error: {message}")
+                                        print(
+                                            f"        🔸 Revision Error: {message}"
+                                        )
                                     else:
-                                        print(f"        🔸 Revision Info: {message}")
+                                        print(
+                                            f"        🔸 Revision Info: {message}"
+                                        )
 
         # Overall missing elements for the endpoint - NO TRUNCATION
         if missing_elements:
@@ -231,7 +258,9 @@ def print_compliance_summary(validation_data):
                     elem_name = elem.get("name", "unknown")
                     cluster_name = elem.get("cluster_name", "")
                     if cluster_name:
-                        print(f"      • {elem_name} ({elem_id}) in {cluster_name}")
+                        print(
+                            f"      • {elem_name} ({elem_id}) in {cluster_name}"
+                        )
                     else:
                         print(f"      • {elem_name} ({elem_id})")
 
@@ -269,12 +298,15 @@ def print_compliance_summary(validation_data):
     # Summary recommendations
     if non_compliant_endpoints > 0:
         print("\n🔧 RECOMMENDATIONS:")
-        print("   • Check missing clusters, attributes, commands, and features")
+        print(
+            "   • Check missing clusters, attributes, commands, and features")
         print("   • Verify device type implementations meet specifications")
         if total_revision_issues > 0:
             print("   • Update firmware to meet minimum revision requirements")
         if total_event_warnings > 0:
-            print("   • Review event implementation (warnings don't affect compliance)")
+            print(
+                "   • Review event implementation (warnings don't affect compliance)"
+            )
         print("   • Check saved JSON files for complete detailed analysis")
     else:
         print("🎉 CONGRATULATIONS: Device is fully compliant!")
@@ -284,21 +316,31 @@ def print_compliance_summary(validation_data):
 
 def run_cli_mode():
     """Run in CLI mode for terminal usage"""
-    parser = argparse.ArgumentParser(description="Matter Device Compliance Parser - Automatically saves parsed_data.json and validation_results.json")
-    parser.add_argument("input_file", nargs="?", help="Input log file (.txt) to parse")
+    parser = argparse.ArgumentParser(
+        description=
+        "Matter Device Compliance Parser - Automatically saves parsed_data.json and validation_results.json"
+    )
+    parser.add_argument("input_file",
+                        nargs="?",
+                        help="Input log file (.txt) to parse")
     parser.add_argument(
         "--chip-version",
         default="1.4.1",
         help="Chip version for element requirements (default: 1.4.1)",
     )
-    parser.add_argument("--verbose", "-v", action="store_true", help="Enable verbose logging")
+    parser.add_argument("--verbose",
+                        "-v",
+                        action="store_true",
+                        help="Enable verbose logging")
     parser.add_argument(
         "--quiet",
         "-q",
         action="store_true",
         help="Quiet mode - only show final results",
     )
-    parser.add_argument("--test", action="store_true", help="Run tests instead of processing file")
+    parser.add_argument("--test",
+                        action="store_true",
+                        help="Run tests instead of processing file")
 
     args = parser.parse_args()
 
@@ -324,7 +366,8 @@ def run_cli_mode():
     print(f"🔍 Running compliance check on: {args.input_file}")
     print(f"📋 Chip version: {args.chip_version}")
 
-    results = run_compliance_check(args.input_file, args.chip_version, args.verbose)
+    results = run_compliance_check(args.input_file, args.chip_version,
+                                   args.verbose)
 
     if results["status"] == "success":
         if not args.quiet:
@@ -358,11 +401,9 @@ def run_tests():
     # Test 1: Test core module imports
     tests_total += 1
     try:
+        from core.compliance_checker import (load_element_requirements,
+                                             validate_device_compliance)
         from core.log_parser import parse_datamodel_logs
-        from core.compliance_checker import (
-            validate_device_compliance,
-            load_element_requirements,
-        )
 
         print("✅ Test 1: Core module imports - PASSED")
         tests_passed += 1
@@ -383,7 +424,9 @@ DeviceTypeList: 1 entries
             print("✅ Test 2: Sample log parsing - PASSED")
             tests_passed += 1
         else:
-            print("❌ Test 2: Sample log parsing - FAILED: Invalid result structure")
+            print(
+                "❌ Test 2: Sample log parsing - FAILED: Invalid result structure"
+            )
     except Exception as e:
         print(f"❌ Test 2: Sample log parsing - FAILED: {e}")
 
@@ -395,7 +438,9 @@ DeviceTypeList: 1 entries
             print("✅ Test 3: Element requirements loading - PASSED")
             tests_passed += 1
         else:
-            print("❌ Test 3: Element requirements loading - FAILED: Invalid requirements format")
+            print(
+                "❌ Test 3: Element requirements loading - FAILED: Invalid requirements format"
+            )
     except Exception as e:
         print(f"❌ Test 3: Element requirements loading - FAILED: {e}")
 
@@ -411,19 +456,21 @@ DeviceTypeList: 1 entries
 [0]: {
   DeviceType: 22
   Revision: 1
-}"""
-            )
+}""")
 
         results = run_compliance_check(test_file, "1.4.1", False)
 
         # Clean up
         os.remove(test_file)
 
-        if results["status"] in ["success", "error"]:  # Either is acceptable for test
+        if results["status"] in ["success",
+                                 "error"]:  # Either is acceptable for test
             print("✅ Test 4: Compliance check function - PASSED")
             tests_passed += 1
         else:
-            print("❌ Test 4: Compliance check function - FAILED: Invalid result status")
+            print(
+                "❌ Test 4: Compliance check function - FAILED: Invalid result status"
+            )
     except Exception as e:
         print(f"❌ Test 4: Compliance check function - FAILED: {e}")
         # Clean up if file exists
@@ -439,7 +486,9 @@ DeviceTypeList: 1 entries
             print("✅ Test 5: File validation - PASSED")
             tests_passed += 1
         else:
-            print("❌ Test 5: File validation - FAILED: Should detect missing file")
+            print(
+                "❌ Test 5: File validation - FAILED: Should detect missing file"
+            )
     except Exception as e:
         print(f"❌ Test 5: File validation - FAILED: {e}")
 

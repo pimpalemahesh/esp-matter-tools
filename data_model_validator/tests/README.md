@@ -20,11 +20,13 @@ tests/
 ## Running Tests
 
 ### Install Dependencies
+
 ```bash
 pip install -r tests/requirements.txt
 ```
 
 ### Run Tests
+
 ```bash
 # Run all tests
 pytest tests/ -v
@@ -42,6 +44,7 @@ pytest tests/ -v -s
 ## Test Fixtures
 
 Common fixtures in `conftest.py`:
+
 - `sample_log_data`: Valid log data for testing
 - `sample_parsed_data`: Pre-parsed data structure
 - `sample_element_requirements`: Sample requirements for compliance testing
@@ -54,4 +57,4 @@ Common fixtures in `conftest.py`:
 1. Create test methods in appropriate test file
 2. Include both valid and invalid test cases
 3. Use fixtures for common test data
-4. Follow naming convention: `test_function_name_scenario` 
+4. Follow naming convention: `test_function_name_scenario`

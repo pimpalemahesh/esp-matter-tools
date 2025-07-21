@@ -1,5 +1,5 @@
-import re
 import logging
+import re
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -25,12 +25,20 @@ def convert_to_snake_case(name):
 
 
 def clean_line(line):
-    """Remove terminal escape sequences and clean line"""
+    """Remove terminal escape sequences and clean line
+
+    :param line:
+
+    """
     return re.sub(r"\x1b\[0m|ESC\[0m|\u241b\[0m", "", line).strip()
 
 
 def convert_value(val):
-    """Convert string values to appropriate types (basic conversion only)"""
+    """Convert string values to appropriate types (basic conversion only)
+
+    :param val:
+
+    """
     try:
         val = clean_line(val)
         if val.lower() == "null":
@@ -49,7 +57,11 @@ def convert_value(val):
 
 
 def convert_cluster_id_to_hex(cluster_id):
-    """Convert cluster ID to hex format consistently"""
+    """Convert cluster ID to hex format consistently
+
+    :param cluster_id:
+
+    """
     if isinstance(cluster_id, int):
         return f"0x{cluster_id:04X}"
     elif isinstance(cluster_id, str):
@@ -61,7 +73,11 @@ def convert_cluster_id_to_hex(cluster_id):
 
 
 def convert_device_type_to_hex(obj):
-    """Recursively convert DeviceType values to hex format"""
+    """Recursively convert DeviceType values to hex format
+
+    :param obj:
+
+    """
     if isinstance(obj, dict):
         result = {}
         for key, value in obj.items():

@@ -1,33 +1,39 @@
-import pytest
-import os
 import json
+import os
+import shutil
 import sys
 import tempfile
-import shutil
-from unittest.mock import patch, Mock, mock_open
 from io import StringIO
+from unittest.mock import Mock
+from unittest.mock import mock_open
+from unittest.mock import patch
+
+import pytest
+
+from datamodel_parser import main
+from datamodel_parser import print_compliance_summary
+from datamodel_parser import run_cli_mode
+from datamodel_parser import run_compliance_check
+from datamodel_parser import run_tests
 
 # Add current directory to sys.path to ensure datamodel_parser can be imported
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-from datamodel_parser import (
-    run_compliance_check,
-    print_compliance_summary,
-    run_cli_mode,
-    run_tests,
-    main,
-)
 
 
 class TestRunComplianceCheck:
     """Test the run_compliance_check function"""
 
     def test_run_compliance_check_success(self, temp_requirements_file):
-        """Test successful compliance check"""
+        """Test successful compliance check
+
+        :param temp_requirements_file:
+
+        """
         # Create temporary input file
         test_input = "[TOO] Endpoint: 0 Cluster: 0x001D Attribute 0x0000 DataVersion: 1\nDeviceTypeList: 1 entries\n[0]: {\n  DeviceType: 22\n  Revision: 1\n}"
 
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".txt",
+                                         delete=False) as f:
             f.write(test_input)
             temp_file = f.name
 
@@ -60,7 +66,9 @@ class TestRunComplianceCheck:
 
     def test_run_compliance_check_invalid_file_extension(self):
         """Test compliance check with invalid file extension"""
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
+        with tempfile.NamedTemporaryFile(mode="w",
+                                         suffix=".json",
+                                         delete=False) as f:
             f.write("{}")
             temp_file = f.name
 
@@ -78,7 +86,11 @@ class TestPrintComplianceSummary:
     """Test the print_compliance_summary function"""
 
     def test_print_compliance_summary_compliant(self, capsys):
-        """Test printing summary for compliant device"""
+        """Test printing summary for compliant device
+
+        :param capsys:
+
+        """
         validation_data = {
             "summary": {
                 "total_endpoints": 1,
@@ -87,22 +99,20 @@ class TestPrintComplianceSummary:
                 "total_revision_issues": 0,
                 "total_event_warnings": 0,
             },
-            "endpoints": [
-                {
-                    "endpoint": 0,
+            "endpoints": [{
+                "endpoint":
+                0,
+                "is_compliant":
+                True,
+                "device_types": [{
+                    "device_type_id": 22,
+                    "device_type_name": "Root Node",
                     "is_compliant": True,
-                    "device_types": [
-                        {
-                            "device_type_id": 22,
-                            "device_type_name": "Root Node",
-                            "is_compliant": True,
-                        }
-                    ],
-                    "missing_elements": [],
-                    "revision_issues": [],
-                    "event_warnings": [],
-                }
-            ],
+                }],
+                "missing_elements": [],
+                "revision_issues": [],
+                "event_warnings": [],
+            }],
         }
 
         print_compliance_summary(validation_data)
@@ -114,7 +124,11 @@ class TestPrintComplianceSummary:
         assert "Non-Compliant Endpoints: 0" in captured.out
 
     def test_print_compliance_summary_empty_data(self, capsys):
-        """Test printing summary with empty validation data"""
+        """Test printing summary with empty validation data
+
+        :param capsys:
+
+        """
         print_compliance_summary({})
 
         captured = capsys.readouterr()
@@ -125,9 +139,14 @@ class TestRunTests:
     """Test the run_tests function"""
 
     def test_run_tests_success(self, capsys):
-        """Test successful test run"""
+        """Test successful test run
+
+        :param capsys:
+
+        """
         with patch("datamodel_parser.parse_datamodel_logs") as mock_parse:
-            with patch("datamodel_parser.load_element_requirements") as mock_load:
+            with patch(
+                    "datamodel_parser.load_element_requirements") as mock_load:
                 mock_parse.return_value = {"endpoints": []}
                 mock_load.return_value = [{"id": 22, "name": "Test"}]
 
@@ -142,7 +161,11 @@ class TestRunCliMode:
     """Test the run_cli_mode function"""
 
     def test_run_cli_mode_missing_input_file(self, capsys):
-        """Test CLI mode with missing input file"""
+        """Test CLI mode with missing input file
+
+        :param capsys:
+
+        """
         with patch("sys.argv", ["datamodel_parser.py"]):
             result = run_cli_mode()
 
@@ -151,7 +174,11 @@ class TestRunCliMode:
             assert result == 2
 
     def test_run_cli_mode_test_flag(self, capsys):
-        """Test CLI mode with test flag"""
+        """Test CLI mode with test flag
+
+        :param capsys:
+
+        """
         with patch("sys.argv", ["datamodel_parser.py", "--test"]):
             with patch("datamodel_parser.run_tests", return_value=0):
                 result = run_cli_mode()
@@ -164,7 +191,8 @@ class TestMainFunction:
 
     def test_main_function_calls_cli_mode(self):
         """Test that main function calls run_cli_mode"""
-        with patch("datamodel_parser.run_cli_mode", return_value=0) as mock_cli:
+        with patch("datamodel_parser.run_cli_mode",
+                   return_value=0) as mock_cli:
             result = main()
 
             mock_cli.assert_called_once()
@@ -179,14 +207,15 @@ class TestDatamodelParserErrorHandling:
         # Create a temporary valid file to pass file validation
         import tempfile
 
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".txt",
+                                         delete=False) as f:
             f.write("test content")
             temp_file = f.name
 
         try:
             with patch(
-                "datamodel_parser.parse_datamodel_logs",
-                side_effect=Exception("Test error"),
+                    "datamodel_parser.parse_datamodel_logs",
+                    side_effect=Exception("Test error"),
             ):
                 result = run_compliance_check(temp_file, "1.4.1", False)
 
@@ -198,7 +227,11 @@ class TestDatamodelParserErrorHandling:
             os.unlink(temp_file)
 
     def test_print_compliance_summary_exception_handling(self, capsys):
-        """Test that print_compliance_summary handles exceptions gracefully"""
+        """Test that print_compliance_summary handles exceptions gracefully
+
+        :param capsys:
+
+        """
         # Test with malformed validation data
         malformed_data = {"summary": "not a dict", "endpoints": "not a list"}
 

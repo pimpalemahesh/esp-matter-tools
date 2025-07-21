@@ -1,30 +1,35 @@
-import pytest
 import json
 import os
 import sys
-from unittest.mock import patch, Mock, mock_open
+from unittest.mock import Mock
+from unittest.mock import mock_open
+from unittest.mock import patch
+
+import pytest
+
+from core.compliance_checker import find_client_cluster
+from core.compliance_checker import load_element_requirements
+from core.compliance_checker import validate_cluster
+from core.compliance_checker import validate_device_compliance
+from core.compliance_checker import validate_events_with_warnings
+from core.compliance_checker import validate_feature_map
+from core.compliance_checker import validate_feature_specific_elements
+from core.compliance_checker import validate_revisions
+from core.compliance_checker import validate_single_device_type
 
 # Add current directory to sys.path to ensure core modules can be imported
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-from core.compliance_checker import (
-    validate_device_compliance,
-    validate_single_device_type,
-    validate_cluster,
-    load_element_requirements,
-    find_client_cluster,
-    validate_feature_map,
-    validate_feature_specific_elements,
-    validate_revisions,
-    validate_events_with_warnings,
-)
 
 
 class TestLoadElementRequirements:
     """Test the load_element_requirements function"""
 
     def test_load_valid_requirements(self, temp_requirements_file):
-        """Test loading valid element requirements"""
+        """Test loading valid element requirements
+
+        :param temp_requirements_file:
+
+        """
         requirements = load_element_requirements("1.4.1")
 
         assert isinstance(requirements, list)
@@ -56,7 +61,12 @@ class TestLoadElementRequirements:
 
     @patch("core.compliance_checker.logger")
     def test_load_with_logging(self, mock_logger, temp_requirements_file):
-        """Test that loading logs appropriately"""
+        """Test that loading logs appropriately
+
+        :param mock_logger: param temp_requirements_file:
+        :param temp_requirements_file:
+
+        """
         requirements = load_element_requirements("1.4.1")
 
         # Should log info about loaded requirements
@@ -67,9 +77,17 @@ class TestLoadElementRequirements:
 class TestValidateDeviceCompliance:
     """Test the main validate_device_compliance function"""
 
-    def test_validate_compliant_device(self, sample_parsed_data, sample_element_requirements):
-        """Test validating a compliant device"""
-        result = validate_device_compliance(sample_parsed_data, sample_element_requirements, "1.4.1")
+    def test_validate_compliant_device(self, sample_parsed_data,
+                                       sample_element_requirements):
+        """Test validating a compliant device
+
+        :param sample_parsed_data: param sample_element_requirements:
+        :param sample_element_requirements:
+
+        """
+        result = validate_device_compliance(sample_parsed_data,
+                                            sample_element_requirements,
+                                            "1.4.1")
 
         assert "endpoints" in result
         assert "summary" in result
@@ -82,14 +100,23 @@ class TestValidateDeviceCompliance:
         assert "non_compliant_endpoints" in summary
         assert summary["total_endpoints"] == 2
 
-    def test_validate_invalid_parsed_data(self, invalid_parsed_data, sample_element_requirements):
-        """Test validating invalid parsed data"""
+    def test_validate_invalid_parsed_data(self, invalid_parsed_data,
+                                          sample_element_requirements):
+        """Test validating invalid parsed data
+
+        :param invalid_parsed_data: param sample_element_requirements:
+        :param sample_element_requirements:
+
+        """
         # Test empty dict
-        with pytest.raises(ValueError, match="parsed_data must be a dictionary"):
-            validate_device_compliance("not a dict", sample_element_requirements, "1.4.1")
+        with pytest.raises(ValueError,
+                           match="parsed_data must be a dictionary"):
+            validate_device_compliance("not a dict",
+                                       sample_element_requirements, "1.4.1")
 
         # Test missing endpoints
-        with pytest.raises(ValueError, match="parsed_data must contain 'endpoints' key"):
+        with pytest.raises(ValueError,
+                           match="parsed_data must contain 'endpoints' key"):
             validate_device_compliance(
                 invalid_parsed_data["no_endpoints"],
                 sample_element_requirements,
@@ -97,7 +124,11 @@ class TestValidateDeviceCompliance:
             )
 
     def test_validate_empty_requirements(self, sample_parsed_data):
-        """Test validating with empty requirements"""
+        """Test validating with empty requirements
+
+        :param sample_parsed_data:
+
+        """
         result = validate_device_compliance(sample_parsed_data, [], "1.4.1")
 
         assert "endpoints" in result
@@ -105,62 +136,88 @@ class TestValidateDeviceCompliance:
         # Should handle gracefully
         assert result["summary"]["total_endpoints"] == 2
 
-    def test_validate_invalid_requirements(self, sample_parsed_data, invalid_requirements):
-        """Test validating with invalid requirements"""
+    def test_validate_invalid_requirements(self, sample_parsed_data,
+                                           invalid_requirements):
+        """Test validating with invalid requirements
+
+        :param sample_parsed_data: param invalid_requirements:
+        :param invalid_requirements:
+
+        """
         # The function handles invalid requirements gracefully rather than raising ValueError
-        result = validate_device_compliance(sample_parsed_data, invalid_requirements["not_list"], "1.4.1")
+        result = validate_device_compliance(sample_parsed_data,
+                                            invalid_requirements["not_list"],
+                                            "1.4.1")
         assert "endpoints" in result
         assert "summary" in result
 
         # Test invalid device type should handle gracefully
-        result = validate_device_compliance(sample_parsed_data, invalid_requirements["invalid_device_type"], "1.4.1")
+        result = validate_device_compliance(
+            sample_parsed_data, invalid_requirements["invalid_device_type"],
+            "1.4.1")
         assert "endpoints" in result
 
-    def test_validate_device_without_descriptor(self, sample_element_requirements):
-        """Test validating device without descriptor cluster"""
+    def test_validate_device_without_descriptor(self,
+                                                sample_element_requirements):
+        """Test validating device without descriptor cluster
+
+        :param sample_element_requirements:
+
+        """
         parsed_data = {
-            "endpoints": [
-                {
-                    "endpoint": 0,
-                    "clusters": {
-                        "0x0028": {
-                            "attributes": {},
-                            "events": {},
-                            "commands": {},
-                            "features": {},
-                        }
-                    },
-                }
-            ]
+            "endpoints": [{
+                "endpoint": 0,
+                "clusters": {
+                    "0x0028": {
+                        "attributes": {},
+                        "events": {},
+                        "commands": {},
+                        "features": {},
+                    }
+                },
+            }]
         }
 
-        result = validate_device_compliance(parsed_data, sample_element_requirements, "1.4.1")
+        result = validate_device_compliance(parsed_data,
+                                            sample_element_requirements,
+                                            "1.4.1")
 
         assert not result["endpoints"][0]["is_compliant"]
         assert "error" in result["endpoints"][0]["device_types"][0]
 
     def test_validate_large_dataset(self, sample_element_requirements):
-        """Test validating large dataset for performance"""
+        """Test validating large dataset for performance
+
+        :param sample_element_requirements:
+
+        """
         # Create a large dataset
         large_parsed_data = {"endpoints": []}
 
         # Add many endpoints
         for i in range(10):
-            large_parsed_data["endpoints"].append(
-                {
-                    "endpoint": i,
-                    "clusters": {
-                        "0x001D": {
-                            "attributes": {"0x0000": {"DeviceTypeList": [{"DeviceType": "0x0016", "Revision": 1}]}},
-                            "events": {},
-                            "commands": {},
-                            "features": {},
-                        }
-                    },
-                }
-            )
+            large_parsed_data["endpoints"].append({
+                "endpoint": i,
+                "clusters": {
+                    "0x001D": {
+                        "attributes": {
+                            "0x0000": {
+                                "DeviceTypeList": [{
+                                    "DeviceType": "0x0016",
+                                    "Revision": 1
+                                }]
+                            }
+                        },
+                        "events": {},
+                        "commands": {},
+                        "features": {},
+                    }
+                },
+            })
 
-        result = validate_device_compliance(large_parsed_data, sample_element_requirements, "1.4.1")
+        result = validate_device_compliance(large_parsed_data,
+                                            sample_element_requirements,
+                                            "1.4.1")
 
         assert len(result["endpoints"]) == 10
         assert result["summary"]["total_endpoints"] == 10
@@ -169,8 +226,14 @@ class TestValidateDeviceCompliance:
 class TestValidateSingleDeviceType:
     """Test the validate_single_device_type function"""
 
-    def test_validate_compliant_device_type(self, sample_parsed_data, sample_element_requirements):
-        """Test validating compliant device type"""
+    def test_validate_compliant_device_type(self, sample_parsed_data,
+                                            sample_element_requirements):
+        """Test validating compliant device type
+
+        :param sample_parsed_data: param sample_element_requirements:
+        :param sample_element_requirements:
+
+        """
         endpoint = sample_parsed_data["endpoints"][0]
         device_requirements = sample_element_requirements[0]  # Root Node
 
@@ -184,11 +247,16 @@ class TestValidateSingleDeviceType:
         assert result["device_type_name"] == "Root Node"
 
     def test_validate_invalid_parameters(self, sample_parsed_data):
-        """Test validating with invalid parameters"""
+        """Test validating with invalid parameters
+
+        :param sample_parsed_data:
+
+        """
         endpoint = sample_parsed_data["endpoints"][0]
 
         # Test invalid device_requirements
-        with pytest.raises(ValueError, match="device_requirements must be a dict"):
+        with pytest.raises(ValueError,
+                           match="device_requirements must be a dict"):
             validate_single_device_type(endpoint, 22, "not a dict")
 
         # Test invalid endpoint
@@ -196,12 +264,23 @@ class TestValidateSingleDeviceType:
             validate_single_device_type("not a dict", 22, {"id": 22})
 
     def test_validate_missing_clusters(self, sample_element_requirements):
-        """Test validating device type with missing clusters"""
+        """Test validating device type with missing clusters
+
+        :param sample_element_requirements:
+
+        """
         endpoint = {
             "endpoint": 0,
             "clusters": {
                 "0x001D": {
-                    "attributes": {"0x0000": {"DeviceTypeList": [{"DeviceType": "0x0016", "Revision": 1}]}},
+                    "attributes": {
+                        "0x0000": {
+                            "DeviceTypeList": [{
+                                "DeviceType": "0x0016",
+                                "Revision": 1
+                            }]
+                        }
+                    },
                     "events": {},
                     "commands": {},
                     "features": {},
@@ -217,19 +296,22 @@ class TestValidateSingleDeviceType:
         assert len(result["missing_elements"]) > 0
 
     def test_validate_revision_mismatch(self, sample_element_requirements):
-        """Test validating device type with revision mismatch"""
+        """Test validating device type with revision mismatch
+
+        :param sample_element_requirements:
+
+        """
         endpoint = {
             "endpoint": 0,
             "clusters": {
                 "0x001D": {
                     "attributes": {
                         "0x0000": {
-                            "DeviceTypeList": [
-                                {
-                                    "DeviceType": "0x0016",
-                                    "Revision": 2,
-                                }  # Wrong revision
-                            ]
+                            "DeviceTypeList": [{
+                                "DeviceType": "0x0016",
+                                "Revision": 2,
+                            }  # Wrong revision
+                                               ]
                         }
                     },
                     "events": {},
@@ -246,19 +328,22 @@ class TestValidateSingleDeviceType:
         assert len(result["revision_issues"]) > 0
 
     def test_validate_device_type_not_found(self, sample_element_requirements):
-        """Test validating device type not found in descriptor"""
+        """Test validating device type not found in descriptor
+
+        :param sample_element_requirements:
+
+        """
         endpoint = {
             "endpoint": 0,
             "clusters": {
                 "0x001D": {
                     "attributes": {
                         "0x0000": {
-                            "DeviceTypeList": [
-                                {
-                                    "DeviceType": "0x0100",
-                                    "Revision": 1,
-                                }  # Different device type
-                            ]
+                            "DeviceTypeList": [{
+                                "DeviceType": "0x0100",
+                                "Revision": 1,
+                            }  # Different device type
+                                               ]
                         }
                     },
                     "events": {},
@@ -279,13 +364,20 @@ class TestValidateCluster:
     """Test the validate_cluster function"""
 
     def test_validate_compliant_cluster(self, sample_parsed_data):
-        """Test validating compliant cluster"""
+        """Test validating compliant cluster
+
+        :param sample_parsed_data:
+
+        """
         endpoint_clusters = sample_parsed_data["endpoints"][0]["clusters"]
         required_cluster = {
             "id": "0x001D",
             "name": "Descriptor",
             "type": "server",
-            "attributes": [{"id": "0x0000", "name": "DeviceTypeList"}],
+            "attributes": [{
+                "id": "0x0000",
+                "name": "DeviceTypeList"
+            }],
         }
 
         result = validate_cluster(endpoint_clusters, required_cluster)
@@ -297,13 +389,20 @@ class TestValidateCluster:
         assert len(result["missing_elements"]) == 0
 
     def test_validate_missing_cluster(self, sample_parsed_data):
-        """Test validating missing cluster"""
+        """Test validating missing cluster
+
+        :param sample_parsed_data:
+
+        """
         endpoint_clusters = sample_parsed_data["endpoints"][0]["clusters"]
         required_cluster = {
             "id": "0x0006",  # Missing cluster
             "name": "On/Off",
             "type": "server",
-            "attributes": [{"id": "0x0000", "name": "OnOff"}],
+            "attributes": [{
+                "id": "0x0000",
+                "name": "OnOff"
+            }],
         }
 
         result = validate_cluster(endpoint_clusters, required_cluster)
@@ -313,7 +412,11 @@ class TestValidateCluster:
         assert result["missing_elements"][0]["type"] == "cluster"
 
     def test_validate_client_cluster(self, sample_parsed_data):
-        """Test validating client cluster"""
+        """Test validating client cluster
+
+        :param sample_parsed_data:
+
+        """
         endpoint_clusters = sample_parsed_data["endpoints"][0]["clusters"]
         required_cluster = {
             "id": "0x0006",
@@ -328,15 +431,28 @@ class TestValidateCluster:
         assert result["cluster_type"] == "client"
 
     def test_validate_missing_attributes(self, sample_parsed_data):
-        """Test validating cluster with missing attributes"""
+        """Test validating cluster with missing attributes
+
+        :param sample_parsed_data:
+
+        """
         endpoint_clusters = sample_parsed_data["endpoints"][0]["clusters"]
         required_cluster = {
-            "id": "0x001D",
-            "name": "Descriptor",
-            "type": "server",
+            "id":
+            "0x001D",
+            "name":
+            "Descriptor",
+            "type":
+            "server",
             "attributes": [
-                {"id": "0x0000", "name": "DeviceTypeList"},
-                {"id": "0x0099", "name": "MissingAttribute"},  # Missing attribute
+                {
+                    "id": "0x0000",
+                    "name": "DeviceTypeList"
+                },
+                {
+                    "id": "0x0099",
+                    "name": "MissingAttribute"
+                },  # Missing attribute
             ],
         }
 
@@ -347,14 +463,22 @@ class TestValidateCluster:
         assert result["missing_elements"][0]["type"] == "attribute"
 
     def test_validate_missing_commands(self, sample_parsed_data):
-        """Test validating cluster with missing commands"""
+        """Test validating cluster with missing commands
+
+        :param sample_parsed_data:
+
+        """
         endpoint_clusters = sample_parsed_data["endpoints"][0]["clusters"]
         required_cluster = {
             "id": "0x001D",
             "name": "Descriptor",
             "type": "server",
             "attributes": [],
-            "commands": [{"id": "0x0000", "name": "TestCommand"}],  # Missing command
+            # Missing command
+            "commands": [{
+                "id": "0x0000",
+                "name": "TestCommand"
+            }],
         }
 
         result = validate_cluster(endpoint_clusters, required_cluster)
@@ -364,20 +488,33 @@ class TestValidateCluster:
         assert result["missing_elements"][0]["type"] == "command"
 
     def test_validate_invalid_required_cluster(self, sample_parsed_data):
-        """Test validating with invalid required cluster"""
+        """Test validating with invalid required cluster
+
+        :param sample_parsed_data:
+
+        """
         endpoint_clusters = sample_parsed_data["endpoints"][0]["clusters"]
 
-        with pytest.raises(ValueError, match="required_cluster must be a dict"):
+        with pytest.raises(ValueError,
+                           match="required_cluster must be a dict"):
             validate_cluster(endpoint_clusters, "not a dict")
 
     def test_validate_cluster_revision(self, sample_parsed_data):
-        """Test validating cluster revision"""
+        """Test validating cluster revision
+
+        :param sample_parsed_data:
+
+        """
         endpoint_clusters = {
             "0x0028": {
                 "attributes": {},
                 "events": {},
                 "commands": {},
-                "features": {"ClusterRevision": {"ClusterRevision": 1}},
+                "features": {
+                    "ClusterRevision": {
+                        "ClusterRevision": 1
+                    }
+                },
             }
         }
 
@@ -402,7 +539,13 @@ class TestFindClientCluster:
         """Test finding existing client cluster"""
         endpoint_clusters = {
             "0x001D": {
-                "attributes": {"0x0002": {"ClientList": [{"id": "0x0006"}]}},
+                "attributes": {
+                    "0x0002": {
+                        "ClientList": [{
+                            "id": "0x0006"
+                        }]
+                    }
+                },
                 "events": {},
                 "commands": {},
                 "features": {},
@@ -416,7 +559,13 @@ class TestFindClientCluster:
         """Test finding non-existent client cluster"""
         endpoint_clusters = {
             "0x001D": {
-                "attributes": {"0x0002": {"ClientList": [{"id": "0x0006"}]}},
+                "attributes": {
+                    "0x0002": {
+                        "ClientList": [{
+                            "id": "0x0006"
+                        }]
+                    }
+                },
                 "events": {},
                 "commands": {},
                 "features": {},
@@ -430,7 +579,9 @@ class TestFindClientCluster:
         """Test finding client cluster in top level ClientList"""
         endpoint_clusters = {
             "0x001D": {
-                "ClientList": [{"id": "0x0006"}],
+                "ClientList": [{
+                    "id": "0x0006"
+                }],
                 "attributes": {},
                 "events": {},
                 "commands": {},
@@ -445,7 +596,15 @@ class TestFindClientCluster:
         """Test finding client cluster in nested structure"""
         endpoint_clusters = {
             "0x001D": {
-                "attributes": {"0x0002": {"ClientList": {"ClientList": [{"id": "0x0006"}]}}},
+                "attributes": {
+                    "0x0002": {
+                        "ClientList": {
+                            "ClientList": [{
+                                "id": "0x0006"
+                            }]
+                        }
+                    }
+                },
                 "events": {},
                 "commands": {},
                 "features": {},
@@ -470,11 +629,19 @@ class TestValidateFeatureMap:
         """Test validating compliant features"""
         actual_feature_map = "0x0003"  # Binary: 0011 (features 0 and 1)
         required_features = [
-            {"id": "0x0001", "name": "Feature1"},  # Bit 0
-            {"id": "0x0002", "name": "Feature2"},  # Bit 1
+            {
+                "id": "0x0001",
+                "name": "Feature1"
+            },  # Bit 0
+            {
+                "id": "0x0002",
+                "name": "Feature2"
+            },  # Bit 1
         ]
 
-        is_compliant, missing_features = validate_feature_map(actual_feature_map, required_features, "0x0028", "Basic Information")
+        is_compliant, missing_features = validate_feature_map(
+            actual_feature_map, required_features, "0x0028",
+            "Basic Information")
 
         assert is_compliant
         assert len(missing_features) == 0
@@ -483,11 +650,19 @@ class TestValidateFeatureMap:
         """Test validating missing features"""
         actual_feature_map = "0x0001"  # Binary: 0001 (only feature 0)
         required_features = [
-            {"id": "0x0001", "name": "Feature1"},  # Bit 0 - present
-            {"id": "0x0002", "name": "Feature2"},  # Bit 1 - missing
+            {
+                "id": "0x0001",
+                "name": "Feature1"
+            },  # Bit 0 - present
+            {
+                "id": "0x0002",
+                "name": "Feature2"
+            },  # Bit 1 - missing
         ]
 
-        is_compliant, missing_features = validate_feature_map(actual_feature_map, required_features, "0x0028", "Basic Information")
+        is_compliant, missing_features = validate_feature_map(
+            actual_feature_map, required_features, "0x0028",
+            "Basic Information")
 
         assert not is_compliant
         assert len(missing_features) == 1
@@ -498,7 +673,9 @@ class TestValidateFeatureMap:
         actual_feature_map = "0x0000"
         required_features = []
 
-        is_compliant, missing_features = validate_feature_map(actual_feature_map, required_features, "0x0028", "Basic Information")
+        is_compliant, missing_features = validate_feature_map(
+            actual_feature_map, required_features, "0x0028",
+            "Basic Information")
 
         assert is_compliant
         assert len(missing_features) == 0
@@ -507,11 +684,19 @@ class TestValidateFeatureMap:
         """Test validating integer feature map"""
         actual_feature_map = 3  # Binary: 0011
         required_features = [
-            {"id": 1, "name": "Feature1"},
-            {"id": 2, "name": "Feature2"},
+            {
+                "id": 1,
+                "name": "Feature1"
+            },
+            {
+                "id": 2,
+                "name": "Feature2"
+            },
         ]
 
-        is_compliant, missing_features = validate_feature_map(actual_feature_map, required_features, "0x0028", "Basic Information")
+        is_compliant, missing_features = validate_feature_map(
+            actual_feature_map, required_features, "0x0028",
+            "Basic Information")
 
         assert is_compliant
         assert len(missing_features) == 0
@@ -521,7 +706,9 @@ class TestValidateFeatureMap:
         actual_feature_map = "invalid"
         required_features = [{"id": "0x0001", "name": "Feature1"}]
 
-        is_compliant, missing_features = validate_feature_map(actual_feature_map, required_features, "0x0028", "Basic Information")
+        is_compliant, missing_features = validate_feature_map(
+            actual_feature_map, required_features, "0x0028",
+            "Basic Information")
 
         assert not is_compliant
         assert len(missing_features) == 1
@@ -532,7 +719,9 @@ class TestValidateFeatureMap:
         actual_feature_map = None
         required_features = [{"id": "0x0001", "name": "Feature1"}]
 
-        is_compliant, missing_features = validate_feature_map(actual_feature_map, required_features, "0x0028", "Basic Information")
+        is_compliant, missing_features = validate_feature_map(
+            actual_feature_map, required_features, "0x0028",
+            "Basic Information")
 
         assert not is_compliant
         assert len(missing_features) == 1
@@ -545,62 +734,145 @@ class TestValidateFeatureSpecificElements:
     def test_validate_feature_specific_elements_with_present_feature(self):
         """Test validating feature-specific elements when feature is present"""
         actual_cluster = {
-            "features": {"FeatureMap": {"FeatureMap": 1}},  # Feature 0x0001 is present (bit 0 set)
+            # Feature 0x0001 is present (bit 0 set)
+            "features": {
+                "FeatureMap": {
+                    "FeatureMap": 1
+                }
+            },
             "attributes": {
-                "0x4000": {"global_scene_control": True},
-                "0x4001": {"on_time": 0},
+                "0x4000": {
+                    "global_scene_control": True
+                },
+                "0x4001": {
+                    "on_time": 0
+                },
                 # Missing 0x4002 (off_wait_time) and 0x4003 (start_up_on_off)
             },
             "commands": {
                 "AcceptedCommandList": {
-                    "AcceptedCommandList": [
-                        {"id": "0x0040", "name": "off_with_effect"}
-                        # Missing 0x0041 and 0x0042
-                    ]
+                    "AcceptedCommandList": [{
+                        "id": "0x0040",
+                        "name": "off_with_effect"
+                    }
+                                            # Missing 0x0041 and 0x0042
+                                            ]
                 }
             },
-            "events": {"EventList": {"EventList": []}},
+            "events": {
+                "EventList": {
+                    "EventList": []
+                }
+            },
         }
 
-        required_features = [
-            {
-                "id": "0x0001",
-                "name": "lighting",
-                "attributes": [{"id": "0x4000", "name": "global_scene_control"}, {"id": "0x4001", "name": "on_time"}, {"id": "0x4002", "name": "off_wait_time"}, {"id": "0x4003", "name": "start_up_on_off"}],
-                "commands": [{"id": "0x0040", "name": "off_with_effect"}, {"id": "0x0041", "name": "on_with_recall_global_scene"}, {"id": "0x0042", "name": "on_with_timed_off"}],
-                "events": [],
-            }
-        ]
+        required_features = [{
+            "id":
+            "0x0001",
+            "name":
+            "lighting",
+            "attributes": [
+                {
+                    "id": "0x4000",
+                    "name": "global_scene_control"
+                },
+                {
+                    "id": "0x4001",
+                    "name": "on_time"
+                },
+                {
+                    "id": "0x4002",
+                    "name": "off_wait_time"
+                },
+                {
+                    "id": "0x4003",
+                    "name": "start_up_on_off"
+                },
+            ],
+            "commands": [
+                {
+                    "id": "0x0040",
+                    "name": "off_with_effect"
+                },
+                {
+                    "id": "0x0041",
+                    "name": "on_with_recall_global_scene"
+                },
+                {
+                    "id": "0x0042",
+                    "name": "on_with_timed_off"
+                },
+            ],
+            "events": [],
+        }]
 
-        is_compliant, missing_elements = validate_feature_specific_elements(actual_cluster, required_features, "0x0006", "On/Off")
+        is_compliant, missing_elements = validate_feature_specific_elements(
+            actual_cluster, required_features, "0x0006", "On/Off")
 
         assert not is_compliant
         assert len(missing_elements) == 4
 
         # Check for missing feature attributes
-        feature_attrs = [e for e in missing_elements if e["type"] == "feature_attribute"]
+        feature_attrs = [
+            e for e in missing_elements if e["type"] == "feature_attribute"
+        ]
         assert len(feature_attrs) == 2
-        assert any(e["id"] == "0x4002" and e["name"] == "off_wait_time" for e in feature_attrs)
-        assert any(e["id"] == "0x4003" and e["name"] == "start_up_on_off" for e in feature_attrs)
+        assert any(e["id"] == "0x4002" and e["name"] == "off_wait_time"
+                   for e in feature_attrs)
+        assert any(e["id"] == "0x4003" and e["name"] == "start_up_on_off"
+                   for e in feature_attrs)
 
         # Check for missing feature commands
-        feature_cmds = [e for e in missing_elements if e["type"] == "feature_command"]
+        feature_cmds = [
+            e for e in missing_elements if e["type"] == "feature_command"
+        ]
         assert len(feature_cmds) == 2
-        assert any(e["id"] == "0x0041" and e["name"] == "on_with_recall_global_scene" for e in feature_cmds)
-        assert any(e["id"] == "0x0042" and e["name"] == "on_with_timed_off" for e in feature_cmds)
+        assert any(
+            e["id"] == "0x0041" and e["name"] == "on_with_recall_global_scene"
+            for e in feature_cmds)
+        assert any(e["id"] == "0x0042" and e["name"] == "on_with_timed_off"
+                   for e in feature_cmds)
 
     def test_validate_feature_specific_elements_with_absent_feature(self):
         """Test validating feature-specific elements when feature is not present"""
         actual_cluster = {
-            "features": {"FeatureMap": {"FeatureMap": 0}},  # No features present
+            # No features present
+            "features": {
+                "FeatureMap": {
+                    "FeatureMap": 0
+                }
+            },
             "attributes": {},
-            "commands": {"AcceptedCommandList": {"AcceptedCommandList": []}},
-            "events": {"EventList": {"EventList": []}},
+            "commands": {
+                "AcceptedCommandList": {
+                    "AcceptedCommandList": []
+                }
+            },
+            "events": {
+                "EventList": {
+                    "EventList": []
+                }
+            },
         }
 
-        required_features = [{"id": "0x0001", "name": "lighting", "attributes": [{"id": "0x4000", "name": "global_scene_control"}], "commands": [{"id": "0x0040", "name": "off_with_effect"}], "events": []}]
+        required_features = [{
+            "id":
+            "0x0001",
+            "name":
+            "lighting",
+            "attributes": [{
+                "id": "0x4000",
+                "name": "global_scene_control"
+            }],
+            "commands": [{
+                "id": "0x0040",
+                "name": "off_with_effect"
+            }],
+            "events": [],
+        }]
 
-        is_compliant, missing_elements = validate_feature_specific_elements(actual_cluster, required_features, "0x0006", "On/Off")
+        is_compliant, missing_elements = validate_feature_specific_elements(
+            actual_cluster, required_features, "0x0006", "On/Off")
 
         # Should be compliant because feature is not present, so no feature-specific validation needed
         assert is_compliant
@@ -610,9 +882,19 @@ class TestValidateFeatureSpecificElements:
         """Test validating feature-specific elements when no FeatureMap exists"""
         actual_cluster = {"attributes": {}, "commands": {}, "events": {}}
 
-        required_features = [{"id": "0x0001", "name": "lighting", "attributes": [{"id": "0x4000", "name": "global_scene_control"}]}]
+        required_features = [{
+            "id":
+            "0x0001",
+            "name":
+            "lighting",
+            "attributes": [{
+                "id": "0x4000",
+                "name": "global_scene_control"
+            }],
+        }]
 
-        is_compliant, missing_elements = validate_feature_specific_elements(actual_cluster, required_features, "0x0006", "On/Off")
+        is_compliant, missing_elements = validate_feature_specific_elements(
+            actual_cluster, required_features, "0x0006", "On/Off")
 
         # Should be compliant because no FeatureMap means no feature-specific validation
         assert is_compliant
@@ -622,7 +904,8 @@ class TestValidateFeatureSpecificElements:
         """Test validating feature-specific elements with empty requirements"""
         actual_cluster = {"features": {"FeatureMap": {"FeatureMap": 1}}}
 
-        is_compliant, missing_elements = validate_feature_specific_elements(actual_cluster, [], "0x0006", "On/Off")
+        is_compliant, missing_elements = validate_feature_specific_elements(
+            actual_cluster, [], "0x0006", "On/Off")
 
         assert is_compliant
         assert len(missing_elements) == 0
@@ -633,14 +916,16 @@ class TestValidateRevisions:
 
     def test_validate_matching_revisions(self):
         """Test validating matching revisions"""
-        is_compliant, issues = validate_revisions(1, 1, "cluster", "0x0028", "Basic Information")
+        is_compliant, issues = validate_revisions(1, 1, "cluster", "0x0028",
+                                                  "Basic Information")
 
         assert is_compliant
         assert len(issues) == 0
 
     def test_validate_mismatched_revisions(self):
         """Test validating mismatched revisions"""
-        is_compliant, issues = validate_revisions(1, 2, "cluster", "0x0028", "Basic Information")
+        is_compliant, issues = validate_revisions(1, 2, "cluster", "0x0028",
+                                                  "Basic Information")
 
         assert not is_compliant
         assert len(issues) == 1
@@ -650,21 +935,25 @@ class TestValidateRevisions:
 
     def test_validate_string_revisions(self):
         """Test validating string revisions"""
-        is_compliant, issues = validate_revisions("1", "1", "device_type", "0x0016", "Root Node")
+        is_compliant, issues = validate_revisions("1", "1", "device_type",
+                                                  "0x0016", "Root Node")
 
         assert is_compliant
         assert len(issues) == 0
 
     def test_validate_none_revisions(self):
         """Test validating None revisions"""
-        is_compliant, issues = validate_revisions(None, 1, "cluster", "0x0028", "Basic Information")
+        is_compliant, issues = validate_revisions(None, 1, "cluster", "0x0028",
+                                                  "Basic Information")
 
         assert is_compliant  # Should return True when actual is None
         assert len(issues) == 0
 
     def test_validate_revision_exception(self):
         """Test revision validation exception handling"""
-        is_compliant, issues = validate_revisions("invalid", 1, "cluster", "0x0028", "Basic Information")
+        is_compliant, issues = validate_revisions("invalid", 1, "cluster",
+                                                  "0x0028",
+                                                  "Basic Information")
 
         assert not is_compliant
         assert len(issues) == 1
@@ -679,7 +968,9 @@ class TestValidateEventsWithWarnings:
         actual_cluster = {"events": {}}
         required_events = []
 
-        warnings = validate_events_with_warnings(actual_cluster, required_events, "0x0028", "Basic Information")
+        warnings = validate_events_with_warnings(actual_cluster,
+                                                 required_events, "0x0028",
+                                                 "Basic Information")
 
         assert len(warnings) == 0
 
@@ -688,18 +979,31 @@ class TestValidateEventsWithWarnings:
         actual_cluster = {"events": {}}
         required_events = [{"id": "0x0000", "name": "TestEvent"}]
 
-        warnings = validate_events_with_warnings(actual_cluster, required_events, "0x0028", "Basic Information")
+        warnings = validate_events_with_warnings(actual_cluster,
+                                                 required_events, "0x0028",
+                                                 "Basic Information")
 
         assert len(warnings) > 0
         # Should have info about event validation being skipped
-        assert any("Event validation skipped" in warning["message"] for warning in warnings)
+        assert any("Event validation skipped" in warning["message"]
+                   for warning in warnings)
 
     def test_validate_events_with_event_list(self):
         """Test validating events with EventList present"""
-        actual_cluster = {"events": {"EventList": {"EventList": [{"id": "0x0000"}]}}}
+        actual_cluster = {
+            "events": {
+                "EventList": {
+                    "EventList": [{
+                        "id": "0x0000"
+                    }]
+                }
+            }
+        }
         required_events = [{"id": "0x0000", "name": "TestEvent"}]
 
-        warnings = validate_events_with_warnings(actual_cluster, required_events, "0x0028", "Basic Information")
+        warnings = validate_events_with_warnings(actual_cluster,
+                                                 required_events, "0x0028",
+                                                 "Basic Information")
 
         assert len(warnings) > 0
         # Should have info about found events
@@ -707,13 +1011,27 @@ class TestValidateEventsWithWarnings:
 
     def test_validate_events_different_formats(self):
         """Test validating events with different ID formats"""
-        actual_cluster = {"events": {"EventList": {"EventList": [0, "0x0001"]}}}
+        actual_cluster = {
+            "events": {
+                "EventList": {
+                    "EventList": [0, "0x0001"]
+                }
+            }
+        }
         required_events = [
-            {"id": "0x0000", "name": "TestEvent1"},
-            {"id": "0x0001", "name": "TestEvent2"},
+            {
+                "id": "0x0000",
+                "name": "TestEvent1"
+            },
+            {
+                "id": "0x0001",
+                "name": "TestEvent2"
+            },
         ]
 
-        warnings = validate_events_with_warnings(actual_cluster, required_events, "0x0028", "Basic Information")
+        warnings = validate_events_with_warnings(actual_cluster,
+                                                 required_events, "0x0028",
+                                                 "Basic Information")
 
         assert len(warnings) > 0
 
@@ -721,11 +1039,17 @@ class TestValidateEventsWithWarnings:
 class TestComplianceCheckerErrorHandling:
     """Test error handling in compliance checker"""
 
-    def test_validate_device_compliance_exception(self, sample_element_requirements):
-        """Test device compliance validation exception handling"""
+    def test_validate_device_compliance_exception(self,
+                                                  sample_element_requirements):
+        """Test device compliance validation exception handling
+
+        :param sample_element_requirements:
+
+        """
         # Invalid parsed data should raise ValueError
         with pytest.raises(ValueError):
-            validate_device_compliance(None, sample_element_requirements, "1.4.1")
+            validate_device_compliance(None, sample_element_requirements,
+                                       "1.4.1")
 
     def test_validate_cluster_exception(self):
         """Test cluster validation exception handling"""
@@ -742,12 +1066,24 @@ class TestComplianceCheckerErrorHandling:
             validate_single_device_type(None, 22, {"id": 22})
 
     @patch("core.compliance_checker.logger")
-    def test_logging_on_validation_errors(self, mock_logger, sample_parsed_data):
-        """Test that validation errors are logged appropriately"""
-        # Test with malformed requirements
-        malformed_requirements = [{"id": 22, "clusters": [{"invalid": "cluster"}]}]
+    def test_logging_on_validation_errors(self, mock_logger,
+                                          sample_parsed_data):
+        """Test that validation errors are logged appropriately
 
-        result = validate_device_compliance(sample_parsed_data, malformed_requirements, "1.4.1")
+        :param mock_logger: param sample_parsed_data:
+        :param sample_parsed_data:
+
+        """
+        # Test with malformed requirements
+        malformed_requirements = [{
+            "id": 22,
+            "clusters": [{
+                "invalid": "cluster"
+            }]
+        }]
+
+        result = validate_device_compliance(sample_parsed_data,
+                                            malformed_requirements, "1.4.1")
 
         # Should handle gracefully and log errors
         assert "endpoints" in result
@@ -755,27 +1091,36 @@ class TestComplianceCheckerErrorHandling:
         assert mock_logger.error.called or mock_logger.info.called
 
     def test_performance_with_large_requirements(self, sample_parsed_data):
-        """Test performance with large requirements dataset"""
+        """Test performance with large requirements dataset
+
+        :param sample_parsed_data:
+
+        """
         # Create large requirements
         large_requirements = []
         for i in range(100):
-            large_requirements.append(
-                {
-                    "id": i,
-                    "name": f"Device{i}",
-                    "clusters": [
-                        {
-                            "id": "0x001D",
-                            "name": "Descriptor",
-                            "type": "server",
-                            "attributes": [{"id": "0x0000", "name": "DeviceTypeList"}],
-                        }
-                    ],
-                }
-            )
+            large_requirements.append({
+                "id":
+                i,
+                "name":
+                f"Device{i}",
+                "clusters": [{
+                    "id":
+                    "0x001D",
+                    "name":
+                    "Descriptor",
+                    "type":
+                    "server",
+                    "attributes": [{
+                        "id": "0x0000",
+                        "name": "DeviceTypeList"
+                    }],
+                }],
+            })
 
         # Should complete without timeout
-        result = validate_device_compliance(sample_parsed_data, large_requirements, "1.4.1")
+        result = validate_device_compliance(sample_parsed_data,
+                                            large_requirements, "1.4.1")
 
         assert "endpoints" in result
         assert "summary" in result

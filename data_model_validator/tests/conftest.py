@@ -1,9 +1,11 @@
-import pytest
 import json
 import os
-import tempfile
 import shutil
-from unittest.mock import Mock, patch
+import tempfile
+from unittest.mock import Mock
+from unittest.mock import patch
+
+import pytest
 
 
 @pytest.fixture
@@ -51,18 +53,34 @@ def sample_parsed_data():
                         "attributes": {
                             "0x0000": {
                                 "DeviceTypeList": [
-                                    {"DeviceType": "0x0016", "Revision": 1},
-                                    {"DeviceType": "0x0100", "Revision": 1},
+                                    {
+                                        "DeviceType": "0x0016",
+                                        "Revision": 1
+                                    },
+                                    {
+                                        "DeviceType": "0x0100",
+                                        "Revision": 1
+                                    },
                                 ]
                             },
                             "0x0001": {
                                 "ServerList": [
-                                    {"id": "0x001D"},
-                                    {"id": "0x0028"},
-                                    {"id": "0x0405"},
+                                    {
+                                        "id": "0x001D"
+                                    },
+                                    {
+                                        "id": "0x0028"
+                                    },
+                                    {
+                                        "id": "0x0405"
+                                    },
                                 ]
                             },
-                            "0x0002": {"ClientList": [{"id": "0x0006"}]},
+                            "0x0002": {
+                                "ClientList": [{
+                                    "id": "0x0006"
+                                }]
+                            },
                         },
                         "events": {},
                         "commands": {},
@@ -73,8 +91,12 @@ def sample_parsed_data():
                         "events": {},
                         "commands": {},
                         "features": {
-                            "FeatureMap": {"FeatureMap": "0x00000000"},
-                            "ClusterRevision": {"ClusterRevision": 1},
+                            "FeatureMap": {
+                                "FeatureMap": "0x00000000"
+                            },
+                            "ClusterRevision": {
+                                "ClusterRevision": 1
+                            },
                         },
                     },
                 },
@@ -85,9 +107,10 @@ def sample_parsed_data():
                     "0x001D": {
                         "attributes": {
                             "0x0000": {
-                                "DeviceTypeList": [
-                                    {"DeviceType": "0x0100", "Revision": 1}
-                                ]
+                                "DeviceTypeList": [{
+                                    "DeviceType": "0x0100",
+                                    "Revision": 1
+                                }]
                             }
                         },
                         "events": {},
@@ -105,55 +128,103 @@ def sample_element_requirements():
     """Sample element requirements for testing"""
     return [
         {
-            "id": 22,
-            "name": "Root Node",
-            "revision": 1,
+            "id":
+            22,
+            "name":
+            "Root Node",
+            "revision":
+            1,
             "clusters": [
                 {
-                    "id": "0x001D",
-                    "name": "Descriptor",
-                    "type": "server",
-                    "revision": 1,
+                    "id":
+                    "0x001D",
+                    "name":
+                    "Descriptor",
+                    "type":
+                    "server",
+                    "revision":
+                    1,
                     "attributes": [
-                        {"id": "0x0000", "name": "DeviceTypeList"},
-                        {"id": "0x0001", "name": "ServerList"},
-                        {"id": "0x0002", "name": "ClientList"},
+                        {
+                            "id": "0x0000",
+                            "name": "DeviceTypeList"
+                        },
+                        {
+                            "id": "0x0001",
+                            "name": "ServerList"
+                        },
+                        {
+                            "id": "0x0002",
+                            "name": "ClientList"
+                        },
                     ],
                 },
                 {
-                    "id": "0x0028",
-                    "name": "Basic Information",
-                    "type": "server",
-                    "revision": 1,
+                    "id":
+                    "0x0028",
+                    "name":
+                    "Basic Information",
+                    "type":
+                    "server",
+                    "revision":
+                    1,
                     "attributes": [
-                        {"id": "0x0000", "name": "DataModelRevision"},
-                        {"id": "0x0001", "name": "VendorName"},
+                        {
+                            "id": "0x0000",
+                            "name": "DataModelRevision"
+                        },
+                        {
+                            "id": "0x0001",
+                            "name": "VendorName"
+                        },
                     ],
-                    "features": [{"id": "0x0001", "name": "TestFeature"}],
+                    "features": [{
+                        "id": "0x0001",
+                        "name": "TestFeature"
+                    }],
                 },
             ],
         },
         {
-            "id": 256,
-            "name": "On/Off Light",
-            "revision": 1,
+            "id":
+            256,
+            "name":
+            "On/Off Light",
+            "revision":
+            1,
             "clusters": [
                 {
                     "id": "0x001D",
                     "name": "Descriptor",
                     "type": "server",
                     "revision": 1,
-                    "attributes": [{"id": "0x0000", "name": "DeviceTypeList"}],
+                    "attributes": [{
+                        "id": "0x0000",
+                        "name": "DeviceTypeList"
+                    }],
                 },
                 {
-                    "id": "0x0006",
-                    "name": "On/Off",
-                    "type": "server",
-                    "revision": 1,
-                    "attributes": [{"id": "0x0000", "name": "OnOff"}],
+                    "id":
+                    "0x0006",
+                    "name":
+                    "On/Off",
+                    "type":
+                    "server",
+                    "revision":
+                    1,
+                    "attributes": [{
+                        "id": "0x0000",
+                        "name": "OnOff"
+                    }],
                     "commands": [
-                        {"id": "0x0000", "name": "Off"},
-                        {"id": "0x0001", "name": "On"},
+                        {
+                            "id": "0x0000",
+                            "name": "Off"
+                        },
+                        {
+                            "id": "0x0001",
+                            "name": "On"
+                        },
                     ],
                 },
             ],
@@ -163,12 +234,17 @@ def sample_element_requirements():
 
 @pytest.fixture
 def temp_requirements_file(sample_element_requirements):
-    """Create a temporary requirements file for testing"""
+    """Create a temporary requirements file for testing
+
+    :param sample_element_requirements:
+
+    """
     temp_dir = tempfile.mkdtemp()
     data_dir = os.path.join(temp_dir, "data")
     os.makedirs(data_dir)
 
-    requirements_file = os.path.join(data_dir, "element_requirements_1.4.1.json")
+    requirements_file = os.path.join(data_dir,
+                                     "element_requirements_1.4.1.json")
     with open(requirements_file, "w") as f:
         json.dump(sample_element_requirements, f)
 
@@ -196,12 +272,18 @@ def mock_logger():
 def invalid_log_data():
     """Invalid log data for negative testing"""
     return {
-        "empty": "",
-        "no_too_entries": "Some random log data without [TOO] entries",
-        "malformed_metadata": "[TOO] Invalid metadata format",
-        "incomplete_block": "[TOO] Endpoint: 0 Cluster: 0x001D Attribute 0x0000\nDeviceTypeList: 1 entries\n[0]: {",
-        "invalid_json_like": "[TOO] Endpoint: 0 Cluster: 0x001D Attribute 0x0000\nInvalid: {broken json",
-        "mixed_valid_invalid": "[TOO] Endpoint: 0 Cluster: 0x001D Attribute 0x0000\nDeviceTypeList: 1 entries\n[0]: {\n  DeviceType: 22\n[TOO] Invalid line",
+        "empty":
+        "",
+        "no_too_entries":
+        "Some random log data without [TOO] entries",
+        "malformed_metadata":
+        "[TOO] Invalid metadata format",
+        "incomplete_block":
+        "[TOO] Endpoint: 0 Cluster: 0x001D Attribute 0x0000\nDeviceTypeList: 1 entries\n[0]: {",
+        "invalid_json_like":
+        "[TOO] Endpoint: 0 Cluster: 0x001D Attribute 0x0000\nInvalid: {broken json",
+        "mixed_valid_invalid":
+        "[TOO] Endpoint: 0 Cluster: 0x001D Attribute 0x0000\nDeviceTypeList: 1 entries\n[0]: {\n  DeviceType: 22\n[TOO] Invalid line",
     }
 
 
@@ -210,12 +292,27 @@ def invalid_parsed_data():
     """Invalid parsed data for negative testing"""
     return {
         "empty_dict": {},
-        "no_endpoints": {"some_key": "some_value"},
-        "endpoints_not_list": {"endpoints": "not a list"},
-        "malformed_endpoint": {"endpoints": [{"invalid": "structure"}]},
-        "missing_clusters": {"endpoints": [{"endpoint": 0}]},
+        "no_endpoints": {
+            "some_key": "some_value"
+        },
+        "endpoints_not_list": {
+            "endpoints": "not a list"
+        },
+        "malformed_endpoint": {
+            "endpoints": [{
+                "invalid": "structure"
+            }]
+        },
+        "missing_clusters": {
+            "endpoints": [{
+                "endpoint": 0
+            }]
+        },
         "invalid_cluster_structure": {
-            "endpoints": [{"endpoint": 0, "clusters": "not a dict"}]
+            "endpoints": [{
+                "endpoint": 0,
+                "clusters": "not a dict"
+            }]
         },
     }
 
@@ -225,10 +322,21 @@ def invalid_requirements():
     """Invalid requirements for negative testing"""
     return {
         "empty_list": [],
-        "not_list": {"invalid": "structure"},
-        "invalid_device_type": [{"invalid": "device_type"}],
-        "missing_id": [{"name": "Test Device", "clusters": []}],
-        "invalid_cluster": [
-            {"id": 22, "name": "Test", "clusters": [{"invalid": "cluster"}]}
-        ],
+        "not_list": {
+            "invalid": "structure"
+        },
+        "invalid_device_type": [{
+            "invalid": "device_type"
+        }],
+        "missing_id": [{
+            "name": "Test Device",
+            "clusters": []
+        }],
+        "invalid_cluster": [{
+            "id": 22,
+            "name": "Test",
+            "clusters": [{
+                "invalid": "cluster"
+            }]
+        }],
     }
