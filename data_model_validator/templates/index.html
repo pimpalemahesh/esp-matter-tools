@@ -21,7 +21,7 @@
         </div>
         <div class="command-note">
             <i class="fas fa-info-circle"></i>
-            The wildcard_logs.txt file will be created in the <strong>tmp/</strong> directory
+            The wildcard_logs.txt file will be created in the <strong>same</strong> directory
         </div>
     </div>
 
@@ -221,24 +221,28 @@
                             {% set cluster_data = parsed_data.endpoints|selectattr('endpoint', 'eq', endpoint.endpoint)|list|first if parsed_data %}
                             {% set actual_cluster_data = cluster_data.clusters.get(cluster.cluster_id, {}) if cluster_data %}
                             {% set has_event_warnings = cluster.event_warnings|length > 0 %}
-                            <div class="cluster-card clickable-cluster {{ 'non-compliant' if not cluster.is_compliant else ('warning' if cluster.is_compliant and has_event_warnings else '') }}"
+                            {% set cluster_missing = cluster.missing_elements|selectattr('type', 'eq', 'cluster')|list if cluster.missing_elements else [] %}
+                            {% set is_cluster_missing = cluster_missing|length > 0 %}
+                            <div class="cluster-card {{ 'clickable-cluster' if not is_cluster_missing else '' }} {{ 'non-compliant' if not cluster.is_compliant else ('warning' if cluster.is_compliant and has_event_warnings else '') }}"
                                  data-cluster-id="{{ cluster.cluster_id }}"
                                  data-endpoint-id="{{ endpoint.endpoint }}"
-                                 onclick="openClusterModal('{{ cluster.cluster_id }}', '{{ endpoint.endpoint }}')"
-                                 style="cursor: pointer;">
+                                 {% if not is_cluster_missing %}onclick="openClusterModal('{{ cluster.cluster_id }}', '{{ endpoint.endpoint }}')"{% endif %}
+                                 style="{% if not is_cluster_missing %}cursor: pointer;{% endif %}">
                                 <div class="cluster-header">
                                     <div class="cluster-info">
                                         <div class="cluster-name">
-                                            <i class="fas fa-network-wired"></i>
+                                            <i class="fas fa-{% if is_cluster_missing %}exclamation-triangle{% else %}network-wired{% endif %}"></i>
                                             {{ cluster.cluster_name.replace('_', ' ').title() }}
                                         </div>
-                                        <div class="cluster-description">Click to view details</div>
+                                        <div class="cluster-description">{% if is_cluster_missing %}Cluster not found in device{% else %}Click to view details{% endif %}</div>
                                     </div>
                                     <div class="cluster-actions">
                                         <div class="cluster-id">{{ cluster.cluster_id }}</div>
+                                        {% if not is_cluster_missing %}
                                         <div class="view-button">
                                             <i class="fas fa-eye"></i>
                                         </div>
+                                        {% endif %}
                                     </div>
                                 </div>
 
@@ -249,7 +253,12 @@
                                         <span style="color: var(--error-color);">
                                             <i class="fas fa-times"></i> Non-Compliant
                                             {% if cluster.missing_elements %}
-                                            ({{ cluster.missing_elements|length }} missing)
+                                                {% set cluster_missing = cluster.missing_elements|selectattr('type', 'eq', 'cluster')|list %}
+                                                {% if cluster_missing %}
+                                                (Cluster Missing)
+                                                {% else %}
+                                                ({{ cluster.missing_elements|length }} missing)
+                                                {% endif %}
                                             {% endif %}
                                         </span>
                                         {% else %}
@@ -271,7 +280,7 @@
                                              <span class="stat-label">Attributes</span>
                                          </div>
                                          <div class="stat-item">
-                                             <i class="fas fa-terminal"></i>
+                                             <i class="fas fa-list"></i>
                                              <span class="stat-count">{{ (actual_cluster_data.commands.get('GeneratedCommandList', {}).get('GeneratedCommandList', []) | length) + (actual_cluster_data.commands.get('AcceptedCommandList', {}).get('AcceptedCommandList', []) | length) }}</span>
                                              <span class="stat-label">Commands</span>
                                          </div>
@@ -363,282 +372,5 @@
     {% if parsed_data %}
     window.parsedData = {{ parsed_data | tojson }};
     {% endif %}
-
-    // Upload New File functionality (version selection form)
-    const uploadNewBtn = document.getElementById('uploadNewBtn');
-    if (uploadNewBtn) {
-        uploadNewBtn.addEventListener('click', function() {
-            if (confirm('This will clear all current data and start over. Continue?')) {
-                // Show loading state
-                const originalText = uploadNewBtn.innerHTML;
-                uploadNewBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Clearing data...';
-                uploadNewBtn.disabled = true;
-
-                fetch('/api/clear-data', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    }
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        uploadNewBtn.innerHTML = '<i class="fas fa-check"></i> Redirecting...';
-                        setTimeout(() => {
-                            window.location.href = '/';
-                        }, 500);
-                    } else {
-                        uploadNewBtn.innerHTML = originalText;
-                        uploadNewBtn.disabled = false;
-                        alert('Error clearing data: ' + data.error);
-                    }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    uploadNewBtn.innerHTML = originalText;
-                    uploadNewBtn.disabled = false;
-                    setTimeout(() => {
-                        window.location.href = '/';
-                    }, 500);
-                });
-            }
-        });
-    }
-
-    // Version selection and validation functionality
-    const validateBtn = document.getElementById('validateBtn');
-    if (validateBtn) {
-        validateBtn.addEventListener('click', function() {
-            const selectedVersion = document.getElementById('complianceVersion').value;
-
-            // Validate version selection
-            if (!selectedVersion) {
-                showMessage('validateMessage', 'Please select a data model version to validate against', 'error');
-                return;
-            }
-
-            // Store the selected version to retain it after validation
-            sessionStorage.setItem('selectedVersion', selectedVersion);
-
-            // Show validation loader
-            showValidationLoader();
-            hideMessage('validateMessage');
-
-            // Simulate progress updates
-            simulateProgress();
-
-            // Make API call
-            fetch('/api/validate-compliance', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    chip_version: selectedVersion
-                })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    updateProgress(100, 'Validation complete!');
-                    setTimeout(() => {
-                        hideValidationLoader();
-                        // Redirect with a parameter to preserve session data
-                        window.location.href = '/?validation_complete=1';
-                    }, 1000);
-                } else {
-                    hideValidationLoader();
-                    showMessage('validateMessage', data.error, 'error');
-                }
-            })
-            .catch(error => {
-                hideValidationLoader();
-                showMessage('validateMessage', 'Error: ' + error.message, 'error');
-            });
-        });
-    }
-
-    // Restore selected version from sessionStorage when page loads
-    document.addEventListener('DOMContentLoaded', function() {
-        const versionSelect = document.getElementById('complianceVersion');
-        const storedVersion = sessionStorage.getItem('selectedVersion');
-
-        if (versionSelect && storedVersion) {
-            versionSelect.value = storedVersion;
-            // Update the display text as well
-            const selectedOption = versionSelect.querySelector(`option[value="${storedVersion}"]`);
-            if (selectedOption) {
-                versionSelect.selectedIndex = Array.from(versionSelect.options).indexOf(selectedOption);
-            }
-        }
-
-        // Clean up URL parameter after validation completion
-        const urlParams = new URLSearchParams(window.location.search);
-        if (urlParams.get('validation_complete')) {
-            // Remove the parameter from URL without triggering a page reload
-            const newUrl = window.location.pathname;
-            window.history.replaceState({}, document.title, newUrl);
-        }
-    });
-
-    // Copy command function - make it global for onclick handler
-    window.copyCommand = function() {
-        const command = './chip-tool any read-by-id 0xFFFFFFFF 0xFFFFFFFF 1 0xFFFF > wildcard_logs.txt';
-
-        if (navigator.clipboard) {
-            navigator.clipboard.writeText(command).then(() => {
-                showCopyFeedback();
-            }).catch(() => {
-                fallbackCopyTextToClipboard(command);
-            });
-        } else {
-            fallbackCopyTextToClipboard(command);
-        }
-    };
-
-    function fallbackCopyTextToClipboard(text) {
-        const textArea = document.createElement("textarea");
-        textArea.value = text;
-        textArea.style.top = "0";
-        textArea.style.left = "0";
-        textArea.style.position = "fixed";
-
-        document.body.appendChild(textArea);
-        textArea.focus();
-        textArea.select();
-
-        try {
-            const successful = document.execCommand('copy');
-            if (successful) {
-                showCopyFeedback();
-            }
-        } catch (err) {
-            console.error('Fallback: Oops, unable to copy', err);
-        }
-
-        document.body.removeChild(textArea);
-    }
-
-    function showCopyFeedback() {
-        const copyBtn = document.querySelector('.copy-btn');
-        const originalHTML = copyBtn.innerHTML;
-
-        copyBtn.innerHTML = '<i class="fas fa-check"></i>';
-        copyBtn.style.background = 'var(--success-color)';
-
-        setTimeout(() => {
-            copyBtn.innerHTML = originalHTML;
-            copyBtn.style.background = 'var(--accent-color)';
-        }, 2000);
-    }
-
-    // Utility functions for showing messages
-    function showMessage(elementId, message, type) {
-        const messageEl = document.getElementById(elementId);
-        messageEl.style.display = 'block';
-        messageEl.className = 'message-container ' + (type === 'error' ? 'error-message' : 'success-message');
-        messageEl.innerHTML = '<i class="fas fa-' + (type === 'error' ? 'exclamation-triangle' : 'check-circle') + '"></i> ' + message;
-    }
-
-    function hideMessage(elementId) {
-        document.getElementById(elementId).style.display = 'none';
-    }
-
-    // Download functions
-    function downloadValidationReport() {
-        window.location.href = '/api/download/validation';
-    }
-
-    function downloadParsedData() {
-        window.location.href = '/api/download/parsed';
-    }
-
-    // Single "Start Over" function - clears all data and starts fresh
-    function startOver() {
-        if (confirm('This will clear all current data and start over. Continue?')) {
-            // Show loading state
-            const btn = event.target.closest('button');
-            const originalText = btn.innerHTML;
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Clearing data...';
-            btn.disabled = true;
-
-            fetch('/api/clear-data', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                }
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    // Smooth transition
-                    btn.innerHTML = '<i class="fas fa-check"></i> Redirecting...';
-                    setTimeout(() => {
-                        window.location.href = '/';
-                    }, 500);
-                } else {
-                    btn.innerHTML = originalText;
-                    btn.disabled = false;
-                    alert('Error clearing data: ' + data.error);
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                btn.innerHTML = originalText;
-                btn.disabled = false;
-                // Even if API fails, redirect to reset the UI
-                setTimeout(() => {
-                    window.location.href = '/';
-                }, 500);
-            });
-        }
-    }
-
-    // Validation Loader Functions
-    function showValidationLoader() {
-        document.getElementById('validationLoader').style.display = 'flex';
-        document.body.style.overflow = 'hidden';
-    }
-
-    function hideValidationLoader() {
-        document.getElementById('validationLoader').style.display = 'none';
-        document.body.style.overflow = 'auto';
-    }
-
-    function updateProgress(percentage, message) {
-        document.getElementById('progressFill').style.width = percentage + '%';
-        document.getElementById('progressText').textContent = message;
-    }
-
-    function simulateProgress() {
-        const steps = [
-            { progress: 10, message: 'Loading requirements...', delay: 200 },
-            { progress: 25, message: 'Parsing device data...', delay: 500 },
-            { progress: 40, message: 'Validating clusters...', delay: 800 },
-            { progress: 60, message: 'Checking attributes...', delay: 1200 },
-            { progress: 80, message: 'Verifying commands...', delay: 1500 },
-            { progress: 95, message: 'Finalizing results...', delay: 1800 }
-        ];
-
-        steps.forEach(step => {
-            setTimeout(() => {
-                        updateProgress(step.progress, step.message);
-    }, step.delay);
-});
-}
-
-// Function to toggle detailed results visibility
-function toggleDetailedResults() {
-    const detailedResults = document.getElementById('detailedResults');
-    const toggleIcon = document.querySelector('.toggle-icon');
-
-    if (detailedResults.style.display === 'none') {
-        detailedResults.style.display = 'grid';
-        toggleIcon.innerHTML = '<i class="fas fa-chevron-up"></i> Click to collapse';
-    } else {
-        detailedResults.style.display = 'none';
-        toggleIcon.innerHTML = '<i class="fas fa-chevron-down"></i> Click to expand';
-    }
-}
 </script>
 {% endblock %}

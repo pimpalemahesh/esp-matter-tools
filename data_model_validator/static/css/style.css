@@ -644,16 +644,14 @@ body {
 
 .cluster-card.non-compliant {
     border-left-color: var(--error-color);
-    background: rgba(244, 67, 54, 0.15);
     border-left: 4px solid var(--error-color);
-    border: 1px solid rgba(244, 67, 54, 0.3);
+    /* Removed background color - clean card appearance */
 }
 
 .cluster-card.warning {
     border-left-color: var(--warning-color);
     border-left: 4px solid var(--warning-color);
-    border: 1px solid rgba(255, 193, 7, 0.3);
-    /* Remove yellow background - only show warning text in yellow */
+    /* Removed background color - clean card appearance */
 }
 
 .cluster-header {
@@ -676,6 +674,21 @@ body {
     color: var(--primary-color);
     font-size: 1.1em;
     margin-bottom: 4px;
+}
+
+/* Make cluster name red for non-compliant clusters */
+.cluster-card.non-compliant .cluster-name {
+    color: var(--error-color);
+}
+
+/* Style for missing clusters - reduce opacity to show they're not interactive */
+.cluster-card:not(.clickable-cluster) {
+    opacity: 0.8;
+}
+
+.cluster-card:not(.clickable-cluster) .cluster-description {
+    font-style: italic;
+    color: var(--text-light);
 }
 
 .cluster-description {
@@ -1359,19 +1372,18 @@ body {
 }
 
 .cluster-card.non-compliant:hover {
-    background: rgba(244, 67, 54, 0.25);
-    border-color: rgba(244, 67, 54, 0.4);
+    /* Removed background color - clean hover effect */
+    border-left-color: var(--error-color);
 }
 
 .cluster-card.warning:hover {
-    background: rgba(255, 193, 7, 0.25);
-    border-color: rgba(255, 193, 7, 0.4);
+    /* Removed background color - clean hover effect */
+    border-left-color: var(--warning-color);
 }
 
-/* Override inner element backgrounds for non-compliant cards */
+/* Clean styling for non-compliant cards - no background colors */
 .cluster-card.non-compliant .cluster-header {
-    background: rgba(244, 67, 54, 0.1);
-    border-bottom: 1px solid rgba(244, 67, 54, 0.2);
+    /* Use default header styling */
 }
 
 .cluster-card.non-compliant .cluster-stats {
@@ -1379,18 +1391,16 @@ body {
 }
 
 .cluster-card.non-compliant .stat-item {
-    background: rgba(244, 67, 54, 0.1);
-    border: 1px solid rgba(244, 67, 54, 0.2);
+    /* Use default stat item styling */
 }
 
 .cluster-card.non-compliant .stat-item:hover {
-    background: rgba(244, 67, 54, 0.2);
+    /* Use default stat item hover styling */
 }
 
-/* Override inner element backgrounds for warning cards */
+/* Clean styling for warning cards - no background colors */
 .cluster-card.warning .cluster-header {
-    background: rgba(255, 193, 7, 0.1);
-    border-bottom: 1px solid rgba(255, 193, 7, 0.2);
+    /* Use default header styling */
 }
 
 .cluster-card.warning .cluster-stats {
@@ -1398,12 +1408,11 @@ body {
 }
 
 .cluster-card.warning .stat-item {
-    background: rgba(255, 193, 7, 0.1);
-    border: 1px solid rgba(255, 193, 7, 0.2);
+    /* Use default stat item styling */
 }
 
 .cluster-card.warning .stat-item:hover {
-    background: rgba(255, 193, 7, 0.2);
+    /* Use default stat item hover styling */
 }
 
 .clickable-cluster:hover .cluster-name {

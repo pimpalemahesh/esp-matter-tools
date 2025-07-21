@@ -1,12 +1,18 @@
 document.addEventListener("DOMContentLoaded", function () {
-  // Initialize processing flag
+  // Initialize processing flags
   window.isProcessing = false;
+  window.isValidationInProgress = false;
+  window.isIntentionalNavigation = false;
 
   initializeFileUpload();
   initializeDragAndDrop();
   initializeInteractiveElements();
+  initializeValidationFunctionality();
+  initializeDataHandling();
+  initializePageProtection();
 });
 
+// ============= FILE UPLOAD FUNCTIONALITY =============
 function initializeFileUpload() {
   const uploadArea = document.getElementById("uploadArea");
   const fileInput = document.getElementById("fileInput");
@@ -249,6 +255,323 @@ function showError(message) {
   window.isProcessing = false;
 }
 
+// ============= VALIDATION FUNCTIONALITY =============
+function initializeValidationFunctionality() {
+  initializeUploadNewButton();
+  initializeValidateButton();
+  restoreSelectedVersion();
+  cleanUpURLParameter();
+}
+
+function initializeUploadNewButton() {
+  const uploadNewBtn = document.getElementById("uploadNewBtn");
+  if (uploadNewBtn) {
+    uploadNewBtn.addEventListener("click", function () {
+      if (
+        confirm("This will clear all current data and start over. Continue?")
+      ) {
+        // Set intentional navigation flag to prevent second popup
+        window.isIntentionalNavigation = true;
+        window.isValidationInProgress = false;
+
+        // Show loading state
+        const originalText = uploadNewBtn.innerHTML;
+        uploadNewBtn.innerHTML =
+          '<i class="fas fa-spinner fa-spin"></i> Clearing data...';
+        uploadNewBtn.disabled = true;
+
+        fetch("/api/clear-data", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        })
+          .then((response) => response.json())
+          .then((data) => {
+            if (data.success) {
+              uploadNewBtn.innerHTML =
+                '<i class="fas fa-check"></i> Redirecting...';
+              setTimeout(() => {
+                window.location.href = "/";
+              }, 500);
+            } else {
+              uploadNewBtn.innerHTML = originalText;
+              uploadNewBtn.disabled = false;
+              alert("Error clearing data: " + data.error);
+            }
+          })
+          .catch((error) => {
+            console.error("Error:", error);
+            uploadNewBtn.innerHTML = originalText;
+            uploadNewBtn.disabled = false;
+            setTimeout(() => {
+              window.location.href = "/";
+            }, 500);
+          });
+      }
+    });
+  }
+}
+
+function initializeValidateButton() {
+  const validateBtn = document.getElementById("validateBtn");
+  if (validateBtn) {
+    validateBtn.addEventListener("click", function () {
+      const selectedVersion =
+        document.getElementById("complianceVersion").value;
+
+      // Validate version selection
+      if (!selectedVersion) {
+        showMessage(
+          "validateMessage",
+          "Please select a data model version to validate against",
+          "error",
+        );
+        return;
+      }
+
+      // Store the selected version to retain it after validation
+      sessionStorage.setItem("selectedVersion", selectedVersion);
+
+      // Set flags to prevent refresh warning during validation
+      window.isValidationInProgress = true;
+      window.isIntentionalNavigation = true;
+
+      // Show validation loader
+      showValidationLoader();
+      hideMessage("validateMessage");
+
+      // Simulate progress updates
+      simulateProgress();
+
+      // Make API call
+      fetch("/api/validate-compliance", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ chip_version: selectedVersion }),
+      })
+        .then((response) => response.json())
+        .then((data) => {
+          if (data.success) {
+            updateProgress(100, "Validation complete!");
+            setTimeout(() => {
+              hideValidationLoader();
+              // Redirect with a parameter to preserve session data
+              window.location.href = "/?validation_complete=1";
+            }, 1000);
+          } else {
+            // Reset flags on error
+            window.isValidationInProgress = false;
+            window.isIntentionalNavigation = false;
+            hideValidationLoader();
+            showMessage("validateMessage", data.error, "error");
+          }
+        })
+        .catch((error) => {
+          // Reset flags on error
+          window.isValidationInProgress = false;
+          window.isIntentionalNavigation = false;
+          hideValidationLoader();
+          showMessage("validateMessage", "Error: " + error.message, "error");
+        });
+    });
+  }
+}
+
+function restoreSelectedVersion() {
+  const versionSelect = document.getElementById("complianceVersion");
+  const storedVersion = sessionStorage.getItem("selectedVersion");
+
+  if (versionSelect && storedVersion) {
+    versionSelect.value = storedVersion;
+    // Update the display text as well
+    const selectedOption = versionSelect.querySelector(
+      `option[value="${storedVersion}"]`,
+    );
+    if (selectedOption) {
+      versionSelect.selectedIndex = Array.from(versionSelect.options).indexOf(
+        selectedOption,
+      );
+    }
+  }
+}
+
+function cleanUpURLParameter() {
+  // Clean up URL parameter after validation completion
+  const urlParams = new URLSearchParams(window.location.search);
+  if (urlParams.get("validation_complete")) {
+    // Reset all flags since validation is now complete
+    window.isValidationInProgress = false;
+    window.isIntentionalNavigation = false;
+
+    // Remove the parameter from URL without triggering a page reload
+    const newUrl = window.location.pathname;
+    window.history.replaceState({}, document.title, newUrl);
+  }
+}
+
+// Validation Loader Functions
+function showValidationLoader() {
+  document.getElementById("validationLoader").style.display = "flex";
+  document.body.style.overflow = "hidden";
+}
+
+function hideValidationLoader() {
+  document.getElementById("validationLoader").style.display = "none";
+  document.body.style.overflow = "auto";
+}
+
+function updateProgress(percentage, message) {
+  document.getElementById("progressFill").style.width = percentage + "%";
+  document.getElementById("progressText").textContent = message;
+}
+
+function simulateProgress() {
+  const steps = [
+    { progress: 10, message: "Loading requirements...", delay: 200 },
+    { progress: 25, message: "Parsing device data...", delay: 500 },
+    { progress: 40, message: "Validating clusters...", delay: 800 },
+    { progress: 60, message: "Checking attributes...", delay: 1200 },
+    { progress: 80, message: "Verifying commands...", delay: 1500 },
+    { progress: 95, message: "Finalizing results...", delay: 1800 },
+  ];
+
+  steps.forEach((step) => {
+    setTimeout(() => {
+      updateProgress(step.progress, step.message);
+    }, step.delay);
+  });
+}
+
+// ============= DATA HANDLING =============
+function initializeDataHandling() {
+  // Initialize data availability for other functions
+  initializeGlobalDataAccess();
+}
+
+function initializeGlobalDataAccess() {
+  // These will be set by the template when data is available
+  window.validationData = window.validationData || null;
+  window.parsedData = window.parsedData || null;
+}
+
+// ============= PAGE PROTECTION =============
+function initializePageProtection() {
+  // Add warning for page refresh when data is present
+  window.addEventListener("beforeunload", function (event) {
+    // Don't show warning if validation is in progress or user intentionally
+    // navigating
+    if (window.isValidationInProgress || window.isIntentionalNavigation) {
+      return;
+    }
+
+    // Check if there's parsed data or validation data present
+    const hasParsedData = window.parsedData !== null;
+    const hasValidationData = window.validationData !== null;
+
+    if (hasParsedData || hasValidationData) {
+      // Show confirmation dialog
+      const message =
+        "All data will be erased if you refresh the page. Are you sure you want to continue?";
+      event.preventDefault();
+      event.returnValue = message; // For older browsers
+      return message;
+    }
+  });
+}
+
+// ============= UTILITY FUNCTIONS =============
+function showMessage(elementId, message, type) {
+  const messageEl = document.getElementById(elementId);
+  messageEl.style.display = "block";
+  messageEl.className =
+    "message-container " +
+    (type === "error" ? "error-message" : "success-message");
+  messageEl.innerHTML =
+    '<i class="fas fa-' +
+    (type === "error" ? "exclamation-triangle" : "check-circle") +
+    '"></i> ' +
+    message;
+}
+
+function hideMessage(elementId) {
+  document.getElementById(elementId).style.display = "none";
+}
+
+// Function to toggle detailed results visibility
+window.toggleDetailedResults = function () {
+  const detailedResults = document.getElementById("detailedResults");
+  const toggleIcon = document.querySelector(".toggle-icon");
+
+  if (detailedResults.style.display === "none") {
+    detailedResults.style.display = "grid";
+    toggleIcon.innerHTML =
+      '<i class="fas fa-chevron-up"></i> Click to collapse';
+  } else {
+    detailedResults.style.display = "none";
+    toggleIcon.innerHTML =
+      '<i class="fas fa-chevron-down"></i> Click to expand';
+  }
+};
+
+// ============= COPY FUNCTIONALITY =============
+window.copyCommand = function () {
+  const command =
+    "./chip-tool any read-by-id 0xFFFFFFFF 0xFFFFFFFF 1 0xFFFF > wildcard_logs.txt";
+
+  if (navigator.clipboard) {
+    navigator.clipboard
+      .writeText(command)
+      .then(() => {
+        showCopyFeedback();
+      })
+      .catch(() => {
+        fallbackCopyTextToClipboard(command);
+      });
+  } else {
+    fallbackCopyTextToClipboard(command);
+  }
+};
+
+function fallbackCopyTextToClipboard(text) {
+  const textArea = document.createElement("textarea");
+  textArea.value = text;
+  textArea.style.top = "0";
+  textArea.style.left = "0";
+  textArea.style.position = "fixed";
+
+  document.body.appendChild(textArea);
+  textArea.focus();
+  textArea.select();
+
+  try {
+    const successful = document.execCommand("copy");
+    if (successful) {
+      showCopyFeedback();
+    }
+  } catch (err) {
+    console.error("Fallback: Oops, unable to copy", err);
+  }
+
+  document.body.removeChild(textArea);
+}
+
+function showCopyFeedback() {
+  const copyBtn = document.querySelector(".copy-btn");
+  const originalHTML = copyBtn.innerHTML;
+
+  copyBtn.innerHTML = '<i class="fas fa-check"></i>';
+  copyBtn.style.background = "var(--success-color)";
+
+  setTimeout(() => {
+    copyBtn.innerHTML = originalHTML;
+    copyBtn.style.background = "var(--accent-color)";
+  }, 2000);
+}
+
+// ============= INTERACTIVE ELEMENTS =============
 function initializeInteractiveElements() {
   // Add smooth scrolling for anchor links
   document.querySelectorAll('a[href^="#"]').forEach((anchor) => {
@@ -882,46 +1205,28 @@ function showCopySuccess(element) {
   }, 1000);
 }
 
-// Download functionality
-function downloadValidationReport() {
-  const validationData = getValidationData();
-  if (validationData) {
-    downloadJSON(validationData, "validation_report.json");
-  }
-}
+// ============= DOWNLOAD FUNCTIONALITY =============
+window.downloadValidationReport = function () {
+  // Use link element to avoid triggering beforeunload
+  const link = document.createElement("a");
+  link.href = "/api/download/validation";
+  link.download = "validation_report.json";
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+};
 
-function downloadParsedData() {
-  const parsedData = getParsedData();
-  if (parsedData) {
-    downloadJSON(parsedData, "parsed_data.json");
-  }
-}
+window.downloadParsedData = function () {
+  // Use link element to avoid triggering beforeunload
+  const link = document.createElement("a");
+  link.href = "/api/download/parsed";
+  link.download = "parsed_data.json";
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+};
 
-function downloadJSON(data, filename) {
-  const blob = new Blob([JSON.stringify(data, null, 2)], {
-    type: "application/json",
-  });
-  const url = window.URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  window.URL.revokeObjectURL(url);
-  document.body.removeChild(a);
-}
-
-function getValidationData() {
-  // This would be populated by the server-side template
-  return window.validationData || null;
-}
-
-function getParsedData() {
-  // This would be populated by the server-side template
-  return window.parsedData || null;
-}
-
-// Add keyboard shortcuts
+// ============= KEYBOARD SHORTCUTS =============
 document.addEventListener("keydown", function (e) {
   // Ctrl/Cmd + U to trigger file upload
   if ((e.ctrlKey || e.metaKey) && e.key === "u") {
@@ -934,6 +1239,11 @@ document.addEventListener("keydown", function (e) {
 
   // Escape to close any open modals or reset upload area
   if (e.key === "Escape") {
-    resetUploadArea();
+    const modal = document.getElementById("clusterModal");
+    if (modal && modal.style.display === "flex") {
+      closeClusterModal();
+    } else {
+      resetUploadArea();
+    }
   }
 });
