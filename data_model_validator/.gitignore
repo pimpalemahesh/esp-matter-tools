@@ -1,5 +1,27 @@
+# Python cache
 */__pycache__/*
 __pycache__/
+*.pyc
+*.pyo
+
+# Data files (session-based, cleared on refresh)
 output/*.json
 generated/*.json
+session_data/
+*.json
+*.log
+
+# Node modules (if any)
+node_modules/
+
+# Environment variables
+.env
+
+# IDE files
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
 

@@ -1,8 +1,15 @@
-from flask import Flask, request, render_template, jsonify, send_file
+from flask import Flask, request, render_template, jsonify, session
 import json
 import logging
 import os
-import time
+import sys
+import uuid
+from datetime import datetime, timedelta
+
+# Add parent directory to Python path to fix imports
+current_dir = os.path.dirname(os.path.abspath(__file__))
+parent_dir = os.path.dirname(current_dir)
+sys.path.insert(0, parent_dir)
 
 # Import our modular components
 from core.log_parser import parse_datamodel_logs
@@ -12,67 +19,114 @@ from core.compliance_checker import (
 )
 
 # Configure Flask to find templates and static files from parent directory
-parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 template_dir = os.path.join(parent_dir, "templates")
 static_dir = os.path.join(parent_dir, "static")
 
 app = Flask(__name__, template_folder=template_dir, static_folder=static_dir)
 app.config["MAX_CONTENT_LENGTH"] = 50 * 1024 * 1024  # 50MB limit
 
+# Configure secret key for sessions
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret-key-change-in-production')
+
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Define paths for JSON files
-OUTPUT_DIR = "output"
-PARSED_DATA_FILE = os.path.join(OUTPUT_DIR, "parsed_data.json")
-VALIDATION_RESULTS_FILE = os.path.join(OUTPUT_DIR, "validation_results.json")
-
-# Ensure output directory exists
-os.makedirs(OUTPUT_DIR, exist_ok=True)
+# Define paths for session-based storage
+SESSION_DATA_DIR = "session_data"
+os.makedirs(SESSION_DATA_DIR, exist_ok=True)
 
 
-# Clear existing JSON files on app start (refresh behavior)
-def clear_existing_files():
-    """Clear existing JSON files to reset the app state"""
+def get_session_id():
+    """Get or create a session ID for the current browser session"""
+    if 'session_id' not in session:
+        session['session_id'] = str(uuid.uuid4())
+        session.permanent = True
+        app.permanent_session_lifetime = timedelta(hours=24)  # Session expires in 24 hours
+    return session['session_id']
+
+
+def get_session_file_path(session_id, file_type):
+    """Get the file path for session-specific data"""
+    return os.path.join(SESSION_DATA_DIR, f"{session_id}_{file_type}.json")
+
+
+def cleanup_old_sessions():
+    """Clean up session files older than 24 hours"""
     try:
-        if os.path.exists(PARSED_DATA_FILE):
-            os.remove(PARSED_DATA_FILE)
-            logger.info("Cleared existing parsed_data.json")
-        if os.path.exists(VALIDATION_RESULTS_FILE):
-            os.remove(VALIDATION_RESULTS_FILE)
-            logger.info("Cleared existing validation_results.json")
+        cutoff_time = datetime.now() - timedelta(hours=24)
+        for filename in os.listdir(SESSION_DATA_DIR):
+            if filename.endswith('.json'):
+                file_path = os.path.join(SESSION_DATA_DIR, filename)
+                if os.path.getmtime(file_path) < cutoff_time.timestamp():
+                    os.remove(file_path)
+                    logger.info(f"Cleaned up old session file: {filename}")
     except Exception as e:
-        logger.error(f"Error clearing existing files: {e}")
+        logger.error(f"Error cleaning up old sessions: {e}")
 
 
-# Clear files on app start
-clear_existing_files()
+def load_session_data(session_id, data_type):
+    """Load data for a specific session"""
+    file_path = get_session_file_path(session_id, data_type)
+    try:
+        if os.path.exists(file_path):
+            with open(file_path, 'r') as f:
+                return json.load(f)
+    except Exception as e:
+        logger.error(f"Error loading session data {data_type} for session {session_id}: {e}")
+    return None
+
+
+def save_session_data(session_id, data_type, data):
+    """Save data for a specific session"""
+    file_path = get_session_file_path(session_id, data_type)
+    try:
+        with open(file_path, 'w') as f:
+            json.dump(data, f, indent=2)
+        return True
+    except Exception as e:
+        logger.error(f"Error saving session data {data_type} for session {session_id}: {e}")
+        return False
+
+
+def clear_session_data(session_id):
+    """Clear all data for a specific session"""
+    try:
+        for data_type in ['parsed_data', 'validation_results']:
+            file_path = get_session_file_path(session_id, data_type)
+            if os.path.exists(file_path):
+                os.remove(file_path)
+                logger.info(f"Removed {data_type} for session {session_id}")
+        return True
+    except Exception as e:
+        logger.error(f"Error clearing session data for session {session_id}: {e}")
+        return False
+
+
+@app.before_request
+def before_request():
+    """Clean up old sessions before each request"""
+    cleanup_old_sessions()
 
 
 @app.route("/", methods=["GET", "POST"])
 def index():
     """Main page for file upload and results display"""
+    session_id = get_session_id()
     parsed_data = None
     validation_data = None
     error = None
     uploaded_filename = None
 
-    # Load existing validation results if available
-    if os.path.exists(VALIDATION_RESULTS_FILE):
-        try:
-            with open(VALIDATION_RESULTS_FILE, "r") as f:
-                validation_data = json.load(f)
-        except Exception as e:
-            logger.error(f"Error loading validation results: {e}")
-
-    # Load existing parsed data if available
-    if os.path.exists(PARSED_DATA_FILE):
-        try:
-            with open(PARSED_DATA_FILE, "r") as f:
-                parsed_data = json.load(f)
-        except Exception as e:
-            logger.error(f"Error loading parsed data: {e}")
+    # For GET requests (page refresh/new visit), always start fresh
+    if request.method == "GET":
+        clear_session_data(session_id)
+        # Don't load any existing data on GET requests
+        parsed_data = None
+        validation_data = None
+    else:
+        # For POST requests (file upload), load existing validation data only
+        validation_data = load_session_data(session_id, 'validation_results')
 
     if request.method == "POST":
         try:
@@ -109,18 +163,21 @@ def index():
 
             uploaded_filename = file.filename
             data = file.read().decode("utf-8")
-            logger.info(f"Processing file: {file.filename}, size: {len(data)} bytes")
+            logger.info(f"Processing file: {file.filename}, size: {len(data)} bytes for session {session_id}")
+
+            # Clear any existing validation data when new file is uploaded
+            clear_session_data(session_id)
 
             # Parse the data
             parsed_data = parse_datamodel_logs(data)
-            logger.info("Successfully parsed data")
+            logger.info(f"Successfully parsed data for session {session_id}")
 
-            # Save parsed data
-            with open(PARSED_DATA_FILE, "w") as f:
-                json.dump(parsed_data, f, indent=2)
+            # Save parsed data for this session
+            if not save_session_data(session_id, 'parsed_data', parsed_data):
+                error = "Error saving parsed data"
 
         except Exception as e:
-            logger.error(f"Error processing request: {str(e)}")
+            logger.error(f"Error processing request for session {session_id}: {str(e)}")
             error = f"Error processing file: {str(e)}"
 
     return render_template(
@@ -136,6 +193,7 @@ def index():
 def validate_compliance():
     """API endpoint to validate compliance against a specific version"""
     try:
+        session_id = get_session_id()
         data = request.get_json()
         if not data:
             return jsonify({"error": "No JSON data provided"}), 400
@@ -153,8 +211,9 @@ def validate_compliance():
                 400,
             )
 
-        # Check if parsed data exists
-        if not os.path.exists(PARSED_DATA_FILE):
+        # Check if parsed data exists for this session
+        parsed_data = load_session_data(session_id, 'parsed_data')
+        if not parsed_data:
             return (
                 jsonify({"error": "No parsed data found. Please upload and parse a wildcard file first."}),
                 400,
@@ -176,18 +235,14 @@ def validate_compliance():
                 500,
             )
 
-        # Load parsed data
-        with open(PARSED_DATA_FILE, "r") as f:
-            parsed_data = json.load(f)
-
         # Perform validation
         validation_data = validate_device_compliance(parsed_data, element_requirements, chip_version)
 
-        # Save validation results
-        with open(VALIDATION_RESULTS_FILE, "w") as f:
-            json.dump(validation_data, f, indent=2)
+        # Save validation results for this session
+        if not save_session_data(session_id, 'validation_results', validation_data):
+            return jsonify({"error": "Error saving validation results"}), 500
 
-        logger.info(f"Compliance validation completed for version {chip_version}")
+        logger.info(f"Compliance validation completed for version {chip_version} for session {session_id}")
         return jsonify(
             {
                 "success": True,
@@ -197,51 +252,51 @@ def validate_compliance():
         )
 
     except Exception as e:
-        logger.error(f"Error in validate_compliance: {str(e)}")
+        logger.error(f"Error in validate_compliance for session {session_id}: {str(e)}")
         return jsonify({"error": str(e)}), 500
 
 
 @app.route("/api/clear-data", methods=["POST"])
 def clear_data():
-    """API endpoint to clear parsed data and validation results"""
+    """API endpoint to clear parsed data and validation results for current session"""
     try:
-        if os.path.exists(PARSED_DATA_FILE):
-            os.remove(PARSED_DATA_FILE)
-            logger.info("Removed parsed_data.json")
-
-        if os.path.exists(VALIDATION_RESULTS_FILE):
-            os.remove(VALIDATION_RESULTS_FILE)
-            logger.info("Removed validation_results.json")
-
-        return jsonify({"success": True, "message": "Data cleared successfully"})
+        session_id = get_session_id()
+        
+        if clear_session_data(session_id):
+            logger.info(f"Cleared data for session {session_id}")
+            return jsonify({"success": True, "message": "Data cleared successfully"})
+        else:
+            return jsonify({"error": "Failed to clear session data"}), 500
 
     except Exception as e:
-        logger.error(f"Error clearing data: {e}")
+        logger.error(f"Error clearing data for session {session_id}: {e}")
         return jsonify({"error": f"Failed to clear data: {str(e)}"}), 500
 
 
 @app.route("/api/download/<data_type>")
 def download_data(data_type):
-    """API endpoint to download parsed data or validation results"""
+    """API endpoint to download parsed data or validation results for current session"""
     try:
+        session_id = get_session_id()
+        
         if data_type == "parsed":
-            with open(PARSED_DATA_FILE, "r") as f:
-                data = json.load(f)
+            data = load_session_data(session_id, 'parsed_data')
             filename = "parsed_data.json"
         elif data_type == "validation":
-            with open(VALIDATION_RESULTS_FILE, "r") as f:
-                data = json.load(f)
+            data = load_session_data(session_id, 'validation_results')
             filename = "validation_results.json"
         else:
             return jsonify({"error": "Invalid data type"}), 400
+
+        if not data:
+            return jsonify({"error": "Data not found for current session"}), 404
 
         response = jsonify(data)
         response.headers["Content-Disposition"] = f"attachment; filename={filename}"
         return response
 
-    except FileNotFoundError:
-        return jsonify({"error": "Data not found"}), 404
     except Exception as e:
+        logger.error(f"Error downloading data for session {session_id}: {str(e)}")
         return jsonify({"error": str(e)}), 500
 
 
