@@ -31,8 +31,7 @@ app = Flask(__name__, template_folder=template_dir, static_folder=static_dir)
 app.config["MAX_CONTENT_LENGTH"] = 50 * 1024 * 1024  # 50MB limit
 
 # Configure secret key for sessions
-app.config["SECRET_KEY"] = os.environ.get(
-    "SECRET_KEY", "dev-secret-key-change-in-production")
+app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "dev-secret-key-change-in-production")
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -48,8 +47,7 @@ def get_session_id():
     if "session_id" not in session:
         session["session_id"] = str(uuid.uuid4())
         session.permanent = True
-        app.permanent_session_lifetime = timedelta(
-            hours=24)  # Session expires in 24 hours
+        app.permanent_session_lifetime = timedelta(hours=24)  # Session expires in 24 hours
     return session["session_id"]
 
 
@@ -90,9 +88,7 @@ def load_session_data(session_id, data_type):
             with open(file_path, "r") as f:
                 return json.load(f)
     except Exception as e:
-        logger.error(
-            f"Error loading session data {data_type} for session {session_id}: {e}"
-        )
+        logger.error(f"Error loading session data {data_type} for session {session_id}: {e}")
     return None
 
 
@@ -110,9 +106,7 @@ def save_session_data(session_id, data_type, data):
             json.dump(data, f, indent=2)
         return True
     except Exception as e:
-        logger.error(
-            f"Error saving session data {data_type} for session {session_id}: {e}"
-        )
+        logger.error(f"Error saving session data {data_type} for session {session_id}: {e}")
         return False
 
 
@@ -130,8 +124,7 @@ def clear_session_data(session_id):
                 logger.info(f"Removed {data_type} for session {session_id}")
         return True
     except Exception as e:
-        logger.error(
-            f"Error clearing session data for session {session_id}: {e}")
+        logger.error(f"Error clearing session data for session {session_id}: {e}")
         return False
 
 
@@ -150,12 +143,20 @@ def index():
     error = None
     uploaded_filename = None
 
-    # For GET requests (page refresh/new visit), always start fresh
+    # For GET requests, check if we should preserve session data
     if request.method == "GET":
-        clear_session_data(session_id)
-        # Don't load any existing data on GET requests
-        parsed_data = None
-        validation_data = None
+        # Check if this is a redirect after validation completion
+        validation_complete = request.args.get("validation_complete")
+
+        if validation_complete:
+            # Load existing data to preserve state after validation
+            parsed_data = load_session_data(session_id, "parsed_data")
+            validation_data = load_session_data(session_id, "validation_results")
+        else:
+            # Normal GET request - start fresh
+            clear_session_data(session_id)
+            parsed_data = None
+            validation_data = None
     else:
         # For POST requests (file upload), load existing validation data only
         validation_data = load_session_data(session_id, "validation_results")
@@ -195,9 +196,7 @@ def index():
 
             uploaded_filename = file.filename
             data = file.read().decode("utf-8")
-            logger.info(
-                f"Processing file: {file.filename}, size: {len(data)} bytes for session {session_id}"
-            )
+            logger.info(f"Processing file: {file.filename}, size: {len(data)} bytes for session {session_id}")
 
             # Clear any existing validation data when new file is uploaded
             clear_session_data(session_id)
@@ -211,8 +210,7 @@ def index():
                 error = "Error saving parsed data"
 
         except Exception as e:
-            logger.error(
-                f"Error processing request for session {session_id}: {str(e)}")
+            logger.error(f"Error processing request for session {session_id}: {str(e)}")
             error = f"Error processing file: {str(e)}"
 
     return render_template(
@@ -242,10 +240,7 @@ def validate_compliance():
         valid_versions = ["1.3", "1.4", "1.4.1", "1.4.2", "master"]
         if chip_version not in valid_versions:
             return (
-                jsonify({
-                    "error":
-                    f'Invalid chip_version. Must be one of: {", ".join(valid_versions)}'
-                }),
+                jsonify({"error": f'Invalid chip_version. Must be one of: {", ".join(valid_versions)}'}),
                 400,
             )
 
@@ -253,10 +248,7 @@ def validate_compliance():
         parsed_data = load_session_data(session_id, "parsed_data")
         if not parsed_data:
             return (
-                jsonify({
-                    "error":
-                    "No parsed data found. Please upload and parse a wildcard file first."
-                }),
+                jsonify({"error": "No parsed data found. Please upload and parse a wildcard file first."}),
                 400,
             )
 
@@ -264,10 +256,7 @@ def validate_compliance():
         requirements_file = f"data/element_requirements_{chip_version}.json"
         if not os.path.exists(requirements_file):
             return (
-                jsonify({
-                    "error":
-                    f"Version {chip_version} is not supported yet. Currently supported versions will be available once the element requirements are generated."
-                }),
+                jsonify({"error": f"Version {chip_version} is not supported yet. Currently supported versions will be available once the element requirements are generated."}),
                 400,
             )
 
@@ -275,36 +264,28 @@ def validate_compliance():
         element_requirements = load_element_requirements(chip_version)
         if not element_requirements:
             return (
-                jsonify({
-                    "error":
-                    f"Failed to load element requirements for version {chip_version}."
-                }),
+                jsonify({"error": f"Failed to load element requirements for version {chip_version}."}),
                 500,
             )
 
         # Perform validation
-        validation_data = validate_device_compliance(parsed_data,
-                                                     element_requirements,
-                                                     chip_version)
+        validation_data = validate_device_compliance(parsed_data, element_requirements, chip_version)
 
         # Save validation results for this session
-        if not save_session_data(session_id, "validation_results",
-                                 validation_data):
+        if not save_session_data(session_id, "validation_results", validation_data):
             return jsonify({"error": "Error saving validation results"}), 500
 
-        logger.info(
-            f"Compliance validation completed for version {chip_version} for session {session_id}"
+        logger.info(f"Compliance validation completed for version {chip_version} for session {session_id}")
+        return jsonify(
+            {
+                "success": True,
+                "message": f"Compliance validation completed for version {chip_version}",
+                "summary": validation_data.get("summary", {}),
+            }
         )
-        return jsonify({
-            "success": True,
-            "message":
-            f"Compliance validation completed for version {chip_version}",
-            "summary": validation_data.get("summary", {}),
-        })
 
     except Exception as e:
-        logger.error(
-            f"Error in validate_compliance for session {session_id}: {str(e)}")
+        logger.error(f"Error in validate_compliance for session {session_id}: {str(e)}")
         return jsonify({"error": str(e)}), 500
 
 
@@ -316,10 +297,7 @@ def clear_data():
 
         if clear_session_data(session_id):
             logger.info(f"Cleared data for session {session_id}")
-            return jsonify({
-                "success": True,
-                "message": "Data cleared successfully"
-            })
+            return jsonify({"success": True, "message": "Data cleared successfully"})
         else:
             return jsonify({"error": "Failed to clear session data"}), 500
 
@@ -348,17 +326,14 @@ def download_data(data_type):
             return jsonify({"error": "Invalid data type"}), 400
 
         if not data:
-            return jsonify({"error":
-                            "Data not found for current session"}), 404
+            return jsonify({"error": "Data not found for current session"}), 404
 
         response = jsonify(data)
-        response.headers[
-            "Content-Disposition"] = f"attachment; filename={filename}"
+        response.headers["Content-Disposition"] = f"attachment; filename={filename}"
         return response
 
     except Exception as e:
-        logger.error(
-            f"Error downloading data for session {session_id}: {str(e)}")
+        logger.error(f"Error downloading data for session {session_id}: {str(e)}")
         return jsonify({"error": str(e)}), 500
 
 

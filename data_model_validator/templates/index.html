@@ -8,6 +8,23 @@
         <i class="fas fa-cloud-upload-alt"></i>
         Upload Wildcard File
     </h2>
+
+    <!-- Chip-tool Command Instructions -->
+    <div class="command-instructions">
+        <h3><i class="fas fa-terminal"></i> Generate Wildcard Logs</h3>
+        <p>First, use the following chip-tool command to generate wildcard logs:</p>
+        <div class="command-box">
+            <code>./chip-tool any read-by-id 0xFFFFFFFF 0xFFFFFFFF 1 0xFFFF > wildcard_logs.txt</code>
+            <button class="copy-btn" onclick="copyCommand()" title="Copy command">
+                <i class="fas fa-copy"></i>
+            </button>
+        </div>
+        <div class="command-note">
+            <i class="fas fa-info-circle"></i>
+            The wildcard_logs.txt file will be created in the <strong>tmp/</strong> directory
+        </div>
+    </div>
+
     <form method="POST" enctype="multipart/form-data">
         <div class="upload-area" id="uploadArea">
             <div class="upload-icon">
@@ -34,20 +51,29 @@
         <i class="fas fa-check-circle"></i>
         File Upload Complete
     </h2>
-    <div class="success-message">
-        <i class="fas fa-check-circle"></i>
-        <strong>File uploaded and processed successfully!</strong>
-        <div class="file-info">
-            <i class="fas fa-file-alt"></i>
-            <span>
-                {% if uploaded_filename %}
-                File "<strong>{{ uploaded_filename }}</strong>" has been parsed and is ready for compliance validation.
-                {% else %}
-                Your wildcard file has been parsed and is ready for compliance validation.
-                {% endif %}
-            </span>
+    <div class="upload-success-card">
+        <div class="success-header">
+            <i class="fas fa-check-circle"></i>
+            <h3>File processed successfully!</h3>
         </div>
-        Now select a version to validate compliance against.
+        <div class="success-content">
+            <div class="file-info-card">
+                <i class="fas fa-file-alt"></i>
+                <div class="file-details">
+                    {% if uploaded_filename %}
+                    <div class="filename">{{ uploaded_filename }}</div>
+                    <div class="file-status">Parsed and ready for compliance validation</div>
+                    {% else %}
+                    <div class="filename">Your wildcard file</div>
+                    <div class="file-status">Parsed and ready for compliance validation</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="next-steps">
+            <p>Now select a version to validate compliance against:</p>
+        </div>
 
         <div class="version-selection mt-3">
             <h4><i class="fas fa-cogs"></i> Select Version for Compliance Check</h4>
@@ -391,6 +417,9 @@
                 return;
             }
 
+            // Store the selected version to retain it after validation
+            sessionStorage.setItem('selectedVersion', selectedVersion);
+
             // Show validation loader
             showValidationLoader();
             hideMessage('validateMessage');
@@ -414,7 +443,8 @@
                     updateProgress(100, 'Validation complete!');
                     setTimeout(() => {
                         hideValidationLoader();
-                        window.location.reload();
+                        // Redirect with a parameter to preserve session data
+                        window.location.href = '/?validation_complete=1';
                     }, 1000);
                 } else {
                     hideValidationLoader();
@@ -426,6 +456,80 @@
                 showMessage('validateMessage', 'Error: ' + error.message, 'error');
             });
         });
+    }
+
+    // Restore selected version from sessionStorage when page loads
+    document.addEventListener('DOMContentLoaded', function() {
+        const versionSelect = document.getElementById('complianceVersion');
+        const storedVersion = sessionStorage.getItem('selectedVersion');
+
+        if (versionSelect && storedVersion) {
+            versionSelect.value = storedVersion;
+            // Update the display text as well
+            const selectedOption = versionSelect.querySelector(`option[value="${storedVersion}"]`);
+            if (selectedOption) {
+                versionSelect.selectedIndex = Array.from(versionSelect.options).indexOf(selectedOption);
+            }
+        }
+
+        // Clean up URL parameter after validation completion
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('validation_complete')) {
+            // Remove the parameter from URL without triggering a page reload
+            const newUrl = window.location.pathname;
+            window.history.replaceState({}, document.title, newUrl);
+        }
+    });
+
+    // Copy command function - make it global for onclick handler
+    window.copyCommand = function() {
+        const command = './chip-tool any read-by-id 0xFFFFFFFF 0xFFFFFFFF 1 0xFFFF > wildcard_logs.txt';
+
+        if (navigator.clipboard) {
+            navigator.clipboard.writeText(command).then(() => {
+                showCopyFeedback();
+            }).catch(() => {
+                fallbackCopyTextToClipboard(command);
+            });
+        } else {
+            fallbackCopyTextToClipboard(command);
+        }
+    };
+
+    function fallbackCopyTextToClipboard(text) {
+        const textArea = document.createElement("textarea");
+        textArea.value = text;
+        textArea.style.top = "0";
+        textArea.style.left = "0";
+        textArea.style.position = "fixed";
+
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+
+        try {
+            const successful = document.execCommand('copy');
+            if (successful) {
+                showCopyFeedback();
+            }
+        } catch (err) {
+            console.error('Fallback: Oops, unable to copy', err);
+        }
+
+        document.body.removeChild(textArea);
+    }
+
+    function showCopyFeedback() {
+        const copyBtn = document.querySelector('.copy-btn');
+        const originalHTML = copyBtn.innerHTML;
+
+        copyBtn.innerHTML = '<i class="fas fa-check"></i>';
+        copyBtn.style.background = 'var(--success-color)';
+
+        setTimeout(() => {
+            copyBtn.innerHTML = originalHTML;
+            copyBtn.style.background = 'var(--accent-color)';
+        }, 2000);
     }
 
     // Utility functions for showing messages
