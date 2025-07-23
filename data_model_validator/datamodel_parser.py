@@ -7,11 +7,11 @@ It provides terminal-based compliance checking with detailed results and automat
 saves parsed_data.json and validation_results.json files for further analysis.
 
 Features:
-- Comprehensive compliance validation with detailed terminal output
+- Comprehensive compliance validation with tabular output
 - Automatic JSON file generation (parsed_data.json, validation_results.json)
 - Built-in test suite for validation
 - Support for different chip versions
-- Complete detailed output (no truncation)
+- Clean tabular formatting for easy visualization
 - Proper exit codes for CI/CD integration
 """
 import argparse
@@ -24,7 +24,17 @@ import time
 from core.compliance_checker import load_element_requirements
 from core.compliance_checker import validate_device_compliance
 from core.log_parser import parse_datamodel_logs
-# Import core modules
+
+# Try to import tabulate for better table formatting
+try:
+    from tabulate import tabulate
+
+    TABULATE_AVAILABLE = True
+except ImportError:
+    TABULATE_AVAILABLE = False
+    print(
+        "Note: Install 'tabulate' for better table formatting: pip install tabulate"
+    )
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -114,10 +124,47 @@ def run_compliance_check(input_file, chip_version="1.4.1", verbose=False):
         return {"status": "error", "error": str(e)}
 
 
-def print_compliance_summary(validation_data):
-    """Print comprehensive compliance summary to terminal with complete details
+def print_table(headers, rows, title=None):
+    """Print a formatted table using tabulate if available, otherwise simple format
 
-    :param validation_data:
+    :param headers:
+    :param rows:
+    :param title:  (Default value = None)
+
+    """
+    if title:
+        print(f"\n{title}")
+        print("=" * len(title))
+
+    if TABULATE_AVAILABLE:
+        print(tabulate(rows, headers=headers, tablefmt="grid"))
+    else:
+        # Simple ASCII table fallback
+        col_widths = [
+            max(len(str(header)),
+                max(len(str(row[i])) for row in rows) if rows else 0)
+            for i, header in enumerate(headers)
+        ]
+
+        # Print header
+        header_row = " | ".join(
+            str(header).ljust(col_widths[i])
+            for i, header in enumerate(headers))
+        print(header_row)
+        print("-" * len(header_row))
+
+        # Print rows
+        for row in rows:
+            row_str = " | ".join(
+                str(row[i]).ljust(col_widths[i]) for i in range(len(headers)))
+            print(row_str)
+    print()
+
+
+def print_compliance_summary(validation_data):
+    """Print comprehensive compliance summary in tabular format with per-endpoint details
+
+    :param validation_data: Validation results data
 
     """
     if not validation_data:
@@ -134,183 +181,281 @@ def print_compliance_summary(validation_data):
     total_event_warnings = summary.get("total_event_warnings", 0)
 
     print("\n" + "=" * 80)
-    print("MATTER DEVICE COMPLIANCE SUMMARY")
-    print("=" * 80)
-    print(f"Total Endpoints: {total_endpoints}")
-    print(f"Compliant Endpoints: {compliant_endpoints}")
-    print(f"Non-Compliant Endpoints: {non_compliant_endpoints}")
-
-    if total_endpoints > 0:
-        compliance_rate = (compliant_endpoints / total_endpoints) * 100
-        print(f"Compliance Rate: {compliance_rate:.1f}%")
-
-    if total_revision_issues > 0:
-        print(f"Revision Issues: {total_revision_issues}")
-
-    if total_event_warnings > 0:
-        print(f"Event Warnings: {total_event_warnings}")
-
+    print("MATTER DEVICE COMPLIANCE REPORT")
     print("=" * 80)
 
-    # Overall status
-    if non_compliant_endpoints == 0:
-        print("✅ OVERALL STATUS: COMPLIANT")
-    else:
-        print("❌ OVERALL STATUS: NON-COMPLIANT")
+    # 1. Overall Summary Table
+    compliance_rate = ((compliant_endpoints / total_endpoints *
+                        100) if total_endpoints > 0 else 0)
+    overall_status = ("✅ COMPLIANT"
+                      if non_compliant_endpoints == 0 else "❌ NON-COMPLIANT")
 
-    print("\nDETAILED COMPLIANCE RESULTS:")
+    summary_data = [
+        ["Total Endpoints", total_endpoints],
+        ["Compliant Endpoints", compliant_endpoints],
+        ["Non-Compliant Endpoints", non_compliant_endpoints],
+        ["Compliance Rate", f"{compliance_rate:.1f}%"],
+        ["Total Revision Issues", total_revision_issues],
+        ["Total Event Warnings", total_event_warnings],
+        ["Overall Status", overall_status],
+    ]
+
+    print_table(["Metric", "Value"], summary_data,
+                "📊 OVERALL COMPLIANCE SUMMARY")
+
+    # 2. Endpoints Quick Overview Table
+    endpoint_overview_rows = []
+    for endpoint in endpoints:
+        endpoint_id = endpoint.get("endpoint", "Unknown")
+        is_compliant = endpoint.get("is_compliant", False)
+        device_types = endpoint.get("device_types", [])
+        missing_count = len(endpoint.get("missing_elements", []))
+        revision_issues_count = len(endpoint.get("revision_issues", []))
+        event_warnings_count = len(endpoint.get("event_warnings", []))
+
+        status = "✅ Compliant" if is_compliant else "❌ Non-Compliant"
+        device_types_str = ", ".join([
+            dt.get("device_type_name", "Unknown") for dt in device_types
+            if dt.get("device_type_name")
+        ])
+
+        endpoint_overview_rows.append([
+            endpoint_id,
+            status,
+            (device_types_str[:40] +
+             "..." if len(device_types_str) > 40 else device_types_str),
+            missing_count,
+            revision_issues_count,
+            event_warnings_count,
+        ])
+
+    print_table(
+        [
+            "Endpoint",
+            "Status",
+            "Device Type Names",
+            "Missing",
+            "Rev Issues",
+            "Warnings",
+        ],
+        endpoint_overview_rows,
+        "🔌 ENDPOINTS QUICK OVERVIEW",
+    )
+
+    # 3. PER-ENDPOINT DETAILED ANALYSIS
+    print("\n" + "=" * 80)
+    print("📋 PER-ENDPOINT DETAILED COMPLIANCE ANALYSIS")
     print("=" * 80)
 
-    # Endpoint details with comprehensive information - NO TRUNCATION
     for i, endpoint in enumerate(endpoints):
-        endpoint_id = endpoint.get("endpoint", "unknown")
+        endpoint_id = endpoint.get("endpoint", "Unknown")
         is_compliant = endpoint.get("is_compliant", False)
         device_types = endpoint.get("device_types", [])
         missing_elements = endpoint.get("missing_elements", [])
         revision_issues = endpoint.get("revision_issues", [])
         event_warnings = endpoint.get("event_warnings", [])
 
-        status_symbol = "✅" if is_compliant else "❌"
-        print(f"\n[{i+1}] ENDPOINT {endpoint_id}: {status_symbol}")
-        print("-" * 50)
-
-        # Device types with detailed cluster validation
+        # B. Device Types for this Endpoint
         if device_types:
-            for dt_idx, dt in enumerate(device_types):
+            device_type_rows = []
+            for dt in device_types:
                 if "error" in dt:
-                    print(f"  🔴 ERROR: {dt['error']}")
+                    device_type_rows.append([
+                        "Error",
+                        "Error",
+                        "❌ Error",
+                        0,
+                        dt.get("error", "Unknown error")[:50] + "...",
+                    ])
                 else:
-                    dt_id = dt.get("device_type_id", "unknown")
-                    dt_name = dt.get("device_type_name", "unknown")
+                    dt_id = dt.get("device_type_id", "Unknown")
+                    dt_name = dt.get("device_type_name", "Unknown")
                     dt_compliant = dt.get("is_compliant", False)
-                    dt_status = "✅" if dt_compliant else "❌"
+                    clusters_count = len(dt.get("cluster_validations", []))
+
+                    status = "✅ Compliant" if dt_compliant else "❌ Non-Compliant"
+
+                    device_type_rows.append(
+                        [dt_id, dt_name, status, clusters_count])
+
+            print_table(
+                ["Type ID", "Type Name", "Status", "Clusters"],
+                device_type_rows,
+                f"📋 Endpoint {endpoint_id} Device Types",
+            )
+
+        # C. Clusters for this Endpoint
+        cluster_rows = []
+        for dt in device_types:
+            if "cluster_validations" in dt:
+                for cluster in dt.get("cluster_validations", []):
+                    cluster_id = cluster.get("cluster_id", "Unknown")
+                    cluster_name = cluster.get("cluster_name", "Unknown")
+                    cluster_type = cluster.get("cluster_type", "server")
+                    device_type_name = dt.get("device_type_name", "Unknown")
+                    is_cluster_compliant = cluster.get("is_compliant", False)
+                    missing_count = len(cluster.get("missing_elements", []))
+
+                    # Get revision issues for this cluster
+                    cluster_revision_issues = cluster.get(
+                        "revision_issues", [])
+                    revision_summary = ""
+                    if cluster_revision_issues:
+                        error_count = len([
+                            r for r in cluster_revision_issues
+                            if r.get("severity") == "error"
+                        ])
+                        warning_count = len([
+                            r for r in cluster_revision_issues
+                            if r.get("severity") != "error"
+                        ])
+                        if error_count > 0:
+                            revision_summary = f"🔴 {error_count} errors"
+                            if warning_count > 0:
+                                revision_summary += f", 🟡 {warning_count} warnings"
+                        elif warning_count > 0:
+                            revision_summary = f"🟡 {warning_count} warnings"
+                    else:
+                        revision_summary = "✅ OK"
+
+                    status = ("✅ Compliant"
+                              if is_cluster_compliant else "❌ Non-Compliant")
+
+                    cluster_rows.append([
+                        cluster_id,
+                        cluster_name,
+                        cluster_type.title(),
+                        device_type_name,
+                        status,
+                        missing_count,
+                        revision_summary,
+                    ])
+
+        if cluster_rows:
+            print_table(
+                [
+                    "Cluster ID",
+                    "Cluster Name",
+                    "Type",
+                    "Device Type Name",
+                    "Status",
+                    "Missing",
+                    "Revisions",
+                ],
+                cluster_rows,
+                f"🔧 Endpoint {endpoint_id} Complete Cluster Compliance",
+            )
+
+        # E. Event Warnings for this Endpoint (only endpoint-level warnings, cluster warnings are in cluster table)
+        endpoint_level_warnings = [
+            w for w in event_warnings if not w.get("cluster_name")
+        ]
+        if endpoint_level_warnings:
+            event_rows = []
+            for warning in endpoint_level_warnings:
+                severity = warning.get("severity", "info")
+                icon = "🟡" if severity == "warning" else "ℹ️"
+
+                event_rows.append([
+                    warning.get("type", "Unknown"),
+                    f"{icon} {severity.title()}",
+                    (warning.get("message", "")[:60] +
+                     "..." if len(warning.get(
+                         "message", "")) > 60 else warning.get("message", "")),
+                ])
+
+            print_table(
+                ["Event Type", "Severity", "Message"],
+                event_rows,
+                f"💬 Endpoint {endpoint_id} General Event Warnings",
+            )
+
+        # F. Endpoint Recommendations
+        print(f"\n🔧 Endpoint {endpoint_id} Recommendations:")
+        if not is_compliant:
+            # Check for device type revision issues
+            device_revision_issue = endpoint.get("revision_issues", [])
+            if device_revision_issue:
+                print(f"\n   • Fix {len(device_revision_issue)} revision issues listed below")
+                for revision_issue in device_revision_issue:
+                    print(f"\t   • For {revision_issue.get('item_name', 'Unknown')}, revision on device is {revision_issue.get('actual_revision', 'Unknown')} but the required revision is {revision_issue.get('required_revision', 'Unknown')}")
+
+            # Check for missing elements
+            if missing_elements:
+                print(
+                    f"\n   • Fix {len(missing_elements)} missing elements listed below"
+                )
+                print(
+                    f"   • Make sure to add the missing elements to the respective clusters"
+                )
+                for missing_element in missing_elements:
                     print(
-                        f"\n  📋 Device Type: {dt_status} {dt_name} (ID: {dt_id})"
+                        f"\t   • {missing_element.get('name', 'Unknown')} {missing_element.get('type', 'Unknown')} is missing on {missing_element.get('cluster_name', 'Unknown')} cluster. {missing_element.get('message', '')}"
                     )
 
-                    # Show cluster validation details
-                    cluster_validations = dt.get("cluster_validations", [])
-                    if cluster_validations:
-                        print(
-                            f"    🔧 Cluster Validations ({len(cluster_validations)} clusters):"
-                        )
+            # Count revision issues from clusters
+            total_cluster_revision_errors = 0
+            for dt in device_types:
+                for cluster in dt.get("cluster_validations", []):
+                    cluster_revision_issues = cluster.get(
+                        "revision_issues", [])
+                    total_cluster_revision_errors += len([
+                        r for r in cluster_revision_issues
+                        if r.get("severity") == "error"
+                    ])
 
-                        for cluster in cluster_validations:
-                            cluster_id = cluster.get("cluster_id", "unknown")
-                            cluster_name = cluster.get("cluster_name",
-                                                       "unknown")
-                            cluster_type = cluster.get("cluster_type",
-                                                       "server")
-                            cluster_compliant = cluster.get(
-                                "is_compliant", False)
-                            cluster_status = "✅" if cluster_compliant else "❌"
-
+            if total_cluster_revision_errors > 0:
+                print(
+                    f"\n   • Address {total_cluster_revision_errors} critical revision issues shown in the below list"
+                )
+                for dt in device_types:
+                    for cluster in dt.get("cluster_validations", []):
+                        cluster_revision_issues = cluster.get(
+                            "revision_issues", [])
+                        for revision_issue in cluster_revision_issues:
                             print(
-                                f"      {cluster_status} {cluster_name} ({cluster_id}) [{cluster_type}]"
+                                f"\t   • For {revision_issue.get('item_name', 'Unknown')}, revision on device is {revision_issue.get('actual_revision', 'Unknown')} but the required revision is {revision_issue.get('required_revision', 'Unknown')}"
                             )
 
-                            # Show ALL missing elements for this cluster - NO TRUNCATION
-                            cluster_missing = cluster.get(
-                                "missing_elements", [])
-                            if cluster_missing:
-                                for elem in cluster_missing:  # Show ALL elements
-                                    elem_type = elem.get("type", "unknown")
-                                    elem_id = elem.get("id", "unknown")
-                                    elem_name = elem.get("name", "unknown")
-                                    print(
-                                        f"        🔸 Missing {elem_type}: {elem_name} ({elem_id})"
-                                    )
+        else:
+            print("   • ✅ Endpoint is compliant - no action needed")
 
-                            # Show ALL revision issues for this cluster
-                            cluster_revision_issues = cluster.get(
-                                "revision_issues", [])
-                            if cluster_revision_issues:
-                                for rev_issue in cluster_revision_issues:
-                                    severity = rev_issue.get(
-                                        "severity", "info")
-                                    message = rev_issue.get(
-                                        "message", "Unknown revision issue")
-                                    if severity == "error":
-                                        print(
-                                            f"        🔸 Revision Error: {message}"
-                                        )
-                                    else:
-                                        print(
-                                            f"        🔸 Revision Info: {message}"
-                                        )
-
-        # Overall missing elements for the endpoint - NO TRUNCATION
-        if missing_elements:
-            print(f"\n  🔍 MISSING ELEMENTS ({len(missing_elements)} total):")
-
-            # Group by type
-            missing_by_type = {}
-            for elem in missing_elements:
-                elem_type = elem.get("type", "unknown")
-                if elem_type not in missing_by_type:
-                    missing_by_type[elem_type] = []
-                missing_by_type[elem_type].append(elem)
-
-            for elem_type, items in missing_by_type.items():
-                print(f"    📌 {elem_type.title()}s ({len(items)}):")
-                for elem in items:  # Show ALL elements - NO TRUNCATION
-                    elem_id = elem.get("id", "unknown")
-                    elem_name = elem.get("name", "unknown")
-                    cluster_name = elem.get("cluster_name", "")
-                    if cluster_name:
-                        print(
-                            f"      • {elem_name} ({elem_id}) in {cluster_name}"
-                        )
-                    else:
-                        print(f"      • {elem_name} ({elem_id})")
-
-        # ALL Revision issues - NO TRUNCATION
-        if revision_issues:
-            print(f"\n  ⚠️  REVISION ISSUES ({len(revision_issues)}):")
-            for rev_issue in revision_issues:
-                severity = rev_issue.get("severity", "info")
-                message = rev_issue.get("message", "Unknown revision issue")
-                item_type = rev_issue.get("item_type", "unknown")
-                item_name = rev_issue.get("item_name", "unknown")
-                actual_rev = rev_issue.get("actual_revision", "unknown")
-                required_rev = rev_issue.get("required_revision", "unknown")
-
-                icon = "🔴" if severity == "error" else "🟡"
-                print(f"    {icon} {item_type.title()}: {item_name}")
-                print(f"       Actual: {actual_rev}, Required: {required_rev}")
-                print(f"       {message}")
-
-        # ALL Event warnings - NO TRUNCATION
         if event_warnings:
-            print(f"\n  💬 EVENT WARNINGS ({len(event_warnings)}):")
-            for event_warning in event_warnings:  # Show ALL warnings
-                severity = event_warning.get("severity", "info")
-                message = event_warning.get("message", "Unknown event warning")
-                event_type = event_warning.get("type", "unknown")
-
-                icon = "🟡" if severity == "warning" else "\t\nℹ️"
-                print(f"    {icon} {event_type}: {message}")
-
-        print()  # Add spacing between endpoints
-
-    print("=" * 80)
-
-    # Summary recommendations
-    if non_compliant_endpoints > 0:
-        print("\n🔧 RECOMMENDATIONS:")
-        print(
-            "   • Check missing clusters, attributes, commands, and features")
-        print("   • Verify device type implementations meet specifications")
-        if total_revision_issues > 0:
-            print("   • Update firmware to meet minimum revision requirements")
-        if total_event_warnings > 0:
             print(
-                "   • Review event implementation (warnings don't affect compliance)"
+                f"\n   • ℹ️ Review the below event warnings (informational only)"
             )
-        print("   • Check saved JSON files for complete detailed analysis")
-    else:
-        print("🎉 CONGRATULATIONS: Device is fully compliant!")
+            for event_warning in event_warnings:
+                (print(
+                    f"\t   •Make sure {event_warning.get('event_name', 'Unknown')} event is present on {event_warning.get('cluster_name', 'Unknown')} cluster"
+                ) if event_warning.get("type", "unknown")
+                 == "event_requirement" else None)
 
+    # 4. Overall Recommendations
+    print(f"\n{'=' * 80}")
+    print("🎯 OVERALL RECOMMENDATIONS")
+    print(f"{'=' * 80}")
+
+    if non_compliant_endpoints > 0:
+        print(
+            f"• Fix compliance issues in {non_compliant_endpoints} endpoint(s)"
+        )
+        print("• Focus on endpoints marked as ❌ Non-Compliant above")
+        print("• Check per-endpoint missing elements and revision issues")
+        if total_revision_issues > 0:
+            print("• Update firmware to meet required revisions")
+    else:
+        print("🎉 CONGRATULATIONS: All endpoints are fully compliant!")
+        print("• Device meets Matter specification requirements")
+        print("• All required elements are present and properly implemented")
+
+    if total_event_warnings > 0:
+        print(
+            f"• Review {total_event_warnings} event warnings (don't affect compliance)"
+        )
+
+    print("\n📁 Detailed results saved in:")
+    print("   • output/parsed_data.json - Raw parsed device data")
+    print("   • output/validation_results.json - Complete validation results")
     print("=" * 80)
 
 
@@ -318,8 +463,7 @@ def run_cli_mode():
     """Run in CLI mode for terminal usage"""
     parser = argparse.ArgumentParser(
         description=
-        "Matter Device Compliance Parser - Automatically saves parsed_data.json and validation_results.json"
-    )
+        "Matter Device Compliance Parser - Tabular results with JSON export")
     parser.add_argument("input_file",
                         nargs="?",
                         help="Input log file (.txt) to parse")
@@ -378,12 +522,10 @@ def run_cli_mode():
         if summary.get("non_compliant_endpoints", 1) == 0:
             if not args.quiet:
                 print("\n✅ COMPLIANCE CHECK PASSED")
-                print("📁 Detailed results saved in output/ directory")
             return 0
         else:
             if not args.quiet:
                 print("\n❌ COMPLIANCE CHECK FAILED")
-                print("📁 Detailed results saved in output/ directory")
             return 1
     else:
         print(f"\n🔴 ERROR: {results['error']}")
