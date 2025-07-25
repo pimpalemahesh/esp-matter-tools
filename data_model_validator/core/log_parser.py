@@ -10,11 +10,46 @@ from utils.helper import convert_to_snake_case
 
 # Import common utility functions
 
+# Try to import ZAP parser
+try:
+    from core.zap_parser import parse_zap_file_with_descriptor_enhancement
+    ZAP_PARSER_AVAILABLE = True
+except ImportError:
+    ZAP_PARSER_AVAILABLE = False
+    logger.warning("ZAP parser not available")
+
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # ------------- Parsing-Specific Functions -------------
+
+
+def detect_file_type(data):
+    """Detect whether the input data is a ZAP file or wildcard logs
+
+    :param data: Input file content
+    :type data: str
+    :returns: 'zap' or 'wildcard_logs'
+    :rtype: str
+
+    """
+    try:
+        # Try to parse as JSON to check if it's a ZAP file
+        parsed = json.loads(data.strip())
+        
+        # Check for ZAP file structure
+        if (isinstance(parsed, dict) and 
+            "endpointTypes" in parsed and 
+            "endpoints" in parsed and
+            "fileFormat" in parsed):
+            return "zap"
+        else:
+            return "wildcard_logs"  # JSON but not ZAP format
+            
+    except json.JSONDecodeError:
+        # Not JSON, assume it's wildcard logs
+        return "wildcard_logs"
 
 
 def parse_id_name_string(val):
@@ -403,3 +438,34 @@ def parse_datamodel_logs(data):
     logger.info(f"Total parsing time: {time.time() - start_time:.2f}s")
 
     return result
+
+
+def parse_datamodel_input(data):
+    """Parse datamodel input - auto-detects ZAP files vs wildcard logs and routes to appropriate parser.
+
+    :param data: Raw input data (ZAP JSON or wildcard logs)
+    :type data: str
+    :returns: Structured data organized by endpoints and clusters
+    :rtype: dict
+    :raises ValueError: If file type is unsupported or parsing fails
+
+    """
+    if not data or not data.strip():
+        raise ValueError("Input data is empty")
+    
+    file_type = detect_file_type(data)
+    logger.info(f"Detected file type: {file_type}")
+    
+    if file_type == "zap":
+        if not ZAP_PARSER_AVAILABLE:
+            raise ValueError("ZAP file detected but ZAP parser is not available")
+        
+        logger.info("Parsing ZAP file...")
+        return parse_zap_file_with_descriptor_enhancement(data)
+    
+    elif file_type == "wildcard_logs":
+        logger.info("Parsing wildcard logs...")
+        return parse_datamodel_logs(data)
+    
+    else:
+        raise ValueError(f"Unsupported file type: {file_type}")

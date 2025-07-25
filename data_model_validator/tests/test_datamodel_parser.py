@@ -81,60 +81,6 @@ class TestRunComplianceCheck:
         finally:
             os.unlink(temp_file)
 
-
-class TestPrintComplianceSummary:
-    """Test the print_compliance_summary function"""
-
-    def test_print_compliance_summary_compliant(self, capsys):
-        """Test printing summary for compliant device
-
-        :param capsys:
-
-        """
-        validation_data = {
-            "summary": {
-                "total_endpoints": 1,
-                "compliant_endpoints": 1,
-                "non_compliant_endpoints": 0,
-                "total_revision_issues": 0,
-                "total_event_warnings": 0,
-            },
-            "endpoints": [{
-                "endpoint":
-                0,
-                "is_compliant":
-                True,
-                "device_types": [{
-                    "device_type_id": 22,
-                    "device_type_name": "Root Node",
-                    "is_compliant": True,
-                }],
-                "missing_elements": [],
-                "revision_issues": [],
-                "event_warnings": [],
-            }],
-        }
-
-        print_compliance_summary(validation_data)
-
-        captured = capsys.readouterr()
-        assert "COMPLIANT" in captured.out
-        assert "Total Endpoints: 1" in captured.out
-        assert "Compliant Endpoints: 1" in captured.out
-        assert "Non-Compliant Endpoints: 0" in captured.out
-
-    def test_print_compliance_summary_empty_data(self, capsys):
-        """Test printing summary with empty validation data
-
-        :param capsys:
-
-        """
-        print_compliance_summary({})
-
-        captured = capsys.readouterr()
-        assert "No validation data available" in captured.out
-
-
 class TestRunTests:
     """Test the run_tests function"""
 

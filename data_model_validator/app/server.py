@@ -14,7 +14,7 @@ from flask import session
 
 from core.compliance_checker import load_element_requirements
 from core.compliance_checker import validate_device_compliance
-from core.log_parser import parse_datamodel_logs
+from core.log_parser import parse_datamodel_logs, parse_datamodel_input
 
 # Add parent directory to Python path to fix imports
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -184,8 +184,8 @@ def index():
                     error=error,
                 )
 
-            if not file.filename.endswith(".txt"):
-                error = "Please upload a .txt file"
+            if not (file.filename.endswith(".txt") or file.filename.endswith(".zap")):
+                error = "Please upload a .txt or .zap file"
                 return render_template(
                     "index.html",
                     parsed_data=parsed_data,
@@ -201,8 +201,8 @@ def index():
             # Clear any existing validation data when new file is uploaded
             clear_session_data(session_id)
 
-            # Parse the data
-            parsed_data = parse_datamodel_logs(data)
+            # Parse the data (auto-detects file type)
+            parsed_data = parse_datamodel_input(data)
             logger.info(f"Successfully parsed data for session {session_id}")
 
             # Save parsed data for this session

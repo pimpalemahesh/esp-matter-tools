@@ -118,7 +118,7 @@ function handleFileSelection(file) {
   const uploadText = document.querySelector(".upload-text");
   const uploadSubtext = document.querySelector(".upload-subtext");
 
-  if (file.type === "text/plain" || file.name.endsWith(".txt")) {
+  if (file.type === "text/plain" || file.name.endsWith(".txt") || file.name.endsWith(".zap") || file.type === "application/json") {
     if (uploadText) {
       uploadText.textContent = `Selected: ${file.name}`;
       uploadText.style.color = "var(--success-color)";
@@ -133,7 +133,7 @@ function handleFileSelection(file) {
       submitFileForm();
     }, 100);
   } else {
-    showError("Please select a .txt file");
+    showError("Please select a .txt or .zap file");
     resetUploadArea();
   }
 }
@@ -180,12 +180,12 @@ function resetUploadArea() {
   const fileInput = document.getElementById("fileInput");
 
   if (uploadText) {
-    uploadText.textContent = "Drop your .txt file here or click to browse";
+    uploadText.textContent = "Drop your .txt or .zap file here or click to browse";
     uploadText.style.color = "";
   }
   if (uploadSubtext) {
     uploadSubtext.textContent =
-      "Supports .txt files containing device log data";
+      "Supports .txt wildcard logs and .zap configuration files";
     uploadSubtext.style.color = "";
   }
   if (fileInput) {

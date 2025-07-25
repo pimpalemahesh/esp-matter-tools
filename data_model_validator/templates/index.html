@@ -30,10 +30,10 @@
             <div class="upload-icon">
                 <i class="fas fa-cloud-upload-alt"></i>
             </div>
-            <div class="upload-text">Drop your .txt file here or click to browse</div>
-            <div class="upload-subtext">Supports .txt files containing device log data</div>
+            <div class="upload-text">Drop your .txt or .zap file here or click to browse</div>
+            <div class="upload-subtext">Supports .txt wildcard logs and .zap configuration files</div>
 
-            <input type="file" name="file" accept=".txt" class="file-input" id="fileInput" required>
+            <input type="file" name="file" accept=".txt,.zap" class="file-input" id="fileInput" required>
             <button type="button" class="btn btn-primary" id="uploadBtn">
                 <i class="fas fa-folder-open"></i> Choose File
             </button>
@@ -154,12 +154,13 @@
                 <i class="fas fa-info-circle"></i> Validation Scope
             </h4>
             <p style="margin: 0; color: #424242; font-size: 0.9em;">
-                This validation checks <strong>attributes</strong>, <strong>commands</strong>, and <strong>features</strong>.
+                This validation checks only <strong>mandatory</strong> attributes, commands, and features. cluster and device type revision etc.
+                <br>
                 <strong>Events</strong> are skipped as they are not typically present in wildcard logs.
+                <br>
+                <strong>Optional</strong> data model elements and their conformance is not checked.
             </p>
         </div>
-
-
     </div>
 
     <!-- Collapsible Detailed Results -->
