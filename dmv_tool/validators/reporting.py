@@ -76,6 +76,82 @@ def print_table(headers, rows, title=None):
     print()
 
 
+def print_composition_results(composition_data):
+    """Print device composition validation results.
+
+    Args:
+        composition_data: Composition validation results from validate_device_composition
+    """
+    if not composition_data:
+        return
+
+    comp_summary = composition_data.get("summary", {})
+    checks = composition_data.get("checks", {})
+    is_compliant = composition_data.get("is_compliant", True)
+
+    overall_status = "PASSED" if is_compliant else "FAILED"
+
+    summary_rows = [
+        ["Total Checks", comp_summary.get("total_checks", 0)],
+        ["Passed Checks", comp_summary.get("passed_checks", 0)],
+        ["Failed Checks", comp_summary.get("failed_checks", 0)],
+        ["Total Errors", comp_summary.get("errors", 0)],
+        ["Total Warnings", comp_summary.get("warnings", 0)],
+        ["Overall Status", overall_status],
+    ]
+    print_table(
+        ["Metric", "Value"], summary_rows, "DEVICE COMPOSITION CHECKS"
+    )
+
+    CHECK_DISPLAY_NAMES = {
+        "endpoint_0_exists": "Endpoint 0 Exists",
+        "root_node_device_type": "Root Node Device Type (TC_SM_1_1)",
+        "descriptor_on_all_endpoints": "Descriptor on All Endpoints (TC_DT_1_1)",
+        "required_root_node_clusters": "Required Root Node Clusters (TC_SM_1_1)",
+        "global_attributes": "Global Attributes Validation (TC_IDM_10_1)",
+        "parts_list": "PartsList Validation (TC_SM_1_2)",
+        "device_type_list_validity": "DeviceTypeList Validity (TC_DESC_2_1)",
+        "root_node_restricted_clusters": "Restricted Clusters (TC_IDM_14_1)",
+        "no_app_device_types_on_root": "No App Device Types on Root (TC_DESC_2_3)",
+        "parts_list_endpoint_range": "PartsList Range Validation (TC_DESC_2_1)",
+    }
+
+    check_rows = []
+    for check_name, check_data in checks.items():
+        display_name = CHECK_DISPLAY_NAMES.get(check_name, check_name)
+        status = "PASS" if check_data.get("passed", True) else "FAIL"
+        errors = check_data.get("errors", 0)
+        warnings = check_data.get("warnings", 0)
+        check_rows.append([display_name, status, errors, warnings])
+
+    if check_rows:
+        print_table(
+            ["Check", "Status", "Errors", "Warnings"],
+            check_rows,
+            "Composition Check Details",
+        )
+
+    # Print problems for failed checks
+    failed_checks = {
+        name: data
+        for name, data in checks.items()
+        if not data.get("passed", True) or data.get("warnings", 0) > 0
+    }
+
+    if failed_checks:
+        print("\nComposition Check Problems:")
+        print("-" * 40)
+        for check_name, check_data in failed_checks.items():
+            display_name = CHECK_DISPLAY_NAMES.get(check_name, check_name)
+            for problem in check_data.get("problems", []):
+                severity = problem.get("severity", "info").upper()
+                message = problem.get("message", "Unknown problem")
+                ep = problem.get("endpoint", "")
+                ep_str = f" [EP{ep}]" if ep != "" else ""
+                print(f"   [{severity}]{ep_str} {display_name}: {message}")
+        print()
+
+
 def print_conformance_summary(
     validation_data, detected_version=None, version_auto_detected=False
 ):
@@ -92,6 +168,7 @@ def print_conformance_summary(
 
     summary = validation_data.get("summary", {})
     endpoints = validation_data.get("endpoints", [])
+    composition = validation_data.get("composition", {})
 
     total_endpoints = summary.get("total_endpoints", 0)
     compliant_endpoints = summary.get("compliant_endpoints", 0)
@@ -114,15 +191,25 @@ def print_conformance_summary(
             print(f"Using specified spec version: {detected_version}")
         print(f"Validation against Matter {detected_version} specification")
 
+    # Print composition check results
+    if composition:
+        print_composition_results(composition)
+
+    composition_compliant = summary.get("composition_compliant", True)
+    composition_errors = summary.get("composition_errors", 0)
+    composition_warnings = summary.get("composition_warnings", 0)
+
     conformance_rate = (
         (compliant_endpoints / total_endpoints * 100) if total_endpoints > 0 else 0
     )
-    overall_status = "COMPLIANT" if non_compliant_endpoints == 0 else "NON-COMPLIANT"
+    overall_compliant = non_compliant_endpoints == 0 and composition_compliant
+    overall_status = "COMPLIANT" if overall_compliant else "NON-COMPLIANT"
     summary_data = [
         ["Total Endpoints", total_endpoints],
         ["Compliant Endpoints", compliant_endpoints],
         ["Non-Compliant Endpoints", non_compliant_endpoints],
         ["Conformance Rate", f"{conformance_rate:.1f}%"],
+        ["Composition Checks", "PASSED" if composition_compliant else f"FAILED ({composition_errors} errors)"],
         ["Total Duplicate Elements", total_duplicate_elements],
         ["Total Revision Issues", total_revision_issues],
         ["Total Event Warnings", total_event_warnings],

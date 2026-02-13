@@ -627,7 +627,8 @@ class DatamodelParser:
             if item_type is None:
                 return item_list
             for element in item_type.findall(element_type):
-                is_mandatory = False
+                is_mandatory = True if len([el for el in element.iter() if el.tag.lower().endswith("conform")]) > 0 else False
+
                 mandatory_conform = element.find("mandatoryConform")
                 if mandatory_conform is not None and len(mandatory_conform) == 0:
                     is_mandatory = True

@@ -8,18 +8,78 @@ VERSION DETECTION
 Using specified spec version: 1.4.2
 Validation against Matter 1.4.2 specification
 
+DEVICE COMPOSITION CHECKS
+=========================
+Metric         | Value 
+-----------------------
+Total Checks   | 10    
+Passed Checks  | 9     
+Failed Checks  | 1     
+Total Errors   | 27    
+Total Warnings | 0     
+Overall Status | FAILED
+
+
+Composition Check Details
+=========================
+Check                                      | Status | Errors | Warnings
+-----------------------------------------------------------------------
+Endpoint 0 Exists                          | PASS   | 0      | 0       
+Root Node Device Type (TC_SM_1_1)          | PASS   | 0      | 0       
+Descriptor on All Endpoints (TC_DT_1_1)    | PASS   | 0      | 0       
+Required Root Node Clusters (TC_SM_1_1)    | PASS   | 0      | 0       
+Global Attributes Validation (TC_IDM_10_1) | FAIL   | 27     | 0       
+PartsList Validation (TC_SM_1_2)           | PASS   | 0      | 0       
+DeviceTypeList Validity (TC_DESC_2_1)      | PASS   | 0      | 0       
+Restricted Clusters (TC_IDM_14_1)          | PASS   | 0      | 0       
+No App Device Types on Root (TC_DESC_2_3)  | PASS   | 0      | 0       
+PartsList Range Validation (TC_DESC_2_1)   | PASS   | 0      | 0       
+
+
+Composition Check Problems:
+----------------------------------------
+   [ERROR] [EP0] Global Attributes Validation (TC_IDM_10_1): Duplicate command arm_fail_safe (0x0000) found 2 times in AcceptedCommandList on cluster 0x0030 (endpoint 0)
+   [ERROR] [EP0] Global Attributes Validation (TC_IDM_10_1): Duplicate command set_regulatory_config (0x0002) found 2 times in AcceptedCommandList on cluster 0x0030 (endpoint 0)
+   [ERROR] [EP0] Global Attributes Validation (TC_IDM_10_1): Duplicate command commissioning_complete (0x0004) found 2 times in AcceptedCommandList on cluster 0x0030 (endpoint 0)
+   [ERROR] [EP0] Global Attributes Validation (TC_IDM_10_1): Duplicate command arm_fail_safe_response (0x0001) found 2 times in GeneratedCommandList on cluster 0x0030 (endpoint 0)
+   [ERROR] [EP0] Global Attributes Validation (TC_IDM_10_1): Duplicate command set_regulatory_config_response (0x0003) found 2 times in GeneratedCommandList on cluster 0x0030 (endpoint 0)
+   [ERROR] [EP0] Global Attributes Validation (TC_IDM_10_1): Duplicate command commissioning_complete_response (0x0005) found 2 times in GeneratedCommandList on cluster 0x0030 (endpoint 0)
+   [ERROR] [EP0] Global Attributes Validation (TC_IDM_10_1): Duplicate command test_event_trigger (0x0000) found 2 times in AcceptedCommandList on cluster 0x0033 (endpoint 0)
+   [ERROR] [EP0] Global Attributes Validation (TC_IDM_10_1): Duplicate command time_snapshot (0x0001) found 2 times in AcceptedCommandList on cluster 0x0033 (endpoint 0)
+   [ERROR] [EP0] Global Attributes Validation (TC_IDM_10_1): Duplicate command time_snapshot_response (0x0002) found 2 times in GeneratedCommandList on cluster 0x0033 (endpoint 0)
+   [ERROR] [EP0] Global Attributes Validation (TC_IDM_10_1): Duplicate command attestation_request (0x0000) found 2 times in AcceptedCommandList on cluster 0x003E (endpoint 0)
+   [ERROR] [EP0] Global Attributes Validation (TC_IDM_10_1): Duplicate command certificate_chain_request (0x0002) found 2 times in AcceptedCommandList on cluster 0x003E (endpoint 0)
+   [ERROR] [EP0] Global Attributes Validation (TC_IDM_10_1): Duplicate command csr_request (0x0004) found 2 times in AcceptedCommandList on cluster 0x003E (endpoint 0)
+   [ERROR] [EP0] Global Attributes Validation (TC_IDM_10_1): Duplicate command add_noc (0x0006) found 2 times in AcceptedCommandList on cluster 0x003E (endpoint 0)
+   [ERROR] [EP0] Global Attributes Validation (TC_IDM_10_1): Duplicate command update_noc (0x0007) found 2 times in AcceptedCommandList on cluster 0x003E (endpoint 0)
+   [ERROR] [EP0] Global Attributes Validation (TC_IDM_10_1): Duplicate command update_fabric_label (0x0009) found 2 times in AcceptedCommandList on cluster 0x003E (endpoint 0)
+   [ERROR] [EP0] Global Attributes Validation (TC_IDM_10_1): Duplicate command remove_fabric (0x000A) found 2 times in AcceptedCommandList on cluster 0x003E (endpoint 0)
+   [ERROR] [EP0] Global Attributes Validation (TC_IDM_10_1): Duplicate command add_trusted_root_certificate (0x000B) found 2 times in AcceptedCommandList on cluster 0x003E (endpoint 0)
+   [ERROR] [EP0] Global Attributes Validation (TC_IDM_10_1): Duplicate command attestation_response (0x0001) found 2 times in GeneratedCommandList on cluster 0x003E (endpoint 0)
+   [ERROR] [EP0] Global Attributes Validation (TC_IDM_10_1): Duplicate command certificate_chain_response (0x0003) found 2 times in GeneratedCommandList on cluster 0x003E (endpoint 0)
+   [ERROR] [EP0] Global Attributes Validation (TC_IDM_10_1): Duplicate command csr_response (0x0005) found 2 times in GeneratedCommandList on cluster 0x003E (endpoint 0)
+   [ERROR] [EP0] Global Attributes Validation (TC_IDM_10_1): Duplicate command noc_response (0x0008) found 2 times in GeneratedCommandList on cluster 0x003E (endpoint 0)
+   [ERROR] [EP0] Global Attributes Validation (TC_IDM_10_1): Duplicate command key_set_write (0x0000) found 2 times in AcceptedCommandList on cluster 0x003F (endpoint 0)
+   [ERROR] [EP0] Global Attributes Validation (TC_IDM_10_1): Duplicate command key_set_read (0x0001) found 2 times in AcceptedCommandList on cluster 0x003F (endpoint 0)
+   [ERROR] [EP0] Global Attributes Validation (TC_IDM_10_1): Duplicate command key_set_remove (0x0003) found 2 times in AcceptedCommandList on cluster 0x003F (endpoint 0)
+   [ERROR] [EP0] Global Attributes Validation (TC_IDM_10_1): Duplicate command key_set_read_all_indices (0x0004) found 2 times in AcceptedCommandList on cluster 0x003F (endpoint 0)
+   [ERROR] [EP0] Global Attributes Validation (TC_IDM_10_1): Duplicate command key_set_read_response (0x0002) found 2 times in GeneratedCommandList on cluster 0x003F (endpoint 0)
+   [ERROR] [EP0] Global Attributes Validation (TC_IDM_10_1): Duplicate command key_set_read_all_indices_response (0x0005) found 2 times in GeneratedCommandList on cluster 0x003F (endpoint 0)
+
+
 OVERALL CONFORMANCE SUMMARY
 ===========================
-Metric                   | Value        
-----------------------------------------
-Total Endpoints          | 2            
-Compliant Endpoints      | 0            
-Non-Compliant Endpoints  | 2            
-Conformance Rate         | 0.0%         
-Total Duplicate Elements | 27           
-Total Revision Issues    | 1            
-Total Event Warnings     | 6            
-Overall Status           | NON-COMPLIANT
+Metric                   | Value             
+---------------------------------------------
+Total Endpoints          | 2                 
+Compliant Endpoints      | 0                 
+Non-Compliant Endpoints  | 2                 
+Conformance Rate         | 0.0%              
+Composition Checks       | FAILED (27 errors)
+Total Duplicate Elements | 27                
+Total Revision Issues    | 1                 
+Total Event Warnings     | 6                 
+Overall Status           | NON-COMPLIANT     
 
 
 ================================================================================

@@ -18,6 +18,9 @@ from .conformance_checker import (
     validate_device_conformance,
     detect_spec_version_from_parsed_data,
 )
+from .composition_checker import (
+    validate_device_composition,
+)
 from .utils import (
     convert_specification_version,
 )
@@ -25,5 +28,6 @@ from .utils import (
 __all__ = [
     "validate_device_conformance",
     "detect_spec_version_from_parsed_data",
+    "validate_device_composition",
     "convert_specification_version",
 ]

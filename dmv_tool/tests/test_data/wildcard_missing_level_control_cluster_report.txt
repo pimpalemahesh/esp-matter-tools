@@ -8,6 +8,34 @@ VERSION DETECTION
 Using specified spec version: 1.4.2
 Validation against Matter 1.4.2 specification
 
+DEVICE COMPOSITION CHECKS
+=========================
+Metric         | Value 
+-----------------------
+Total Checks   | 10    
+Passed Checks  | 10    
+Failed Checks  | 0     
+Total Errors   | 0     
+Total Warnings | 0     
+Overall Status | PASSED
+
+
+Composition Check Details
+=========================
+Check                                      | Status | Errors | Warnings
+-----------------------------------------------------------------------
+Endpoint 0 Exists                          | PASS   | 0      | 0       
+Root Node Device Type (TC_SM_1_1)          | PASS   | 0      | 0       
+Descriptor on All Endpoints (TC_DT_1_1)    | PASS   | 0      | 0       
+Required Root Node Clusters (TC_SM_1_1)    | PASS   | 0      | 0       
+Global Attributes Validation (TC_IDM_10_1) | PASS   | 0      | 0       
+PartsList Validation (TC_SM_1_2)           | PASS   | 0      | 0       
+DeviceTypeList Validity (TC_DESC_2_1)      | PASS   | 0      | 0       
+Restricted Clusters (TC_IDM_14_1)          | PASS   | 0      | 0       
+No App Device Types on Root (TC_DESC_2_3)  | PASS   | 0      | 0       
+PartsList Range Validation (TC_DESC_2_1)   | PASS   | 0      | 0       
+
+
 OVERALL CONFORMANCE SUMMARY
 ===========================
 Metric                   | Value        
@@ -16,6 +44,7 @@ Total Endpoints          | 2
 Compliant Endpoints      | 1            
 Non-Compliant Endpoints  | 1            
 Conformance Rate         | 50.0%        
+Composition Checks       | PASSED       
 Total Duplicate Elements | 0            
 Total Revision Issues    | 1            
 Total Event Warnings     | 10           

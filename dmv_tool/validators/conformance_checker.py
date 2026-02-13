@@ -29,6 +29,7 @@ from .utils import (
     find_duplicates_in_element_list,
 )
 from .reporting import generate_conformance_report
+from .composition_checker import validate_device_composition
 from .constants import (
     DESCRIPTOR_CLUSTER_ID,
     DESCRIPTOR_CLIENT_LIST_ATTRIBUTE_ID,
@@ -1145,8 +1146,12 @@ def validate_device_conformance(
     if "endpoints" not in parsed_data:
         raise ValueError("parsed_data must contain 'endpoints' key")
 
+    logger.debug("Running device composition checks...")
+    composition_results = validate_device_composition(parsed_data)
+
     validation_results = {
         "endpoints": [],
+        "composition": composition_results,
         "summary": {
             "total_endpoints": 0,
             "compliant_endpoints": 0,
@@ -1154,6 +1159,9 @@ def validate_device_conformance(
             "total_revision_issues": 0,
             "total_event_warnings": 0,
             "total_duplicate_elements": 0,
+            "composition_compliant": composition_results.get("is_compliant", True),
+            "composition_errors": composition_results.get("summary", {}).get("errors", 0),
+            "composition_warnings": composition_results.get("summary", {}).get("warnings", 0),
         },
     }
 
@@ -1353,12 +1361,20 @@ def validate_data_model_conformance(file_path, spec_version, output_path):
         summary = validation_results.get("summary", {})
         total_endpoints = summary.get("total_endpoints", 0)
         compliant_endpoints = summary.get("compliant_endpoints", 0)
+        composition_compliant = summary.get("composition_compliant", True)
         logger.info(
             f"Conformance Rate: {compliant_endpoints}/{total_endpoints} endpoints"
         )
+        if not composition_compliant:
+            comp_errors = summary.get("composition_errors", 0)
+            logger.info(
+                f"Composition checks: FAILED ({comp_errors} error(s))"
+            )
+        else:
+            logger.info("Composition checks: PASSED")
         logger.info(f"Full report saved to: {output_path}")
 
-        return compliant_endpoints == total_endpoints
+        return compliant_endpoints == total_endpoints and composition_compliant
 
     except Exception as e:
         raise ValueError(f"Validation error: {str(e)}") from e
