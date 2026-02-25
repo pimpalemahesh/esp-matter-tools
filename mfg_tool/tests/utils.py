@@ -441,6 +441,14 @@ def _validate_supported_modes(cmd_args, partition_data):
                     logger.info(f"  ✓ st-mfg/{ep}/{i}/{j} = {act_mfg}")
 
 
+def validate_rmaker_creds(cmd_args: dict, partition_bin_path: str):
+    """Validate rmaker_creds namespace fields from CLI args."""
+    if cmd_args.get("mqtt-host") is None:
+        return
+    rmaker_data = parse_partition_bin(partition_bin_path, namespace="rmaker_creds")
+    _validate_string_arg(cmd_args, rmaker_data, "mqtt-host", pk="mqtt_host")
+
+
 def validate_single_partition(cmd_args: dict, partition_data: dict):
     """Validate that the parsed partition matches the cmd-line args.
 
