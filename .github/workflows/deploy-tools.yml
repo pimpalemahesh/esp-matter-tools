@@ -30,6 +30,9 @@ jobs:
         run: |
           mkdir public
 
+          # Copy index file
+          cp index.html public/index.html
+
           # Copy DMV Tool
           mkdir -p public/dmv_tool
           cp -r dmv_tool/ui/* public/dmv_tool/
