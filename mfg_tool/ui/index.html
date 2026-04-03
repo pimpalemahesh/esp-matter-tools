@@ -35,7 +35,7 @@
             align-items: center;
             gap: 1rem;
         }
-        .header img { height: 32px; }
+        .header svg { height: 32px; width: 32px; }
         .header h1 { font-size: 1.25rem; font-weight: 600; }
         .header .badge {
             background: var(--primary);
@@ -46,7 +46,7 @@
             font-weight: 600;
         }
         .container {
-            max-width: 1200px;
+            max-width: 1400px;
             margin: 0 auto;
             padding: 2rem;
         }
@@ -87,25 +87,13 @@
             width: 0%;
             transition: width 0.3s;
         }
-        .tabs {
-            display: flex;
-            gap: 0.5rem;
-            margin-bottom: 1.5rem;
+        .main-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
         }
-        .tab {
-            padding: 0.75rem 1.5rem;
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: 8px 8px 0 0;
-            cursor: pointer;
-            transition: all 0.2s;
-            color: var(--text-muted);
-        }
-        .tab:hover { background: var(--surface-2); }
-        .tab.active {
-            background: var(--surface-2);
-            color: var(--text);
-            border-bottom-color: var(--surface-2);
+        @media (max-width: 1024px) {
+            .main-grid { grid-template-columns: 1fr; }
         }
         .card {
             background: var(--surface);
@@ -125,7 +113,7 @@
         .card-title i { color: var(--primary); }
         .form-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
             gap: 1rem;
         }
         .form-group {
@@ -133,6 +121,7 @@
             flex-direction: column;
             gap: 0.5rem;
         }
+        .form-group.full-width { grid-column: 1 / -1; }
         .form-group label {
             font-size: 0.875rem;
             color: var(--text-muted);
@@ -141,15 +130,22 @@
             gap: 0.5rem;
         }
         .form-group label .required { color: var(--error); }
-        .form-group input, .form-group select {
+        .form-group input, .form-group select, .form-group textarea {
             background: var(--bg);
             border: 1px solid var(--border);
             border-radius: 6px;
             padding: 0.75rem;
             color: var(--text);
             font-size: 0.875rem;
+            font-family: inherit;
         }
-        .form-group input:focus, .form-group select:focus {
+        .form-group textarea {
+            min-height: 100px;
+            resize: vertical;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 0.75rem;
+        }
+        .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
             outline: none;
             border-color: var(--primary);
         }
@@ -157,6 +153,30 @@
         .form-group .hint {
             font-size: 0.75rem;
             color: var(--text-muted);
+        }
+        .file-upload {
+            border: 2px dashed var(--border);
+            border-radius: 8px;
+            padding: 1.5rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .file-upload:hover {
+            border-color: var(--primary);
+            background: rgba(231, 64, 17, 0.05);
+        }
+        .file-upload.has-file {
+            border-color: var(--success);
+            background: rgba(63, 185, 80, 0.05);
+        }
+        .file-upload input { display: none; }
+        .file-upload i { font-size: 2rem; color: var(--text-muted); margin-bottom: 0.5rem; }
+        .file-upload .filename {
+            font-size: 0.875rem;
+            color: var(--success);
+            margin-top: 0.5rem;
+            word-break: break-all;
         }
         .btn {
             padding: 0.75rem 1.5rem;
@@ -185,6 +205,7 @@
             border: 1px solid var(--border);
         }
         .btn-secondary:hover { background: var(--border); }
+        .btn-sm { padding: 0.5rem 0.75rem; font-size: 0.75rem; }
         .actions {
             display: flex;
             gap: 1rem;
@@ -196,11 +217,11 @@
             border: 1px solid var(--border);
             border-radius: 6px;
             padding: 1rem;
-            max-height: 300px;
+            max-height: 400px;
             overflow-y: auto;
             font-family: 'Monaco', 'Menlo', monospace;
-            font-size: 0.8rem;
-            line-height: 1.5;
+            font-size: 0.75rem;
+            line-height: 1.6;
             white-space: pre-wrap;
         }
         .output-area .log-info { color: var(--text); }
@@ -211,6 +232,8 @@
             display: grid;
             gap: 0.5rem;
             margin-top: 1rem;
+            max-height: 400px;
+            overflow-y: auto;
         }
         .file-item {
             display: flex;
@@ -221,31 +244,21 @@
             border: 1px solid var(--border);
             border-radius: 6px;
         }
-        .file-item i { color: var(--text-muted); }
-        .file-item .name { flex: 1; font-size: 0.875rem; }
+        .file-item i { color: var(--text-muted); min-width: 16px; }
+        .file-item .name { flex: 1; font-size: 0.8rem; word-break: break-all; }
         .file-item .size {
-            font-size: 0.75rem;
+            font-size: 0.7rem;
             color: var(--text-muted);
+            white-space: nowrap;
         }
-        .file-item .btn { padding: 0.5rem 0.75rem; font-size: 0.75rem; }
+        .file-item .btn { padding: 0.4rem 0.6rem; font-size: 0.7rem; }
+        .file-item.binary { border-left: 3px solid var(--primary); }
+        .file-item.cert { border-left: 3px solid var(--success); }
         .hidden { display: none !important; }
-        .collapsible-header {
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        }
-        .collapsible-header i.toggle {
-            transition: transform 0.2s;
-        }
-        .collapsible-header.collapsed i.toggle {
-            transform: rotate(-90deg);
-        }
-        .collapsible-content {
-            margin-top: 1rem;
-        }
-        .collapsible-content.collapsed {
-            display: none;
+        .section-divider {
+            border-top: 1px solid var(--border);
+            margin: 1.5rem 0;
+            padding-top: 1.5rem;
         }
         .checkbox-group {
             display: flex;
@@ -257,120 +270,170 @@
             height: 18px;
             accent-color: var(--primary);
         }
-        @media (max-width: 768px) {
-            .container { padding: 1rem; }
-            .header { padding: 1rem; }
-            .form-grid { grid-template-columns: 1fr; }
+        .tabs {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 0.5rem;
+        }
+        .tab {
+            padding: 0.5rem 1rem;
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            font-size: 0.875rem;
+            border-radius: 4px;
+        }
+        .tab:hover { background: var(--surface-2); }
+        .tab.active { 
+            color: var(--primary); 
+            background: var(--surface-2);
+            font-weight: 600;
+        }
+        .alert {
+            padding: 1rem;
+            border-radius: 6px;
+            margin-bottom: 1rem;
+            font-size: 0.875rem;
+        }
+        .alert-info {
+            background: rgba(56, 139, 253, 0.1);
+            border: 1px solid rgba(56, 139, 253, 0.4);
+            color: #58a6ff;
+        }
+        .alert-warning {
+            background: rgba(210, 153, 34, 0.1);
+            border: 1px solid rgba(210, 153, 34, 0.4);
+            color: var(--warning);
+        }
+        .qr-preview {
+            background: white;
+            padding: 1rem;
+            border-radius: 8px;
+            display: inline-block;
+            margin: 0.5rem 0;
+        }
+        .device-summary {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 1rem;
+            margin-top: 1rem;
+        }
+        .device-summary h4 {
+            font-size: 0.875rem;
+            margin-bottom: 0.5rem;
+            color: var(--primary);
+        }
+        .device-summary .codes {
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 0.8rem;
+        }
+        .device-summary .codes span {
+            display: block;
+            margin: 0.25rem 0;
         }
     </style>
 </head>
 <body>
     <header class="header">
-        <svg height="32" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
             <circle cx="50" cy="50" r="45" fill="#e74011"/>
             <path d="M30 50 L45 65 L70 35" stroke="white" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
         </svg>
         <h1>ESP Matter Manufacturing Tool</h1>
-        <span class="badge">Web UI</span>
+        <span class="badge">Web UI v1.0</span>
     </header>
 
     <div class="container">
         <div class="status-bar">
             <div class="status-indicator" id="statusIndicator"></div>
-            <span class="status-text" id="statusText">Initializing Pyodide...</span>
+            <span class="status-text" id="statusText">Initializing Pyodide runtime...</span>
             <div class="progress-bar" id="progressBar">
                 <div class="fill" id="progressFill"></div>
             </div>
         </div>
 
-        <div class="tabs">
-            <div class="tab active" data-tab="simple">Simple Mode</div>
-            <div class="tab" data-tab="advanced">Advanced Mode</div>
-        </div>
-
-        <div id="simpleTab">
-            <div class="card">
-                <div class="card-title"><i class="fas fa-microchip"></i> Device Configuration</div>
-                <div class="form-grid">
-                    <div class="form-group">
-                        <label>Vendor ID <span class="required">*</span></label>
-                        <input type="text" id="vendorId" value="0xFFF1" placeholder="e.g., 0xFFF1">
-                        <span class="hint">Test vendor ID: 0xFFF1</span>
-                    </div>
-                    <div class="form-group">
-                        <label>Product ID <span class="required">*</span></label>
-                        <input type="text" id="productId" value="0x8000" placeholder="e.g., 0x8000">
-                    </div>
-                    <div class="form-group">
-                        <label>Number of Devices</label>
-                        <input type="number" id="deviceCount" value="1" min="1" max="100">
-                    </div>
-                    <div class="form-group">
-                        <label>Target Chip</label>
-                        <select id="targetChip">
-                            <option value="esp32">ESP32</option>
-                            <option value="esp32s2">ESP32-S2</option>
-                            <option value="esp32s3">ESP32-S3</option>
-                            <option value="esp32c3">ESP32-C3</option>
-                            <option value="esp32c6">ESP32-C6</option>
-                            <option value="esp32h2">ESP32-H2</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>Vendor Name</label>
-                        <input type="text" id="vendorName" placeholder="Optional">
-                    </div>
-                    <div class="form-group">
-                        <label>Product Name</label>
-                        <input type="text" id="productName" placeholder="Optional">
-                    </div>
-                </div>
-            </div>
-
-            <div class="card">
-                <div class="card-title"><i class="fas fa-key"></i> Commissioning Options</div>
-                <div class="form-grid">
-                    <div class="form-group">
-                        <label>Passcode</label>
-                        <input type="text" id="passcode" placeholder="Random if empty">
-                        <span class="hint">8-digit code (1-99999998)</span>
-                    </div>
-                    <div class="form-group">
-                        <label>Discriminator</label>
-                        <input type="text" id="discriminator" placeholder="Random if empty">
-                        <span class="hint">12-bit value (0-4095)</span>
-                    </div>
-                    <div class="form-group">
-                        <label>Commissioning Flow</label>
-                        <select id="commissioningFlow">
-                            <option value="0">Standard (0)</option>
-                            <option value="1">User Intent (1)</option>
-                            <option value="2">Custom (2)</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>Discovery Mode</label>
-                        <select id="discoveryMode">
-                            <option value="2">BLE (2)</option>
-                            <option value="4">On-network (4)</option>
-                            <option value="6">BLE + On-network (6)</option>
-                        </select>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div id="advancedTab" class="hidden">
-            <div class="card">
-                <div class="collapsible-header" onclick="toggleCollapsible(this)">
-                    <div class="card-title"><i class="fas fa-cog"></i> General Options</div>
-                    <i class="fas fa-chevron-down toggle"></i>
-                </div>
-                <div class="collapsible-content">
+        <div class="main-grid">
+            <div class="left-column">
+                <!-- Device Configuration -->
+                <div class="card">
+                    <div class="card-title"><i class="fas fa-microchip"></i> Device Configuration</div>
                     <div class="form-grid">
+                        <div class="form-group">
+                            <label>Vendor ID <span class="required">*</span></label>
+                            <input type="text" id="vendorId" value="0xFFF1" placeholder="e.g., 0xFFF1">
+                            <span class="hint">Test: 0xFFF1 (65521)</span>
+                        </div>
+                        <div class="form-group">
+                            <label>Product ID <span class="required">*</span></label>
+                            <input type="text" id="productId" value="0x8000" placeholder="e.g., 0x8000">
+                        </div>
+                        <div class="form-group">
+                            <label>Number of Devices</label>
+                            <input type="number" id="deviceCount" value="1" min="1" max="100">
+                        </div>
+                        <div class="form-group">
+                            <label>Target Chip</label>
+                            <select id="targetChip">
+                                <option value="esp32">ESP32</option>
+                                <option value="esp32s2">ESP32-S2</option>
+                                <option value="esp32s3">ESP32-S3</option>
+                                <option value="esp32c3">ESP32-C3</option>
+                                <option value="esp32c6">ESP32-C6</option>
+                                <option value="esp32h2">ESP32-H2</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Vendor Name</label>
+                            <input type="text" id="vendorName" placeholder="Optional">
+                        </div>
+                        <div class="form-group">
+                            <label>Product Name</label>
+                            <input type="text" id="productName" placeholder="Optional">
+                        </div>
                         <div class="form-group">
                             <label>Partition Size</label>
                             <input type="text" id="partitionSize" value="0x6000" placeholder="0x6000">
+                        </div>
+                        <div class="form-group">
+                            <label>CN Prefix</label>
+                            <input type="text" id="cnPrefix" value="ESP32" placeholder="ESP32">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Commissioning Options -->
+                <div class="card">
+                    <div class="card-title"><i class="fas fa-key"></i> Commissioning Options</div>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>Passcode</label>
+                            <input type="text" id="passcode" placeholder="Random if empty">
+                            <span class="hint">1-99999998</span>
+                        </div>
+                        <div class="form-group">
+                            <label>Discriminator</label>
+                            <input type="text" id="discriminator" placeholder="Random if empty">
+                            <span class="hint">0-4095 (12-bit)</span>
+                        </div>
+                        <div class="form-group">
+                            <label>Commissioning Flow</label>
+                            <select id="commissioningFlow">
+                                <option value="0">Standard (0)</option>
+                                <option value="1">User Intent (1)</option>
+                                <option value="2">Custom (2)</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Discovery Mode</label>
+                            <select id="discoveryMode">
+                                <option value="2">BLE (2)</option>
+                                <option value="4">On-network (4)</option>
+                                <option value="6">BLE + On-network (6)</option>
+                            </select>
                         </div>
                         <div class="form-group">
                             <label>Iteration Count</label>
@@ -378,109 +441,129 @@
                         </div>
                         <div class="form-group">
                             <div class="checkbox-group">
-                                <input type="checkbox" id="encrypt">
-                                <label for="encrypt">Encrypt NVS Partition</label>
-                            </div>
-                        </div>
-                        <div class="form-group">
-                            <div class="checkbox-group">
                                 <input type="checkbox" id="enableDynamicPasscode">
-                                <label for="enableDynamicPasscode">Enable Dynamic Passcode</label>
+                                <label for="enableDynamicPasscode">Dynamic Passcode</label>
                             </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Certificate Options -->
+                <div class="card">
+                    <div class="card-title"><i class="fas fa-certificate"></i> Device Attestation Certificates</div>
+                    
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i> Upload PAI certificate and key to generate DAC certificates for each device. Without certificates, only commissioning data (CSV) will be generated.
+                    </div>
+
+                    <div class="tabs">
+                        <button class="tab active" data-cert-tab="pai">Use PAI</button>
+                        <button class="tab" data-cert-tab="paa">Use PAA</button>
+                        <button class="tab" data-cert-tab="none">No Certs</button>
+                    </div>
+
+                    <div id="paiTab">
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label>PAI Certificate (PEM)</label>
+                                <div class="file-upload" id="paiCertUpload">
+                                    <input type="file" id="paiCertFile" accept=".pem,.crt,.cer">
+                                    <i class="fas fa-file-upload"></i>
+                                    <div>Click to upload PAI certificate</div>
+                                    <div class="filename" id="paiCertName"></div>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>PAI Private Key (PEM)</label>
+                                <div class="file-upload" id="paiKeyUpload">
+                                    <input type="file" id="paiKeyFile" accept=".pem,.key">
+                                    <i class="fas fa-key"></i>
+                                    <div>Click to upload PAI key</div>
+                                    <div class="filename" id="paiKeyName"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="paaTab" class="hidden">
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label>PAA Certificate (PEM)</label>
+                                <div class="file-upload" id="paaCertUpload">
+                                    <input type="file" id="paaCertFile" accept=".pem,.crt,.cer">
+                                    <i class="fas fa-file-upload"></i>
+                                    <div>Click to upload PAA certificate</div>
+                                    <div class="filename" id="paaCertName"></div>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>PAA Private Key (PEM)</label>
+                                <div class="file-upload" id="paaKeyUpload">
+                                    <input type="file" id="paaKeyFile" accept=".pem,.key">
+                                    <i class="fas fa-key"></i>
+                                    <div>Click to upload PAA key</div>
+                                    <div class="filename" id="paaKeyName"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="hint" style="margin-top: 0.5rem;">
+                            PAA mode will generate PAI and DAC certificates automatically.
+                        </div>
+                    </div>
+
+                    <div id="noneTab" class="hidden">
+                        <div class="alert alert-warning">
+                            <i class="fas fa-exclamation-triangle"></i> Without certificates, only commissioning data CSV files will be generated. No DAC/PAI certificates or partition binaries with attestation data.
+                        </div>
+                    </div>
+
+                    <div class="section-divider"></div>
+                    
+                    <div class="form-group">
+                        <label>Certificate Declaration (optional)</label>
+                        <div class="file-upload" id="cdUpload" style="padding: 1rem;">
+                            <input type="file" id="cdFile" accept=".der,.bin">
+                            <i class="fas fa-file-signature" style="font-size: 1.5rem;"></i>
+                            <div style="font-size: 0.875rem;">Upload CD (DER format)</div>
+                            <div class="filename" id="cdName"></div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <div class="card">
-                <div class="collapsible-header" onclick="toggleCollapsible(this)">
-                    <div class="card-title"><i class="fas fa-info-circle"></i> Device Instance Info</div>
-                    <i class="fas fa-chevron-down toggle"></i>
-                </div>
-                <div class="collapsible-content">
-                    <div class="form-grid">
-                        <div class="form-group">
-                            <label>Hardware Version</label>
-                            <input type="number" id="hwVer" placeholder="Optional">
-                        </div>
-                        <div class="form-group">
-                            <label>Hardware Version String</label>
-                            <input type="text" id="hwVerStr" placeholder="Optional">
-                        </div>
-                        <div class="form-group">
-                            <label>Serial Number</label>
-                            <input type="text" id="serialNum" placeholder="Optional">
-                        </div>
-                        <div class="form-group">
-                            <label>Manufacturing Date</label>
-                            <input type="date" id="mfgDate">
-                        </div>
-                        <div class="form-group">
-                            <label>Product Finish</label>
-                            <select id="productFinish">
-                                <option value="">None</option>
-                                <option value="OTHER">Other</option>
-                                <option value="MATTE">Matte</option>
-                                <option value="SATIN">Satin</option>
-                                <option value="POLISHED">Polished</option>
-                                <option value="RUGGED">Rugged</option>
-                                <option value="FABRIC">Fabric</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label>Product Color</label>
-                            <select id="productColor">
-                                <option value="">None</option>
-                                <option value="BLACK">Black</option>
-                                <option value="NAVY">Navy</option>
-                                <option value="GREEN">Green</option>
-                                <option value="TEAL">Teal</option>
-                                <option value="MAROON">Maroon</option>
-                                <option value="PURPLE">Purple</option>
-                                <option value="OLIVE">Olive</option>
-                                <option value="GRAY">Gray</option>
-                                <option value="BLUE">Blue</option>
-                                <option value="LIME">Lime</option>
-                                <option value="AQUA">Aqua</option>
-                                <option value="RED">Red</option>
-                                <option value="FUCHSIA">Fuchsia</option>
-                                <option value="YELLOW">Yellow</option>
-                                <option value="WHITE">White</option>
-                                <option value="NICKEL">Nickel</option>
-                                <option value="CHROME">Chrome</option>
-                                <option value="BRASS">Brass</option>
-                                <option value="COPPER">Copper</option>
-                                <option value="SILVER">Silver</option>
-                                <option value="GOLD">Gold</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <div class="checkbox-group">
-                                <input type="checkbox" id="enableRotatingDeviceId">
-                                <label for="enableRotatingDeviceId">Enable Rotating Device ID</label>
-                            </div>
-                        </div>
+            <div class="right-column">
+                <!-- Actions -->
+                <div class="card">
+                    <div class="card-title"><i class="fas fa-play"></i> Generate</div>
+                    <div class="actions" style="margin-top: 0; justify-content: flex-start;">
+                        <button class="btn btn-secondary" id="resetBtn"><i class="fas fa-undo"></i> Reset</button>
+                        <button class="btn btn-primary" id="generateBtn" disabled>
+                            <i class="fas fa-cogs"></i> Generate Factory Data
+                        </button>
                     </div>
                 </div>
+
+                <!-- Output Log -->
+                <div class="card" id="outputCard">
+                    <div class="card-title"><i class="fas fa-terminal"></i> Output Log</div>
+                    <div class="output-area" id="outputArea">Waiting for Pyodide initialization...</div>
+                </div>
+
+                <!-- Generated Files -->
+                <div class="card" id="filesCard" style="display: none;">
+                    <div class="card-title"><i class="fas fa-folder-open"></i> Generated Files</div>
+                    <button class="btn btn-primary" id="downloadAllBtn" style="width: 100%;">
+                        <i class="fas fa-download"></i> Download All (ZIP)
+                    </button>
+                    <div class="files-list" id="filesList"></div>
+                </div>
+
+                <!-- Device Summaries -->
+                <div class="card" id="summaryCard" style="display: none;">
+                    <div class="card-title"><i class="fas fa-qrcode"></i> Device Onboarding Codes</div>
+                    <div id="deviceSummaries"></div>
+                </div>
             </div>
-        </div>
-
-        <div class="actions">
-            <button class="btn btn-secondary" id="resetBtn"><i class="fas fa-undo"></i> Reset</button>
-            <button class="btn btn-primary" id="generateBtn" disabled><i class="fas fa-play"></i> Generate Partition</button>
-        </div>
-
-        <div class="card" id="outputCard" style="display: none;">
-            <div class="card-title"><i class="fas fa-terminal"></i> Output</div>
-            <div class="output-area" id="outputArea"></div>
-        </div>
-
-        <div class="card" id="filesCard" style="display: none;">
-            <div class="card-title"><i class="fas fa-folder-open"></i> Generated Files</div>
-            <button class="btn btn-primary" id="downloadAllBtn" style="margin-bottom: 1rem;">
-                <i class="fas fa-download"></i> Download All (ZIP)
-            </button>
-            <div class="files-list" id="filesList"></div>
         </div>
     </div>
 
@@ -488,23 +571,33 @@
     <script>
         let pyodide = null;
         let generatedFiles = {};
+        let paiCertContent = null;
+        let paiKeyContent = null;
+        let paaCertContent = null;
+        let paaKeyContent = null;
+        let cdContent = null;
+        let certMode = 'pai';
 
         const statusIndicator = document.getElementById('statusIndicator');
         const statusText = document.getElementById('statusText');
         const progressFill = document.getElementById('progressFill');
         const generateBtn = document.getElementById('generateBtn');
         const outputArea = document.getElementById('outputArea');
-        const outputCard = document.getElementById('outputCard');
         const filesCard = document.getElementById('filesCard');
         const filesList = document.getElementById('filesList');
+        const summaryCard = document.getElementById('summaryCard');
+        const deviceSummaries = document.getElementById('deviceSummaries');
 
         function log(msg, type = 'info') {
-            outputCard.style.display = 'block';
             const span = document.createElement('span');
             span.className = `log-${type}`;
             span.textContent = `[${new Date().toLocaleTimeString()}] ${msg}\n`;
             outputArea.appendChild(span);
             outputArea.scrollTop = outputArea.scrollHeight;
+        }
+
+        function clearLog() {
+            outputArea.innerHTML = '';
         }
 
         function updateProgress(percent) {
@@ -518,23 +611,82 @@
             else if (state === 'error') statusIndicator.classList.add('error');
         }
 
+        // File upload handlers
+        function setupFileUpload(uploadId, inputId, nameId, callback) {
+            const upload = document.getElementById(uploadId);
+            const input = document.getElementById(inputId);
+            const nameEl = document.getElementById(nameId);
+            
+            upload.addEventListener('click', () => input.click());
+            input.addEventListener('change', async (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    const content = await file.text();
+                    callback(content, file.name);
+                    nameEl.textContent = file.name;
+                    upload.classList.add('has-file');
+                }
+            });
+        }
+
+        setupFileUpload('paiCertUpload', 'paiCertFile', 'paiCertName', (c, n) => { paiCertContent = c; });
+        setupFileUpload('paiKeyUpload', 'paiKeyFile', 'paiKeyName', (c, n) => { paiKeyContent = c; });
+        setupFileUpload('paaCertUpload', 'paaCertFile', 'paaCertName', (c, n) => { paaCertContent = c; });
+        setupFileUpload('paaKeyUpload', 'paaKeyFile', 'paaKeyName', (c, n) => { paaKeyContent = c; });
+        
+        document.getElementById('cdUpload').addEventListener('click', () => document.getElementById('cdFile').click());
+        document.getElementById('cdFile').addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                const buffer = await file.arrayBuffer();
+                cdContent = new Uint8Array(buffer);
+                document.getElementById('cdName').textContent = file.name;
+                document.getElementById('cdUpload').classList.add('has-file');
+            }
+        });
+
+        // Certificate mode tabs
+        document.querySelectorAll('[data-cert-tab]').forEach(tab => {
+            tab.addEventListener('click', () => {
+                document.querySelectorAll('[data-cert-tab]').forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+                certMode = tab.dataset.certTab;
+                
+                document.getElementById('paiTab').classList.toggle('hidden', certMode !== 'pai');
+                document.getElementById('paaTab').classList.toggle('hidden', certMode !== 'paa');
+                document.getElementById('noneTab').classList.toggle('hidden', certMode !== 'none');
+            });
+        });
+
         async function initPyodide() {
             try {
+                clearLog();
+                log('Starting Pyodide initialization...', 'info');
                 setStatus('Loading Pyodide runtime...', 'loading');
                 updateProgress(10);
                 
                 pyodide = await loadPyodide({
                     indexURL: "https://cdn.jsdelivr.net/pyodide/v0.24.1/full/"
                 });
+                log('Pyodide runtime loaded', 'success');
                 updateProgress(30);
                 
-                setStatus('Installing packages...', 'loading');
+                setStatus('Installing Python packages...', 'loading');
                 await pyodide.loadPackage(['micropip']);
-                updateProgress(50);
+                updateProgress(40);
                 
                 const micropip = pyodide.pyimport('micropip');
-                await micropip.install(['cryptography', 'ecdsa', 'bitarray']);
+                log('Installing cryptography...', 'info');
+                await micropip.install(['cryptography']);
+                updateProgress(55);
+                
+                log('Installing ecdsa...', 'info');
+                await micropip.install(['ecdsa']);
                 updateProgress(70);
+                
+                log('Installing esp-idf-nvs-partition-gen...', 'info');
+                await micropip.install(['esp-idf-nvs-partition-gen']);
+                updateProgress(85);
                 
                 setStatus('Loading MFG tool modules...', 'loading');
                 await loadPythonModules();
@@ -542,18 +694,18 @@
                 
                 setStatus('Ready to generate', 'ready');
                 generateBtn.disabled = false;
-                log('Pyodide initialized successfully', 'success');
-                log('Ready to generate factory partitions', 'success');
+                log('All modules loaded successfully!', 'success');
+                log('Ready to generate factory partition data.', 'success');
                 
             } catch (error) {
-                setStatus('Failed to initialize: ' + error.message, 'error');
+                setStatus('Initialization failed: ' + error.message, 'error');
                 log('Initialization error: ' + error.message, 'error');
                 console.error(error);
             }
         }
 
         async function loadPythonModules() {
-            const pythonInit = `
+            const pythonCode = `
 import sys
 import os
 import io
@@ -563,30 +715,25 @@ import base64
 import random
 import hashlib
 import struct
+import binascii
 from types import SimpleNamespace
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
+from cryptography import x509
+from cryptography.x509.oid import NameOID
+from cryptography.hazmat.primitives import hashes, serialization
+from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives.asymmetric import ec
+from cryptography.x509 import load_pem_x509_certificate, load_der_x509_certificate
+from ecdsa.curves import NIST256p
+import esp_idf_nvs_partition_gen.nvs_partition_gen as nvs_partition_gen
 
-# Mock filesystem for browser
-class VirtualFS:
-    def __init__(self):
-        self.files = {}
-    
-    def write(self, path, content):
-        self.files[path] = content
-    
-    def read(self, path):
-        return self.files.get(path, None)
-    
-    def list_all(self):
-        return list(self.files.keys())
-    
-    def clear(self):
-        self.files = {}
+print("Core modules imported")
 
-vfs = VirtualFS()
+# CHIP OIDs
+VENDOR_ID_OID = x509.ObjectIdentifier('1.3.6.1.4.1.37244.2.1')
+PRODUCT_ID_OID = x509.ObjectIdentifier('1.3.6.1.4.1.37244.2.2')
 
 # SPAKE2+ implementation
-from ecdsa.curves import NIST256p
 WS_LENGTH = NIST256p.baselen + 8
 
 def generate_verifier(passcode, salt, iterations):
@@ -596,17 +743,9 @@ def generate_verifier(passcode, salt, iterations):
     L = NIST256p.generator * w1
     return w0.to_bytes(NIST256p.baselen, byteorder='big') + L.to_bytes('uncompressed')
 
-# Setup payload generation (simplified)
-class CommissioningFlow:
-    Standard = 0
-    UserIntent = 1
-    Custom = 2
+INVALID_PASSCODES = [0, 11111111, 22222222, 33333333, 44444444, 55555555, 66666666, 77777777, 88888888, 99999999, 12345678, 87654321]
 
-def compute_check_digit(payload_base38):
-    from functools import reduce
-    total = reduce(lambda acc, c: acc + ord(c), payload_base38, 0)
-    return total % 10
-
+# Setup payload generation
 BASE38_CHARS = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ-."
 
 def base38_encode(value, length):
@@ -616,120 +755,294 @@ def base38_encode(value, length):
         value //= 38
     return ''.join(reversed(result))
 
-def generate_qr_code_payload(vendor_id, product_id, discriminator, passcode, commissioning_flow, discovery_mode):
+def generate_qr_payload(vendor_id, product_id, discriminator, passcode, flow, discovery):
     version = 0
-    padding = 0
-    
-    # Build the payload bits
     payload_bits = 0
     payload_bits |= (version & 0x7)
     payload_bits |= (vendor_id & 0xFFFF) << 3
     payload_bits |= (product_id & 0xFFFF) << 19
-    payload_bits |= (commissioning_flow & 0x3) << 35
-    payload_bits |= (discovery_mode & 0xFF) << 37
+    payload_bits |= (flow & 0x3) << 35
+    payload_bits |= (discovery & 0xFF) << 37
     payload_bits |= (discriminator & 0xFFF) << 45
     payload_bits |= (passcode & 0x7FFFFFF) << 57
-    payload_bits |= (padding & 0xF) << 84
-    
-    # Encode to base38 (11 characters for the main payload)
-    encoded = base38_encode(payload_bits, 11)
-    
-    return f"MT:{encoded}"
+    return "MT:" + base38_encode(payload_bits, 11)
 
-def generate_manual_code(discriminator, passcode, commissioning_flow, vendor_id=None, product_id=None):
-    # Short code format (without vendor/product)
-    discriminator_top = (discriminator >> 10) & 0x3
-    discriminator_low = discriminator & 0x3FF
-    
-    chunk1 = (discriminator_top << 14) | passcode
-    chunk2 = discriminator_low
-    
-    code = f"{chunk1:05d}-{chunk2 >> 6:03d}-{chunk2 & 0x3F:03d}"
-    
-    # Calculate check digit
-    check = sum(int(c) for c in code.replace('-', '')) % 10
-    
-    return code + str(check)
+def generate_manual_code(discriminator, passcode, flow):
+    d1 = (discriminator >> 10) & 0x3
+    d2 = discriminator & 0x3FF
+    chunk1 = (d1 << 14) | (passcode & 0x3FFF)
+    chunk2 = passcode >> 14
+    chunk3 = d2
+    code = f"{chunk1:05d}{chunk2:04d}{chunk3:05d}"
+    check = sum(int(c) for c in code) % 10
+    if flow == 0:
+        return f"{code[:4]}-{code[4:7]}-{code[7:11]}{check}"
+    else:
+        return f"{code[:4]}-{code[4:7]}-{code[7:11]}\\n{code[11:]}-{check}"
 
-INVALID_PASSCODES = [0, 11111111, 22222222, 33333333, 44444444, 55555555, 66666666, 77777777, 88888888, 99999999, 12345678, 87654321]
+# Certificate utilities
+def load_cert_from_pem(pem_str):
+    return load_pem_x509_certificate(pem_str.encode())
 
-def generate_mfg_data(config):
-    """Generate manufacturing data for Matter devices"""
+def load_key_from_pem(pem_str):
+    return serialization.load_pem_private_key(pem_str.encode(), password=None)
+
+def generate_ec_key():
+    return ec.generate_private_key(ec.SECP256R1())
+
+def cert_to_der(cert):
+    return cert.public_bytes(serialization.Encoding.DER)
+
+def cert_to_pem(cert):
+    return cert.public_bytes(serialization.Encoding.PEM)
+
+def key_to_pem(key):
+    return key.private_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PrivateFormat.PKCS8,
+        encryption_algorithm=serialization.NoEncryption()
+    )
+
+def key_to_der(key):
+    return key.private_bytes(
+        encoding=serialization.Encoding.DER,
+        format=serialization.PrivateFormat.TraditionalOpenSSL,
+        encryption_algorithm=serialization.NoEncryption()
+    )
+
+def key_to_raw_private(key):
+    return key.private_numbers().private_value.to_bytes(32, byteorder='big')
+
+def key_to_raw_public(key):
+    pub = key.public_key().public_numbers()
+    return b'\\x04' + pub.x.to_bytes(32, byteorder='big') + pub.y.to_bytes(32, byteorder='big')
+
+def compute_ski(public_key):
+    """Compute Subject Key Identifier manually to avoid OpenSSL issues in Pyodide"""
+    from cryptography.hazmat.primitives.hashes import SHA1, Hash
+    pub_bytes = public_key.public_bytes(
+        serialization.Encoding.X962,
+        serialization.PublicFormat.UncompressedPoint
+    )
+    digest = Hash(SHA1())
+    digest.update(pub_bytes)
+    return digest.finalize()
+
+def build_certificate(vendor_id, product_id, ca_cert, ca_key, common_name, is_pai=False, lifetime=36500):
+    private_key = generate_ec_key()
+    public_key = private_key.public_key()
+    
+    x509_attrs = [
+        x509.NameAttribute(NameOID.COMMON_NAME, common_name),
+        x509.NameAttribute(VENDOR_ID_OID, f"{vendor_id:04X}"),
+        x509.NameAttribute(PRODUCT_ID_OID, f"{product_id:04X}"),
+    ]
+    subject = x509.Name(x509_attrs)
+    
+    now = datetime.now(timezone.utc)
+    cert_builder = x509.CertificateBuilder()
+    cert_builder = cert_builder.subject_name(subject)
+    cert_builder = cert_builder.issuer_name(ca_cert.subject)
+    cert_builder = cert_builder.public_key(public_key)
+    cert_builder = cert_builder.serial_number(x509.random_serial_number())
+    cert_builder = cert_builder.not_valid_before(now)
+    cert_builder = cert_builder.not_valid_after(now + timedelta(days=lifetime))
+    
+    if is_pai:
+        cert_builder = cert_builder.add_extension(x509.BasicConstraints(ca=True, path_length=0), critical=True)
+        cert_builder = cert_builder.add_extension(
+            x509.KeyUsage(digital_signature=True, content_commitment=False, key_encipherment=False,
+                         data_encipherment=False, key_agreement=False, key_cert_sign=True,
+                         crl_sign=True, encipher_only=False, decipher_only=False), critical=True)
+    else:
+        cert_builder = cert_builder.add_extension(x509.BasicConstraints(ca=False, path_length=None), critical=True)
+        cert_builder = cert_builder.add_extension(
+            x509.KeyUsage(digital_signature=True, content_commitment=False, key_encipherment=False,
+                         data_encipherment=False, key_agreement=False, key_cert_sign=False,
+                         crl_sign=False, encipher_only=False, decipher_only=False), critical=True)
+    
+    # Compute SKI and AKI manually to avoid OpenSSL EC_POINT_copy issues in Pyodide
+    ski = compute_ski(public_key)
+    cert_builder = cert_builder.add_extension(x509.SubjectKeyIdentifier(ski), critical=False)
+    
+    # Get CA's SKI for AKI (or compute it)
+    try:
+        ca_ski_ext = ca_cert.extensions.get_extension_for_class(x509.SubjectKeyIdentifier)
+        aki_key_id = ca_ski_ext.value.digest
+    except x509.ExtensionNotFound:
+        aki_key_id = compute_ski(ca_cert.public_key())
+    
+    cert_builder = cert_builder.add_extension(
+        x509.AuthorityKeyIdentifier(
+            key_identifier=aki_key_id,
+            authority_cert_issuer=None,
+            authority_cert_serial_number=None
+        ), critical=False)
+    
+    signed_cert = cert_builder.sign(private_key=ca_key, algorithm=hashes.SHA256(), backend=default_backend())
+    
+    return signed_cert, private_key
+
+def normalize_partition_size(size):
+    """Convert partition size to hex string format expected by nvs_partition_gen"""
+    if isinstance(size, str):
+        size_int = int(size, 0)
+    else:
+        size_int = int(size)
+    # Round down to multiple of 4096
+    size_int = (size_int // 4096) * 4096
+    if size_int < 4096:
+        size_int = 0x6000
+    return hex(size_int)
+
+def generate_nvs_binary(config_csv_content, values_csv_content, partition_size=0x6000):
+    """Generate NVS partition binary using esp_idf_nvs_partition_gen"""
+    import tempfile
+    import shutil
+    
+    size_str = normalize_partition_size(partition_size)
+    
+    temp_dir = tempfile.mkdtemp()
+    try:
+        config_file = os.path.join(temp_dir, 'config.csv')
+        values_file = os.path.join(temp_dir, 'values.csv')
+        output_file = os.path.join(temp_dir, 'partition.bin')
+        
+        with open(config_file, 'w') as f:
+            f.write(config_csv_content)
+        with open(values_file, 'w') as f:
+            f.write(values_csv_content)
+        
+        # Create args for nvs_partition_gen - size must be hex string like '0x6000'
+        args = SimpleNamespace(
+            input=values_file,
+            output=output_file,
+            outdir=temp_dir,
+            size=size_str,
+            version=2,
+            keygen=False,
+            inputkey=None,
+            keyfile=None,
+            key_protect_hmac=False,
+            kp_hmac_keygen=False,
+            kp_hmac_keyfile=None,
+            kp_hmac_inputkey=None
+        )
+        
+        # Generate the binary
+        nvs_partition_gen.generate(args)
+        
+        # Read the generated binary
+        with open(output_file, 'rb') as f:
+            return f.read()
+    finally:
+        shutil.rmtree(temp_dir, ignore_errors=True)
+
+def generate_mfg_data(config, pai_cert_pem=None, pai_key_pem=None, paa_cert_pem=None, paa_key_pem=None, cd_bytes=None):
+    """Generate full manufacturing data including certificates and NVS binaries"""
+    
     results = {
         'devices': [],
         'staging': {},
-        'summary': []
+        'errors': []
     }
     
     vendor_id = config.get('vendor_id', 0xFFF1)
     product_id = config.get('product_id', 0x8000)
     count = config.get('count', 1)
-    target = config.get('target', 'esp32')
     partition_size = config.get('size', 0x6000)
-    encrypt = config.get('encrypt', False)
     iteration_count = config.get('iteration_count', 10000)
     commissioning_flow = config.get('commissioning_flow', 0)
     discovery_mode = config.get('discovery_mode', 2)
     enable_dynamic_passcode = config.get('enable_dynamic_passcode', False)
+    cn_prefix = config.get('cn_prefix', 'ESP32')
     
     vendor_name = config.get('vendor_name', '')
     product_name = config.get('product_name', '')
-    hw_ver = config.get('hw_ver')
-    hw_ver_str = config.get('hw_ver_str', '')
-    serial_num = config.get('serial_num', '')
-    mfg_date = config.get('mfg_date', '')
-    product_finish = config.get('product_finish', '')
-    product_color = config.get('product_color', '')
-    enable_rotating_device_id = config.get('enable_rotating_device_id', False)
-    
-    # Fixed passcode/discriminator if provided
     fixed_passcode = config.get('passcode')
     fixed_discriminator = config.get('discriminator')
     
-    # Generate config.csv (NVS schema)
-    config_csv_rows = [
+    # Certificate handling
+    pai_cert = None
+    pai_key = None
+    pai_cert_der = None
+    has_certs = False
+    
+    if paa_cert_pem and paa_key_pem:
+        # Generate PAI from PAA
+        try:
+            paa_cert = load_cert_from_pem(paa_cert_pem)
+            paa_key = load_key_from_pem(paa_key_pem)
+            pai_cn = f"{cn_prefix} PAI 00"
+            pai_cert, pai_key = build_certificate(vendor_id, product_id, paa_cert, paa_key, pai_cn, is_pai=True)
+            pai_cert_der = cert_to_der(pai_cert)
+            results['staging']['pai_cert.pem'] = cert_to_pem(pai_cert).decode()
+            results['staging']['pai_cert.der'] = pai_cert_der
+            results['staging']['pai_key.pem'] = key_to_pem(pai_key).decode()
+            has_certs = True
+            print(f"Generated PAI certificate: {pai_cn}")
+        except Exception as e:
+            results['errors'].append(f"PAA/PAI error: {str(e)}")
+            
+    elif pai_cert_pem and pai_key_pem:
+        try:
+            pai_cert = load_cert_from_pem(pai_cert_pem)
+            pai_key = load_key_from_pem(pai_key_pem)
+            pai_cert_der = cert_to_der(pai_cert)
+            results['staging']['pai_cert.der'] = pai_cert_der
+            has_certs = True
+            print("Using provided PAI certificate")
+        except Exception as e:
+            results['errors'].append(f"PAI load error: {str(e)}")
+    
+    # Build config.csv schema
+    config_rows = [
         ['key', 'type', 'encoding', 'value'],
         ['chip-factory', 'namespace', '', ''],
         ['discriminator', 'data', 'u32', ''],
         ['iteration-count', 'data', 'u32', ''],
         ['salt', 'data', 'string', ''],
-        ['verifier', 'data', 'string', ''],
         ['vendor-id', 'data', 'u32', ''],
         ['product-id', 'data', 'u32', ''],
     ]
     
+    if not enable_dynamic_passcode:
+        config_rows.append(['verifier', 'data', 'string', ''])
     if vendor_name:
-        config_csv_rows.append(['vendor-name', 'data', 'string', ''])
+        config_rows.append(['vendor-name', 'data', 'string', ''])
     if product_name:
-        config_csv_rows.append(['product-name', 'data', 'string', ''])
-    if hw_ver is not None:
-        config_csv_rows.append(['hardware-ver', 'data', 'u32', ''])
-    if hw_ver_str:
-        config_csv_rows.append(['hw-ver-str', 'data', 'string', ''])
-    if serial_num:
-        config_csv_rows.append(['serial-num', 'data', 'string', ''])
-    if mfg_date:
-        config_csv_rows.append(['mfg-date', 'data', 'string', ''])
+        config_rows.append(['product-name', 'data', 'string', ''])
+    config_rows.append(['serial-num', 'data', 'string', ''])
     
-    # Write config.csv
+    if has_certs:
+        config_rows.append(['dac-cert', 'file', 'binary', ''])
+        config_rows.append(['dac-key', 'file', 'binary', ''])
+        config_rows.append(['dac-pub-key', 'file', 'binary', ''])
+        config_rows.append(['pai-cert', 'file', 'binary', ''])
+    
+    if cd_bytes:
+        config_rows.append(['cert-dclrn', 'file', 'binary', ''])
+    
     config_csv = io.StringIO()
     writer = csv.writer(config_csv)
-    writer.writerows(config_csv_rows)
+    writer.writerows(config_rows)
     results['staging']['config.csv'] = config_csv.getvalue()
     
-    # Generate pin_disc.csv and per-device data
+    # Generate pin_disc.csv
     pin_disc_rows = []
     if enable_dynamic_passcode:
         pin_disc_rows.append(['Index', 'Iteration Count', 'Salt', 'Discriminator'])
     else:
         pin_disc_rows.append(['Index', 'PIN Code', 'Iteration Count', 'Salt', 'Verifier', 'Discriminator'])
     
-    summary_rows = [['UUID', 'Discriminator', 'Passcode', 'QR Code', 'Manual Code', 'Vendor ID', 'Product ID']]
+    # CN/DAC tracking
+    cn_dac_rows = [['CN', 'certs']]
     
+    # Generate per-device data
     for i in range(count):
         device_uuid = str(uuid.uuid4())
         
-        # Generate or use fixed passcode
+        # Passcode
         if fixed_passcode:
             passcode = fixed_passcode
         else:
@@ -737,7 +1050,7 @@ def generate_mfg_data(config):
             while passcode in INVALID_PASSCODES:
                 passcode = random.randint(1, 99999998)
         
-        # Generate or use fixed discriminator
+        # Discriminator
         if fixed_discriminator:
             discriminator = fixed_discriminator
         else:
@@ -752,15 +1065,55 @@ def generate_mfg_data(config):
             verifier_b64 = base64.b64encode(verifier).decode('utf-8')
             pin_disc_rows.append([i, passcode, iteration_count, salt_b64, verifier_b64, discriminator])
         else:
-            pin_disc_rows.append([i, iteration_count, salt_b64, discriminator])
             verifier_b64 = ''
+            pin_disc_rows.append([i, iteration_count, salt_b64, discriminator])
         
-        # Generate QR code and manual code
-        qr_payload = generate_qr_code_payload(vendor_id, product_id, discriminator, passcode, commissioning_flow, discovery_mode)
+        # Generate QR and manual codes
+        qr_payload = generate_qr_payload(vendor_id, product_id, discriminator, passcode, commissioning_flow, discovery_mode)
         manual_code = generate_manual_code(discriminator, passcode, commissioning_flow)
         
-        # Generate per-device partition.csv
-        partition_rows = [
+        # Serial number
+        serial_num = binascii.b2a_hex(os.urandom(8)).decode('utf-8')
+        
+        device_data = {
+            'uuid': device_uuid,
+            'index': i,
+            'passcode': passcode,
+            'discriminator': discriminator,
+            'qr_payload': qr_payload,
+            'manual_code': manual_code,
+            'files': {}
+        }
+        
+        # Generate DAC if we have certificates
+        if has_certs and pai_cert and pai_key:
+            try:
+                dac_cert, dac_key = build_certificate(vendor_id, product_id, pai_cert, pai_key, device_uuid, is_pai=False)
+                
+                dac_cert_pem = cert_to_pem(dac_cert)
+                dac_cert_der = cert_to_der(dac_cert)
+                dac_key_pem = key_to_pem(dac_key)
+                dac_key_der = key_to_der(dac_key)
+                dac_private_bin = key_to_raw_private(dac_key)
+                dac_public_bin = key_to_raw_public(dac_key)
+                
+                device_data['files']['internal/DAC_cert.pem'] = dac_cert_pem
+                device_data['files']['internal/DAC_cert.der'] = dac_cert_der
+                device_data['files']['internal/DAC_key.pem'] = dac_key_pem
+                device_data['files']['internal/DAC_key.der'] = dac_key_der
+                device_data['files']['internal/DAC_private_key.bin'] = dac_private_bin
+                device_data['files']['internal/DAC_public_key.bin'] = dac_public_bin
+                device_data['files']['internal/PAI_cert.der'] = pai_cert_der
+                
+                # Add to CN/DAC CSV
+                cn_dac_rows.append([device_uuid, dac_cert_pem.decode()])
+                
+                print(f"Generated DAC for device {i+1}: {device_uuid}")
+            except Exception as e:
+                results['errors'].append(f"DAC generation error for device {i}: {str(e)}")
+        
+        # Build partition.csv for this device
+        part_rows = [
             ['key', 'type', 'encoding', 'value'],
             ['chip-factory', 'namespace', '', ''],
             ['discriminator', 'data', 'u32', str(discriminator)],
@@ -771,42 +1124,109 @@ def generate_mfg_data(config):
         ]
         
         if not enable_dynamic_passcode:
-            partition_rows.append(['verifier', 'data', 'string', verifier_b64])
-        
+            part_rows.append(['verifier', 'data', 'string', verifier_b64])
         if vendor_name:
-            partition_rows.append(['vendor-name', 'data', 'string', vendor_name])
+            part_rows.append(['vendor-name', 'data', 'string', vendor_name])
         if product_name:
-            partition_rows.append(['product-name', 'data', 'string', product_name])
-        if hw_ver is not None:
-            partition_rows.append(['hardware-ver', 'data', 'u32', str(hw_ver)])
-        if hw_ver_str:
-            partition_rows.append(['hw-ver-str', 'data', 'string', hw_ver_str])
-        if serial_num:
-            partition_rows.append(['serial-num', 'data', 'string', serial_num])
-        if mfg_date:
-            partition_rows.append(['mfg-date', 'data', 'string', mfg_date])
+            part_rows.append(['product-name', 'data', 'string', product_name])
+        part_rows.append(['serial-num', 'data', 'string', serial_num])
         
         partition_csv = io.StringIO()
         writer = csv.writer(partition_csv)
-        writer.writerows(partition_rows)
+        writer.writerows(part_rows)
+        device_data['files']['internal/partition.csv'] = partition_csv.getvalue()
         
         # Onboarding codes CSV
-        onb_codes_csv = io.StringIO()
-        writer = csv.writer(onb_codes_csv)
-        writer.writerow(['UUID', 'QR Code', 'Manual Code', 'Passcode', 'Discriminator'])
-        writer.writerow([device_uuid, qr_payload, manual_code, passcode, discriminator])
+        onb_csv = io.StringIO()
+        writer = csv.writer(onb_csv)
+        writer.writerow(['qrcode', 'manualcode', 'discriminator', 'passcode'])
+        writer.writerow([qr_payload, manual_code, discriminator, passcode])
+        device_data['files'][f'{device_uuid}-onb_codes.csv'] = onb_csv.getvalue()
         
-        results['devices'].append({
-            'uuid': device_uuid,
-            'partition.csv': partition_csv.getvalue(),
-            'onb_codes.csv': onb_codes_csv.getvalue(),
-            'qr_payload': qr_payload,
-            'manual_code': manual_code,
-            'passcode': passcode,
-            'discriminator': discriminator
-        })
+        # Generate NVS partition binary
+        if has_certs:
+            try:
+                # Build values CSV with file references (need temp files for binary generation)
+                import tempfile
+                temp_dir = tempfile.mkdtemp()
+                
+                # Write certificate files
+                dac_cert_path = os.path.join(temp_dir, 'dac_cert.der')
+                dac_key_path = os.path.join(temp_dir, 'dac_key.bin')
+                dac_pub_path = os.path.join(temp_dir, 'dac_pub.bin')
+                pai_cert_path = os.path.join(temp_dir, 'pai_cert.der')
+                
+                with open(dac_cert_path, 'wb') as f:
+                    f.write(device_data['files']['internal/DAC_cert.der'])
+                with open(dac_key_path, 'wb') as f:
+                    f.write(device_data['files']['internal/DAC_private_key.bin'])
+                with open(dac_pub_path, 'wb') as f:
+                    f.write(device_data['files']['internal/DAC_public_key.bin'])
+                with open(pai_cert_path, 'wb') as f:
+                    f.write(pai_cert_der)
+                
+                # Build full partition CSV with file paths
+                full_part_rows = [
+                    ['key', 'type', 'encoding', 'value'],
+                    ['chip-factory', 'namespace', '', ''],
+                    ['discriminator', 'data', 'u32', str(discriminator)],
+                    ['iteration-count', 'data', 'u32', str(iteration_count)],
+                    ['salt', 'data', 'string', salt_b64],
+                    ['vendor-id', 'data', 'u32', str(vendor_id)],
+                    ['product-id', 'data', 'u32', str(product_id)],
+                ]
+                if not enable_dynamic_passcode:
+                    full_part_rows.append(['verifier', 'data', 'string', verifier_b64])
+                if vendor_name:
+                    full_part_rows.append(['vendor-name', 'data', 'string', vendor_name])
+                if product_name:
+                    full_part_rows.append(['product-name', 'data', 'string', product_name])
+                full_part_rows.append(['serial-num', 'data', 'string', serial_num])
+                full_part_rows.append(['dac-cert', 'file', 'binary', dac_cert_path])
+                full_part_rows.append(['dac-key', 'file', 'binary', dac_key_path])
+                full_part_rows.append(['dac-pub-key', 'file', 'binary', dac_pub_path])
+                full_part_rows.append(['pai-cert', 'file', 'binary', pai_cert_path])
+                
+                # Write partition CSV
+                part_csv_path = os.path.join(temp_dir, 'partition.csv')
+                with open(part_csv_path, 'w', newline='') as f:
+                    writer = csv.writer(f)
+                    writer.writerows(full_part_rows)
+                
+                # Generate binary
+                output_bin = os.path.join(temp_dir, 'partition.bin')
+                size_str = normalize_partition_size(partition_size)
+                
+                args = SimpleNamespace(
+                    input=part_csv_path,
+                    output=output_bin,
+                    outdir=temp_dir,
+                    size=size_str,
+                    version=2,
+                    keygen=False,
+                    inputkey=None,
+                    keyfile=None,
+                    key_protect_hmac=False,
+                    kp_hmac_keygen=False,
+                    kp_hmac_keyfile=None,
+                    kp_hmac_inputkey=None
+                )
+                nvs_partition_gen.generate(args)
+                
+                with open(output_bin, 'rb') as f:
+                    device_data['files'][f'{device_uuid}-partition.bin'] = f.read()
+                
+                print(f"Generated partition binary for device {i+1}")
+                
+                # Cleanup
+                import shutil
+                shutil.rmtree(temp_dir, ignore_errors=True)
+                
+            except Exception as e:
+                results['errors'].append(f"Binary generation error for device {i}: {str(e)}")
+                print(f"Binary generation error: {e}")
         
-        summary_rows.append([device_uuid, discriminator, passcode, qr_payload, manual_code, hex(vendor_id), hex(product_id)])
+        results['devices'].append(device_data)
     
     # Write pin_disc.csv
     pin_disc_csv = io.StringIO()
@@ -814,74 +1234,153 @@ def generate_mfg_data(config):
     writer.writerows(pin_disc_rows)
     results['staging']['pin_disc.csv'] = pin_disc_csv.getvalue()
     
+    # Write cn_dacs.csv if we have certs
+    if has_certs:
+        cn_dac_csv = io.StringIO()
+        writer = csv.writer(cn_dac_csv)
+        writer.writerows(cn_dac_rows)
+        timestamp = datetime.now().strftime('%Y-%m-%d-%H-%M-%S')
+        results['cn_dacs_filename'] = f'cn_dacs-{timestamp}.csv'
+        results['cn_dacs_content'] = cn_dac_csv.getvalue()
+    
     # Write summary CSV
+    summary_rows = [['UUID', 'discriminator', 'passcode', 'qrcode', 'manualcode', 'vendor-id', 'product-id', 'serial-num']]
+    for d in results['devices']:
+        summary_rows.append([
+            d['uuid'], d['discriminator'], d['passcode'], 
+            d['qr_payload'], d['manual_code'],
+            hex(vendor_id), hex(product_id), ''
+        ])
+    
     summary_csv = io.StringIO()
     writer = csv.writer(summary_csv)
     writer.writerows(summary_rows)
-    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+    timestamp = datetime.now().strftime('%Y-%m-%d-%H-%M-%S')
     results['summary_filename'] = f'summary-{timestamp}.csv'
     results['summary_content'] = summary_csv.getvalue()
     
     results['vendor_id'] = vendor_id
     results['product_id'] = product_id
+    results['has_certs'] = has_certs
     
     return results
 
-print("MFG Tool modules loaded successfully")
+print("MFG Tool fully loaded - ready for generation")
 `;
-            await pyodide.runPythonAsync(pythonInit);
+            await pyodide.runPythonAsync(pythonCode);
         }
 
         async function generatePartition() {
             const config = getFormConfig();
             
-            log('Starting generation...', 'info');
-            log(`Vendor ID: ${config.vendor_id}, Product ID: ${config.product_id}`, 'info');
+            clearLog();
+            log('Starting factory data generation...', 'info');
+            log(`Vendor ID: 0x${config.vendor_id.toString(16).toUpperCase()}, Product ID: 0x${config.product_id.toString(16).toUpperCase()}`, 'info');
             log(`Generating ${config.count} device(s)...`, 'info');
             
             generateBtn.disabled = true;
             generatedFiles = {};
+            deviceSummaries.innerHTML = '';
             
             try {
-                // Convert config to Python dict
+                // Set up Python variables
                 pyodide.globals.set('js_config', pyodide.toPy(config));
+                pyodide.globals.set('js_pai_cert', paiCertContent || '');
+                pyodide.globals.set('js_pai_key', paiKeyContent || '');
+                pyodide.globals.set('js_paa_cert', paaCertContent || '');
+                pyodide.globals.set('js_paa_key', paaKeyContent || '');
+                
+                if (certMode === 'pai' && paiCertContent && paiKeyContent) {
+                    log('Using PAI certificate for DAC generation', 'info');
+                } else if (certMode === 'paa' && paaCertContent && paaKeyContent) {
+                    log('Using PAA certificate - will generate PAI and DAC', 'info');
+                } else {
+                    log('No certificates provided - generating commissioning data only', 'warning');
+                }
                 
                 const result = await pyodide.runPythonAsync(`
 config = dict(js_config)
-result = generate_mfg_data(config)
+pai_cert = js_pai_cert if js_pai_cert else None
+pai_key = js_pai_key if js_pai_key else None
+paa_cert = js_paa_cert if js_paa_cert else None
+paa_key = js_paa_key if js_paa_key else None
+
+result = generate_mfg_data(config, pai_cert, pai_key, paa_cert, paa_key)
 result
 `);
                 
                 const jsResult = result.toJs({dict_converter: Object.fromEntries});
                 
-                // Process results
+                // Log any errors
+                if (jsResult.errors && jsResult.errors.length > 0) {
+                    jsResult.errors.forEach(err => log(err, 'error'));
+                }
+                
                 const vidPid = `${config.vendor_id.toString(16).padStart(4, '0')}_${config.product_id.toString(16).padStart(4, '0')}`;
                 
-                // Staging files
-                for (const [filename, content] of Object.entries(jsResult.staging)) {
+                // Process staging files
+                for (const [filename, content] of Object.entries(jsResult.staging || {})) {
                     const path = `${vidPid}/staging/${filename}`;
-                    generatedFiles[path] = content;
-                    log(`Generated: ${path}`, 'success');
+                    if (content instanceof Uint8Array) {
+                        generatedFiles[path] = content;
+                    } else {
+                        generatedFiles[path] = content;
+                    }
+                    log(`Generated: staging/${filename}`, 'success');
                 }
                 
-                // Per-device files
+                // Process per-device files
                 for (const device of jsResult.devices) {
                     const devicePath = `${vidPid}/${device.uuid}`;
-                    generatedFiles[`${devicePath}/partition.csv`] = device['partition.csv'];
-                    generatedFiles[`${devicePath}/${device.uuid}-onb_codes.csv`] = device['onb_codes.csv'];
-                    log(`Generated device: ${device.uuid}`, 'success');
-                    log(`  QR: ${device.qr_payload}`, 'info');
-                    log(`  Manual: ${device.manual_code}`, 'info');
+                    
+                    for (const [filename, content] of Object.entries(device.files || {})) {
+                        const fullPath = `${devicePath}/${filename}`;
+                        generatedFiles[fullPath] = content;
+                    }
+                    
+                    // Log device info
+                    const hasBin = Object.keys(device.files || {}).some(f => f.endsWith('.bin') && f.includes('partition'));
+                    const hasDac = Object.keys(device.files || {}).some(f => f.includes('DAC_cert'));
+                    
+                    let status = `Device ${device.index + 1}: ${device.uuid}`;
+                    if (hasDac) status += ' [DAC]';
+                    if (hasBin) status += ' [BIN]';
+                    log(status, 'success');
+                    
+                    // Add device summary
+                    const summaryDiv = document.createElement('div');
+                    summaryDiv.className = 'device-summary';
+                    summaryDiv.innerHTML = `
+                        <h4>Device ${device.index + 1}: ${device.uuid.substring(0, 8)}...</h4>
+                        <div class="codes">
+                            <span><strong>QR:</strong> ${device.qr_payload}</span>
+                            <span><strong>Manual:</strong> ${device.manual_code}</span>
+                            <span><strong>Passcode:</strong> ${device.passcode} | <strong>Discriminator:</strong> ${device.discriminator}</span>
+                        </div>
+                    `;
+                    deviceSummaries.appendChild(summaryDiv);
                 }
                 
-                // Summary
-                generatedFiles[`${vidPid}/${jsResult.summary_filename}`] = jsResult.summary_content;
-                log(`Generated: ${jsResult.summary_filename}`, 'success');
+                // Summary and CN/DACs CSV
+                if (jsResult.summary_filename) {
+                    generatedFiles[`${vidPid}/${jsResult.summary_filename}`] = jsResult.summary_content;
+                    log(`Generated: ${jsResult.summary_filename}`, 'success');
+                }
                 
-                log(`\nGeneration complete! ${jsResult.devices.length} device(s) generated.`, 'success');
+                if (jsResult.cn_dacs_filename) {
+                    generatedFiles[`${vidPid}/${jsResult.cn_dacs_filename}`] = jsResult.cn_dacs_content;
+                    log(`Generated: ${jsResult.cn_dacs_filename}`, 'success');
+                }
                 
-                // Display files
+                log('', 'info');
+                log(`Generation complete! ${jsResult.devices.length} device(s) generated.`, 'success');
+                if (jsResult.has_certs) {
+                    log('Certificates and partition binaries included.', 'success');
+                }
+                
+                // Display files and summaries
                 displayFiles();
+                summaryCard.style.display = 'block';
                 
             } catch (error) {
                 log('Generation error: ' + error.message, 'error');
@@ -894,7 +1393,7 @@ result
         function getFormConfig() {
             const parseHex = (val) => {
                 if (!val) return null;
-                if (typeof val === 'string' && val.startsWith('0x')) {
+                if (typeof val === 'string' && val.toLowerCase().startsWith('0x')) {
                     return parseInt(val, 16);
                 }
                 return parseInt(val, 10);
@@ -909,34 +1408,16 @@ result
                 product_name: document.getElementById('productName').value || '',
                 commissioning_flow: parseInt(document.getElementById('commissioningFlow').value),
                 discovery_mode: parseInt(document.getElementById('discoveryMode').value),
+                cn_prefix: document.getElementById('cnPrefix').value || 'ESP32',
+                size: parseHex(document.getElementById('partitionSize').value) || 0x6000,
+                iteration_count: parseInt(document.getElementById('iterationCount').value) || 10000,
+                enable_dynamic_passcode: document.getElementById('enableDynamicPasscode').checked,
             };
             
-            // Optional passcode/discriminator
             const passcode = document.getElementById('passcode').value;
             const discriminator = document.getElementById('discriminator').value;
             if (passcode) config.passcode = parseHex(passcode);
             if (discriminator) config.discriminator = parseHex(discriminator);
-            
-            // Advanced options
-            const sizeVal = document.getElementById('partitionSize')?.value;
-            if (sizeVal) config.size = parseHex(sizeVal);
-            
-            const iterCount = document.getElementById('iterationCount')?.value;
-            if (iterCount) config.iteration_count = parseInt(iterCount);
-            
-            config.encrypt = document.getElementById('encrypt')?.checked || false;
-            config.enable_dynamic_passcode = document.getElementById('enableDynamicPasscode')?.checked || false;
-            config.enable_rotating_device_id = document.getElementById('enableRotatingDeviceId')?.checked || false;
-            
-            // Device info
-            const hwVer = document.getElementById('hwVer')?.value;
-            if (hwVer) config.hw_ver = parseInt(hwVer);
-            
-            config.hw_ver_str = document.getElementById('hwVerStr')?.value || '';
-            config.serial_num = document.getElementById('serialNum')?.value || '';
-            config.mfg_date = document.getElementById('mfgDate')?.value || '';
-            config.product_finish = document.getElementById('productFinish')?.value || '';
-            config.product_color = document.getElementById('productColor')?.value || '';
             
             return config;
         }
@@ -945,19 +1426,41 @@ result
             filesCard.style.display = 'block';
             filesList.innerHTML = '';
             
-            for (const [path, content] of Object.entries(generatedFiles)) {
+            const sortedFiles = Object.keys(generatedFiles).sort();
+            
+            for (const path of sortedFiles) {
+                const content = generatedFiles[path];
                 const item = document.createElement('div');
                 item.className = 'file-item';
                 
-                const icon = path.endsWith('.csv') ? 'fa-file-csv' : 'fa-file';
-                const size = new Blob([content]).size;
+                // Determine file type and icon
+                let icon = 'fa-file';
+                let isBinary = false;
+                let isCert = false;
+                
+                if (path.endsWith('.bin')) {
+                    icon = 'fa-microchip';
+                    isBinary = true;
+                    item.classList.add('binary');
+                } else if (path.endsWith('.csv')) {
+                    icon = 'fa-file-csv';
+                } else if (path.endsWith('.pem') || path.endsWith('.der')) {
+                    icon = 'fa-certificate';
+                    isCert = true;
+                    item.classList.add('cert');
+                }
+                
+                const size = content instanceof Uint8Array ? content.length : new Blob([content]).size;
                 const sizeStr = size > 1024 ? `${(size / 1024).toFixed(1)} KB` : `${size} B`;
+                
+                // Truncate path for display
+                const displayPath = path.length > 50 ? '...' + path.substring(path.length - 47) : path;
                 
                 item.innerHTML = `
                     <i class="fas ${icon}"></i>
-                    <span class="name">${path}</span>
+                    <span class="name" title="${path}">${displayPath}</span>
                     <span class="size">${sizeStr}</span>
-                    <button class="btn btn-secondary" onclick="downloadFile('${path}')">
+                    <button class="btn btn-secondary btn-sm" onclick="downloadFile('${path}')">
                         <i class="fas fa-download"></i>
                     </button>
                 `;
@@ -967,7 +1470,16 @@ result
 
         function downloadFile(path) {
             const content = generatedFiles[path];
-            const blob = new Blob([content], { type: 'text/csv' });
+            let blob;
+            
+            if (content instanceof Uint8Array) {
+                blob = new Blob([content], { type: 'application/octet-stream' });
+            } else if (typeof content === 'string') {
+                blob = new Blob([content], { type: 'text/plain' });
+            } else {
+                blob = new Blob([content], { type: 'application/octet-stream' });
+            }
+            
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
@@ -980,53 +1492,66 @@ result
             const zip = new JSZip();
             
             for (const [path, content] of Object.entries(generatedFiles)) {
-                zip.file(path, content);
+                if (content instanceof Uint8Array) {
+                    zip.file(path, content);
+                } else {
+                    zip.file(path, content);
+                }
             }
             
             const blob = await zip.generateAsync({ type: 'blob' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = 'mfg_partition.zip';
+            a.download = 'esp_matter_mfg_data.zip';
             a.click();
             URL.revokeObjectURL(url);
             
             log('Downloaded all files as ZIP', 'success');
         }
 
-        function toggleCollapsible(header) {
-            header.classList.toggle('collapsed');
-            header.nextElementSibling.classList.toggle('collapsed');
-        }
-
         function resetForm() {
-            document.querySelectorAll('input').forEach(input => {
-                if (input.type === 'checkbox') input.checked = false;
-                else if (input.id === 'vendorId') input.value = '0xFFF1';
-                else if (input.id === 'productId') input.value = '0x8000';
-                else if (input.id === 'deviceCount') input.value = '1';
-                else if (input.id === 'partitionSize') input.value = '0x6000';
-                else if (input.id === 'iterationCount') input.value = '10000';
-                else input.value = '';
+            // Reset inputs
+            document.getElementById('vendorId').value = '0xFFF1';
+            document.getElementById('productId').value = '0x8000';
+            document.getElementById('deviceCount').value = '1';
+            document.getElementById('targetChip').selectedIndex = 0;
+            document.getElementById('vendorName').value = '';
+            document.getElementById('productName').value = '';
+            document.getElementById('partitionSize').value = '0x6000';
+            document.getElementById('cnPrefix').value = 'ESP32';
+            document.getElementById('passcode').value = '';
+            document.getElementById('discriminator').value = '';
+            document.getElementById('commissioningFlow').selectedIndex = 0;
+            document.getElementById('discoveryMode').selectedIndex = 0;
+            document.getElementById('iterationCount').value = '10000';
+            document.getElementById('enableDynamicPasscode').checked = false;
+            
+            // Reset certificates
+            paiCertContent = null;
+            paiKeyContent = null;
+            paaCertContent = null;
+            paaKeyContent = null;
+            cdContent = null;
+            
+            document.querySelectorAll('.file-upload').forEach(el => {
+                el.classList.remove('has-file');
             });
-            document.querySelectorAll('select').forEach(select => select.selectedIndex = 0);
-            outputArea.innerHTML = '';
-            outputCard.style.display = 'none';
+            document.querySelectorAll('.filename').forEach(el => {
+                el.textContent = '';
+            });
+            document.querySelectorAll('input[type="file"]').forEach(el => {
+                el.value = '';
+            });
+            
+            // Reset output
+            clearLog();
+            log('Form reset. Ready to generate.', 'info');
             filesCard.style.display = 'none';
+            summaryCard.style.display = 'none';
             generatedFiles = {};
+            deviceSummaries.innerHTML = '';
         }
-
-        // Tab switching
-        document.querySelectorAll('.tab').forEach(tab => {
-            tab.addEventListener('click', () => {
-                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-                tab.classList.add('active');
-                
-                const tabName = tab.dataset.tab;
-                document.getElementById('simpleTab').classList.toggle('hidden', tabName !== 'simple');
-                document.getElementById('advancedTab').classList.toggle('hidden', tabName !== 'advanced');
-            });
-        });
 
         // Event listeners
         generateBtn.addEventListener('click', generatePartition);
