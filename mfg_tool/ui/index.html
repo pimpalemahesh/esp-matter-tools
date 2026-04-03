@@ -1,0 +1,1040 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ESP Matter Manufacturing Tool</title>
+    <script src="https://cdn.jsdelivr.net/pyodide/v0.24.1/full/pyodide.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary: #e74011;
+            --primary-dark: #c73710;
+            --bg: #0d1117;
+            --surface: #161b22;
+            --surface-2: #21262d;
+            --border: #30363d;
+            --text: #e6edf3;
+            --text-muted: #8b949e;
+            --success: #3fb950;
+            --warning: #d29922;
+            --error: #f85149;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+        }
+        .header {
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            padding: 1rem 2rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        .header img { height: 32px; }
+        .header h1 { font-size: 1.25rem; font-weight: 600; }
+        .header .badge {
+            background: var(--primary);
+            color: white;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        .status-bar {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1rem 1.5rem;
+            margin-bottom: 2rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: var(--warning);
+            animation: pulse 2s infinite;
+        }
+        .status-indicator.ready { background: var(--success); animation: none; }
+        .status-indicator.error { background: var(--error); animation: none; }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        .status-text { flex: 1; }
+        .progress-bar {
+            height: 4px;
+            background: var(--surface-2);
+            border-radius: 2px;
+            overflow: hidden;
+            width: 200px;
+        }
+        .progress-bar .fill {
+            height: 100%;
+            background: var(--primary);
+            width: 0%;
+            transition: width 0.3s;
+        }
+        .tabs {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1.5rem;
+        }
+        .tab {
+            padding: 0.75rem 1.5rem;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px 8px 0 0;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: var(--text-muted);
+        }
+        .tab:hover { background: var(--surface-2); }
+        .tab.active {
+            background: var(--surface-2);
+            color: var(--text);
+            border-bottom-color: var(--surface-2);
+        }
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+        .card-title {
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .card-title i { color: var(--primary); }
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1rem;
+        }
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+        .form-group label {
+            font-size: 0.875rem;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .form-group label .required { color: var(--error); }
+        .form-group input, .form-group select {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 0.75rem;
+            color: var(--text);
+            font-size: 0.875rem;
+        }
+        .form-group input:focus, .form-group select:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+        .form-group input::placeholder { color: var(--text-muted); }
+        .form-group .hint {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.875rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+        .btn-primary:hover:not(:disabled) { background: var(--primary-dark); }
+        .btn-primary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .btn-secondary {
+            background: var(--surface-2);
+            color: var(--text);
+            border: 1px solid var(--border);
+        }
+        .btn-secondary:hover { background: var(--border); }
+        .actions {
+            display: flex;
+            gap: 1rem;
+            justify-content: flex-end;
+            margin-top: 1.5rem;
+        }
+        .output-area {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 1rem;
+            max-height: 300px;
+            overflow-y: auto;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 0.8rem;
+            line-height: 1.5;
+            white-space: pre-wrap;
+        }
+        .output-area .log-info { color: var(--text); }
+        .output-area .log-success { color: var(--success); }
+        .output-area .log-warning { color: var(--warning); }
+        .output-area .log-error { color: var(--error); }
+        .files-list {
+            display: grid;
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+        .file-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+        }
+        .file-item i { color: var(--text-muted); }
+        .file-item .name { flex: 1; font-size: 0.875rem; }
+        .file-item .size {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+        .file-item .btn { padding: 0.5rem 0.75rem; font-size: 0.75rem; }
+        .hidden { display: none !important; }
+        .collapsible-header {
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .collapsible-header i.toggle {
+            transition: transform 0.2s;
+        }
+        .collapsible-header.collapsed i.toggle {
+            transform: rotate(-90deg);
+        }
+        .collapsible-content {
+            margin-top: 1rem;
+        }
+        .collapsible-content.collapsed {
+            display: none;
+        }
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .checkbox-group input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            accent-color: var(--primary);
+        }
+        @media (max-width: 768px) {
+            .container { padding: 1rem; }
+            .header { padding: 1rem; }
+            .form-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <svg height="32" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="50" cy="50" r="45" fill="#e74011"/>
+            <path d="M30 50 L45 65 L70 35" stroke="white" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+        </svg>
+        <h1>ESP Matter Manufacturing Tool</h1>
+        <span class="badge">Web UI</span>
+    </header>
+
+    <div class="container">
+        <div class="status-bar">
+            <div class="status-indicator" id="statusIndicator"></div>
+            <span class="status-text" id="statusText">Initializing Pyodide...</span>
+            <div class="progress-bar" id="progressBar">
+                <div class="fill" id="progressFill"></div>
+            </div>
+        </div>
+
+        <div class="tabs">
+            <div class="tab active" data-tab="simple">Simple Mode</div>
+            <div class="tab" data-tab="advanced">Advanced Mode</div>
+        </div>
+
+        <div id="simpleTab">
+            <div class="card">
+                <div class="card-title"><i class="fas fa-microchip"></i> Device Configuration</div>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Vendor ID <span class="required">*</span></label>
+                        <input type="text" id="vendorId" value="0xFFF1" placeholder="e.g., 0xFFF1">
+                        <span class="hint">Test vendor ID: 0xFFF1</span>
+                    </div>
+                    <div class="form-group">
+                        <label>Product ID <span class="required">*</span></label>
+                        <input type="text" id="productId" value="0x8000" placeholder="e.g., 0x8000">
+                    </div>
+                    <div class="form-group">
+                        <label>Number of Devices</label>
+                        <input type="number" id="deviceCount" value="1" min="1" max="100">
+                    </div>
+                    <div class="form-group">
+                        <label>Target Chip</label>
+                        <select id="targetChip">
+                            <option value="esp32">ESP32</option>
+                            <option value="esp32s2">ESP32-S2</option>
+                            <option value="esp32s3">ESP32-S3</option>
+                            <option value="esp32c3">ESP32-C3</option>
+                            <option value="esp32c6">ESP32-C6</option>
+                            <option value="esp32h2">ESP32-H2</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Vendor Name</label>
+                        <input type="text" id="vendorName" placeholder="Optional">
+                    </div>
+                    <div class="form-group">
+                        <label>Product Name</label>
+                        <input type="text" id="productName" placeholder="Optional">
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-title"><i class="fas fa-key"></i> Commissioning Options</div>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Passcode</label>
+                        <input type="text" id="passcode" placeholder="Random if empty">
+                        <span class="hint">8-digit code (1-99999998)</span>
+                    </div>
+                    <div class="form-group">
+                        <label>Discriminator</label>
+                        <input type="text" id="discriminator" placeholder="Random if empty">
+                        <span class="hint">12-bit value (0-4095)</span>
+                    </div>
+                    <div class="form-group">
+                        <label>Commissioning Flow</label>
+                        <select id="commissioningFlow">
+                            <option value="0">Standard (0)</option>
+                            <option value="1">User Intent (1)</option>
+                            <option value="2">Custom (2)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Discovery Mode</label>
+                        <select id="discoveryMode">
+                            <option value="2">BLE (2)</option>
+                            <option value="4">On-network (4)</option>
+                            <option value="6">BLE + On-network (6)</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="advancedTab" class="hidden">
+            <div class="card">
+                <div class="collapsible-header" onclick="toggleCollapsible(this)">
+                    <div class="card-title"><i class="fas fa-cog"></i> General Options</div>
+                    <i class="fas fa-chevron-down toggle"></i>
+                </div>
+                <div class="collapsible-content">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>Partition Size</label>
+                            <input type="text" id="partitionSize" value="0x6000" placeholder="0x6000">
+                        </div>
+                        <div class="form-group">
+                            <label>Iteration Count</label>
+                            <input type="number" id="iterationCount" value="10000" min="1000" max="100000">
+                        </div>
+                        <div class="form-group">
+                            <div class="checkbox-group">
+                                <input type="checkbox" id="encrypt">
+                                <label for="encrypt">Encrypt NVS Partition</label>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <div class="checkbox-group">
+                                <input type="checkbox" id="enableDynamicPasscode">
+                                <label for="enableDynamicPasscode">Enable Dynamic Passcode</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="collapsible-header" onclick="toggleCollapsible(this)">
+                    <div class="card-title"><i class="fas fa-info-circle"></i> Device Instance Info</div>
+                    <i class="fas fa-chevron-down toggle"></i>
+                </div>
+                <div class="collapsible-content">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>Hardware Version</label>
+                            <input type="number" id="hwVer" placeholder="Optional">
+                        </div>
+                        <div class="form-group">
+                            <label>Hardware Version String</label>
+                            <input type="text" id="hwVerStr" placeholder="Optional">
+                        </div>
+                        <div class="form-group">
+                            <label>Serial Number</label>
+                            <input type="text" id="serialNum" placeholder="Optional">
+                        </div>
+                        <div class="form-group">
+                            <label>Manufacturing Date</label>
+                            <input type="date" id="mfgDate">
+                        </div>
+                        <div class="form-group">
+                            <label>Product Finish</label>
+                            <select id="productFinish">
+                                <option value="">None</option>
+                                <option value="OTHER">Other</option>
+                                <option value="MATTE">Matte</option>
+                                <option value="SATIN">Satin</option>
+                                <option value="POLISHED">Polished</option>
+                                <option value="RUGGED">Rugged</option>
+                                <option value="FABRIC">Fabric</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Product Color</label>
+                            <select id="productColor">
+                                <option value="">None</option>
+                                <option value="BLACK">Black</option>
+                                <option value="NAVY">Navy</option>
+                                <option value="GREEN">Green</option>
+                                <option value="TEAL">Teal</option>
+                                <option value="MAROON">Maroon</option>
+                                <option value="PURPLE">Purple</option>
+                                <option value="OLIVE">Olive</option>
+                                <option value="GRAY">Gray</option>
+                                <option value="BLUE">Blue</option>
+                                <option value="LIME">Lime</option>
+                                <option value="AQUA">Aqua</option>
+                                <option value="RED">Red</option>
+                                <option value="FUCHSIA">Fuchsia</option>
+                                <option value="YELLOW">Yellow</option>
+                                <option value="WHITE">White</option>
+                                <option value="NICKEL">Nickel</option>
+                                <option value="CHROME">Chrome</option>
+                                <option value="BRASS">Brass</option>
+                                <option value="COPPER">Copper</option>
+                                <option value="SILVER">Silver</option>
+                                <option value="GOLD">Gold</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <div class="checkbox-group">
+                                <input type="checkbox" id="enableRotatingDeviceId">
+                                <label for="enableRotatingDeviceId">Enable Rotating Device ID</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="actions">
+            <button class="btn btn-secondary" id="resetBtn"><i class="fas fa-undo"></i> Reset</button>
+            <button class="btn btn-primary" id="generateBtn" disabled><i class="fas fa-play"></i> Generate Partition</button>
+        </div>
+
+        <div class="card" id="outputCard" style="display: none;">
+            <div class="card-title"><i class="fas fa-terminal"></i> Output</div>
+            <div class="output-area" id="outputArea"></div>
+        </div>
+
+        <div class="card" id="filesCard" style="display: none;">
+            <div class="card-title"><i class="fas fa-folder-open"></i> Generated Files</div>
+            <button class="btn btn-primary" id="downloadAllBtn" style="margin-bottom: 1rem;">
+                <i class="fas fa-download"></i> Download All (ZIP)
+            </button>
+            <div class="files-list" id="filesList"></div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script>
+        let pyodide = null;
+        let generatedFiles = {};
+
+        const statusIndicator = document.getElementById('statusIndicator');
+        const statusText = document.getElementById('statusText');
+        const progressFill = document.getElementById('progressFill');
+        const generateBtn = document.getElementById('generateBtn');
+        const outputArea = document.getElementById('outputArea');
+        const outputCard = document.getElementById('outputCard');
+        const filesCard = document.getElementById('filesCard');
+        const filesList = document.getElementById('filesList');
+
+        function log(msg, type = 'info') {
+            outputCard.style.display = 'block';
+            const span = document.createElement('span');
+            span.className = `log-${type}`;
+            span.textContent = `[${new Date().toLocaleTimeString()}] ${msg}\n`;
+            outputArea.appendChild(span);
+            outputArea.scrollTop = outputArea.scrollHeight;
+        }
+
+        function updateProgress(percent) {
+            progressFill.style.width = `${percent}%`;
+        }
+
+        function setStatus(text, state = 'loading') {
+            statusText.textContent = text;
+            statusIndicator.className = 'status-indicator';
+            if (state === 'ready') statusIndicator.classList.add('ready');
+            else if (state === 'error') statusIndicator.classList.add('error');
+        }
+
+        async function initPyodide() {
+            try {
+                setStatus('Loading Pyodide runtime...', 'loading');
+                updateProgress(10);
+                
+                pyodide = await loadPyodide({
+                    indexURL: "https://cdn.jsdelivr.net/pyodide/v0.24.1/full/"
+                });
+                updateProgress(30);
+                
+                setStatus('Installing packages...', 'loading');
+                await pyodide.loadPackage(['micropip']);
+                updateProgress(50);
+                
+                const micropip = pyodide.pyimport('micropip');
+                await micropip.install(['cryptography', 'ecdsa', 'bitarray']);
+                updateProgress(70);
+                
+                setStatus('Loading MFG tool modules...', 'loading');
+                await loadPythonModules();
+                updateProgress(100);
+                
+                setStatus('Ready to generate', 'ready');
+                generateBtn.disabled = false;
+                log('Pyodide initialized successfully', 'success');
+                log('Ready to generate factory partitions', 'success');
+                
+            } catch (error) {
+                setStatus('Failed to initialize: ' + error.message, 'error');
+                log('Initialization error: ' + error.message, 'error');
+                console.error(error);
+            }
+        }
+
+        async function loadPythonModules() {
+            const pythonInit = `
+import sys
+import os
+import io
+import csv
+import uuid
+import base64
+import random
+import hashlib
+import struct
+from types import SimpleNamespace
+from datetime import datetime
+
+# Mock filesystem for browser
+class VirtualFS:
+    def __init__(self):
+        self.files = {}
+    
+    def write(self, path, content):
+        self.files[path] = content
+    
+    def read(self, path):
+        return self.files.get(path, None)
+    
+    def list_all(self):
+        return list(self.files.keys())
+    
+    def clear(self):
+        self.files = {}
+
+vfs = VirtualFS()
+
+# SPAKE2+ implementation
+from ecdsa.curves import NIST256p
+WS_LENGTH = NIST256p.baselen + 8
+
+def generate_verifier(passcode, salt, iterations):
+    ws = hashlib.pbkdf2_hmac('sha256', struct.pack('<I', passcode), salt, iterations, WS_LENGTH * 2)
+    w0 = int.from_bytes(ws[:WS_LENGTH], byteorder='big') % NIST256p.order
+    w1 = int.from_bytes(ws[WS_LENGTH:], byteorder='big') % NIST256p.order
+    L = NIST256p.generator * w1
+    return w0.to_bytes(NIST256p.baselen, byteorder='big') + L.to_bytes('uncompressed')
+
+# Setup payload generation (simplified)
+class CommissioningFlow:
+    Standard = 0
+    UserIntent = 1
+    Custom = 2
+
+def compute_check_digit(payload_base38):
+    from functools import reduce
+    total = reduce(lambda acc, c: acc + ord(c), payload_base38, 0)
+    return total % 10
+
+BASE38_CHARS = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ-."
+
+def base38_encode(value, length):
+    result = []
+    for _ in range(length):
+        result.append(BASE38_CHARS[value % 38])
+        value //= 38
+    return ''.join(reversed(result))
+
+def generate_qr_code_payload(vendor_id, product_id, discriminator, passcode, commissioning_flow, discovery_mode):
+    version = 0
+    padding = 0
+    
+    # Build the payload bits
+    payload_bits = 0
+    payload_bits |= (version & 0x7)
+    payload_bits |= (vendor_id & 0xFFFF) << 3
+    payload_bits |= (product_id & 0xFFFF) << 19
+    payload_bits |= (commissioning_flow & 0x3) << 35
+    payload_bits |= (discovery_mode & 0xFF) << 37
+    payload_bits |= (discriminator & 0xFFF) << 45
+    payload_bits |= (passcode & 0x7FFFFFF) << 57
+    payload_bits |= (padding & 0xF) << 84
+    
+    # Encode to base38 (11 characters for the main payload)
+    encoded = base38_encode(payload_bits, 11)
+    
+    return f"MT:{encoded}"
+
+def generate_manual_code(discriminator, passcode, commissioning_flow, vendor_id=None, product_id=None):
+    # Short code format (without vendor/product)
+    discriminator_top = (discriminator >> 10) & 0x3
+    discriminator_low = discriminator & 0x3FF
+    
+    chunk1 = (discriminator_top << 14) | passcode
+    chunk2 = discriminator_low
+    
+    code = f"{chunk1:05d}-{chunk2 >> 6:03d}-{chunk2 & 0x3F:03d}"
+    
+    # Calculate check digit
+    check = sum(int(c) for c in code.replace('-', '')) % 10
+    
+    return code + str(check)
+
+INVALID_PASSCODES = [0, 11111111, 22222222, 33333333, 44444444, 55555555, 66666666, 77777777, 88888888, 99999999, 12345678, 87654321]
+
+def generate_mfg_data(config):
+    """Generate manufacturing data for Matter devices"""
+    results = {
+        'devices': [],
+        'staging': {},
+        'summary': []
+    }
+    
+    vendor_id = config.get('vendor_id', 0xFFF1)
+    product_id = config.get('product_id', 0x8000)
+    count = config.get('count', 1)
+    target = config.get('target', 'esp32')
+    partition_size = config.get('size', 0x6000)
+    encrypt = config.get('encrypt', False)
+    iteration_count = config.get('iteration_count', 10000)
+    commissioning_flow = config.get('commissioning_flow', 0)
+    discovery_mode = config.get('discovery_mode', 2)
+    enable_dynamic_passcode = config.get('enable_dynamic_passcode', False)
+    
+    vendor_name = config.get('vendor_name', '')
+    product_name = config.get('product_name', '')
+    hw_ver = config.get('hw_ver')
+    hw_ver_str = config.get('hw_ver_str', '')
+    serial_num = config.get('serial_num', '')
+    mfg_date = config.get('mfg_date', '')
+    product_finish = config.get('product_finish', '')
+    product_color = config.get('product_color', '')
+    enable_rotating_device_id = config.get('enable_rotating_device_id', False)
+    
+    # Fixed passcode/discriminator if provided
+    fixed_passcode = config.get('passcode')
+    fixed_discriminator = config.get('discriminator')
+    
+    # Generate config.csv (NVS schema)
+    config_csv_rows = [
+        ['key', 'type', 'encoding', 'value'],
+        ['chip-factory', 'namespace', '', ''],
+        ['discriminator', 'data', 'u32', ''],
+        ['iteration-count', 'data', 'u32', ''],
+        ['salt', 'data', 'string', ''],
+        ['verifier', 'data', 'string', ''],
+        ['vendor-id', 'data', 'u32', ''],
+        ['product-id', 'data', 'u32', ''],
+    ]
+    
+    if vendor_name:
+        config_csv_rows.append(['vendor-name', 'data', 'string', ''])
+    if product_name:
+        config_csv_rows.append(['product-name', 'data', 'string', ''])
+    if hw_ver is not None:
+        config_csv_rows.append(['hardware-ver', 'data', 'u32', ''])
+    if hw_ver_str:
+        config_csv_rows.append(['hw-ver-str', 'data', 'string', ''])
+    if serial_num:
+        config_csv_rows.append(['serial-num', 'data', 'string', ''])
+    if mfg_date:
+        config_csv_rows.append(['mfg-date', 'data', 'string', ''])
+    
+    # Write config.csv
+    config_csv = io.StringIO()
+    writer = csv.writer(config_csv)
+    writer.writerows(config_csv_rows)
+    results['staging']['config.csv'] = config_csv.getvalue()
+    
+    # Generate pin_disc.csv and per-device data
+    pin_disc_rows = []
+    if enable_dynamic_passcode:
+        pin_disc_rows.append(['Index', 'Iteration Count', 'Salt', 'Discriminator'])
+    else:
+        pin_disc_rows.append(['Index', 'PIN Code', 'Iteration Count', 'Salt', 'Verifier', 'Discriminator'])
+    
+    summary_rows = [['UUID', 'Discriminator', 'Passcode', 'QR Code', 'Manual Code', 'Vendor ID', 'Product ID']]
+    
+    for i in range(count):
+        device_uuid = str(uuid.uuid4())
+        
+        # Generate or use fixed passcode
+        if fixed_passcode:
+            passcode = fixed_passcode
+        else:
+            passcode = random.randint(1, 99999998)
+            while passcode in INVALID_PASSCODES:
+                passcode = random.randint(1, 99999998)
+        
+        # Generate or use fixed discriminator
+        if fixed_discriminator:
+            discriminator = fixed_discriminator
+        else:
+            discriminator = random.randint(0, 4095)
+        
+        # Generate salt and verifier
+        salt = os.urandom(32)
+        salt_b64 = base64.b64encode(salt).decode('utf-8')
+        
+        if not enable_dynamic_passcode:
+            verifier = generate_verifier(passcode, salt, iteration_count)
+            verifier_b64 = base64.b64encode(verifier).decode('utf-8')
+            pin_disc_rows.append([i, passcode, iteration_count, salt_b64, verifier_b64, discriminator])
+        else:
+            pin_disc_rows.append([i, iteration_count, salt_b64, discriminator])
+            verifier_b64 = ''
+        
+        # Generate QR code and manual code
+        qr_payload = generate_qr_code_payload(vendor_id, product_id, discriminator, passcode, commissioning_flow, discovery_mode)
+        manual_code = generate_manual_code(discriminator, passcode, commissioning_flow)
+        
+        # Generate per-device partition.csv
+        partition_rows = [
+            ['key', 'type', 'encoding', 'value'],
+            ['chip-factory', 'namespace', '', ''],
+            ['discriminator', 'data', 'u32', str(discriminator)],
+            ['iteration-count', 'data', 'u32', str(iteration_count)],
+            ['salt', 'data', 'string', salt_b64],
+            ['vendor-id', 'data', 'u32', str(vendor_id)],
+            ['product-id', 'data', 'u32', str(product_id)],
+        ]
+        
+        if not enable_dynamic_passcode:
+            partition_rows.append(['verifier', 'data', 'string', verifier_b64])
+        
+        if vendor_name:
+            partition_rows.append(['vendor-name', 'data', 'string', vendor_name])
+        if product_name:
+            partition_rows.append(['product-name', 'data', 'string', product_name])
+        if hw_ver is not None:
+            partition_rows.append(['hardware-ver', 'data', 'u32', str(hw_ver)])
+        if hw_ver_str:
+            partition_rows.append(['hw-ver-str', 'data', 'string', hw_ver_str])
+        if serial_num:
+            partition_rows.append(['serial-num', 'data', 'string', serial_num])
+        if mfg_date:
+            partition_rows.append(['mfg-date', 'data', 'string', mfg_date])
+        
+        partition_csv = io.StringIO()
+        writer = csv.writer(partition_csv)
+        writer.writerows(partition_rows)
+        
+        # Onboarding codes CSV
+        onb_codes_csv = io.StringIO()
+        writer = csv.writer(onb_codes_csv)
+        writer.writerow(['UUID', 'QR Code', 'Manual Code', 'Passcode', 'Discriminator'])
+        writer.writerow([device_uuid, qr_payload, manual_code, passcode, discriminator])
+        
+        results['devices'].append({
+            'uuid': device_uuid,
+            'partition.csv': partition_csv.getvalue(),
+            'onb_codes.csv': onb_codes_csv.getvalue(),
+            'qr_payload': qr_payload,
+            'manual_code': manual_code,
+            'passcode': passcode,
+            'discriminator': discriminator
+        })
+        
+        summary_rows.append([device_uuid, discriminator, passcode, qr_payload, manual_code, hex(vendor_id), hex(product_id)])
+    
+    # Write pin_disc.csv
+    pin_disc_csv = io.StringIO()
+    writer = csv.writer(pin_disc_csv)
+    writer.writerows(pin_disc_rows)
+    results['staging']['pin_disc.csv'] = pin_disc_csv.getvalue()
+    
+    # Write summary CSV
+    summary_csv = io.StringIO()
+    writer = csv.writer(summary_csv)
+    writer.writerows(summary_rows)
+    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+    results['summary_filename'] = f'summary-{timestamp}.csv'
+    results['summary_content'] = summary_csv.getvalue()
+    
+    results['vendor_id'] = vendor_id
+    results['product_id'] = product_id
+    
+    return results
+
+print("MFG Tool modules loaded successfully")
+`;
+            await pyodide.runPythonAsync(pythonInit);
+        }
+
+        async function generatePartition() {
+            const config = getFormConfig();
+            
+            log('Starting generation...', 'info');
+            log(`Vendor ID: ${config.vendor_id}, Product ID: ${config.product_id}`, 'info');
+            log(`Generating ${config.count} device(s)...`, 'info');
+            
+            generateBtn.disabled = true;
+            generatedFiles = {};
+            
+            try {
+                // Convert config to Python dict
+                pyodide.globals.set('js_config', pyodide.toPy(config));
+                
+                const result = await pyodide.runPythonAsync(`
+config = dict(js_config)
+result = generate_mfg_data(config)
+result
+`);
+                
+                const jsResult = result.toJs({dict_converter: Object.fromEntries});
+                
+                // Process results
+                const vidPid = `${config.vendor_id.toString(16).padStart(4, '0')}_${config.product_id.toString(16).padStart(4, '0')}`;
+                
+                // Staging files
+                for (const [filename, content] of Object.entries(jsResult.staging)) {
+                    const path = `${vidPid}/staging/${filename}`;
+                    generatedFiles[path] = content;
+                    log(`Generated: ${path}`, 'success');
+                }
+                
+                // Per-device files
+                for (const device of jsResult.devices) {
+                    const devicePath = `${vidPid}/${device.uuid}`;
+                    generatedFiles[`${devicePath}/partition.csv`] = device['partition.csv'];
+                    generatedFiles[`${devicePath}/${device.uuid}-onb_codes.csv`] = device['onb_codes.csv'];
+                    log(`Generated device: ${device.uuid}`, 'success');
+                    log(`  QR: ${device.qr_payload}`, 'info');
+                    log(`  Manual: ${device.manual_code}`, 'info');
+                }
+                
+                // Summary
+                generatedFiles[`${vidPid}/${jsResult.summary_filename}`] = jsResult.summary_content;
+                log(`Generated: ${jsResult.summary_filename}`, 'success');
+                
+                log(`\nGeneration complete! ${jsResult.devices.length} device(s) generated.`, 'success');
+                
+                // Display files
+                displayFiles();
+                
+            } catch (error) {
+                log('Generation error: ' + error.message, 'error');
+                console.error(error);
+            } finally {
+                generateBtn.disabled = false;
+            }
+        }
+
+        function getFormConfig() {
+            const parseHex = (val) => {
+                if (!val) return null;
+                if (typeof val === 'string' && val.startsWith('0x')) {
+                    return parseInt(val, 16);
+                }
+                return parseInt(val, 10);
+            };
+            
+            const config = {
+                vendor_id: parseHex(document.getElementById('vendorId').value) || 0xFFF1,
+                product_id: parseHex(document.getElementById('productId').value) || 0x8000,
+                count: parseInt(document.getElementById('deviceCount').value) || 1,
+                target: document.getElementById('targetChip').value,
+                vendor_name: document.getElementById('vendorName').value || '',
+                product_name: document.getElementById('productName').value || '',
+                commissioning_flow: parseInt(document.getElementById('commissioningFlow').value),
+                discovery_mode: parseInt(document.getElementById('discoveryMode').value),
+            };
+            
+            // Optional passcode/discriminator
+            const passcode = document.getElementById('passcode').value;
+            const discriminator = document.getElementById('discriminator').value;
+            if (passcode) config.passcode = parseHex(passcode);
+            if (discriminator) config.discriminator = parseHex(discriminator);
+            
+            // Advanced options
+            const sizeVal = document.getElementById('partitionSize')?.value;
+            if (sizeVal) config.size = parseHex(sizeVal);
+            
+            const iterCount = document.getElementById('iterationCount')?.value;
+            if (iterCount) config.iteration_count = parseInt(iterCount);
+            
+            config.encrypt = document.getElementById('encrypt')?.checked || false;
+            config.enable_dynamic_passcode = document.getElementById('enableDynamicPasscode')?.checked || false;
+            config.enable_rotating_device_id = document.getElementById('enableRotatingDeviceId')?.checked || false;
+            
+            // Device info
+            const hwVer = document.getElementById('hwVer')?.value;
+            if (hwVer) config.hw_ver = parseInt(hwVer);
+            
+            config.hw_ver_str = document.getElementById('hwVerStr')?.value || '';
+            config.serial_num = document.getElementById('serialNum')?.value || '';
+            config.mfg_date = document.getElementById('mfgDate')?.value || '';
+            config.product_finish = document.getElementById('productFinish')?.value || '';
+            config.product_color = document.getElementById('productColor')?.value || '';
+            
+            return config;
+        }
+
+        function displayFiles() {
+            filesCard.style.display = 'block';
+            filesList.innerHTML = '';
+            
+            for (const [path, content] of Object.entries(generatedFiles)) {
+                const item = document.createElement('div');
+                item.className = 'file-item';
+                
+                const icon = path.endsWith('.csv') ? 'fa-file-csv' : 'fa-file';
+                const size = new Blob([content]).size;
+                const sizeStr = size > 1024 ? `${(size / 1024).toFixed(1)} KB` : `${size} B`;
+                
+                item.innerHTML = `
+                    <i class="fas ${icon}"></i>
+                    <span class="name">${path}</span>
+                    <span class="size">${sizeStr}</span>
+                    <button class="btn btn-secondary" onclick="downloadFile('${path}')">
+                        <i class="fas fa-download"></i>
+                    </button>
+                `;
+                filesList.appendChild(item);
+            }
+        }
+
+        function downloadFile(path) {
+            const content = generatedFiles[path];
+            const blob = new Blob([content], { type: 'text/csv' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = path.split('/').pop();
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        async function downloadAllAsZip() {
+            const zip = new JSZip();
+            
+            for (const [path, content] of Object.entries(generatedFiles)) {
+                zip.file(path, content);
+            }
+            
+            const blob = await zip.generateAsync({ type: 'blob' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'mfg_partition.zip';
+            a.click();
+            URL.revokeObjectURL(url);
+            
+            log('Downloaded all files as ZIP', 'success');
+        }
+
+        function toggleCollapsible(header) {
+            header.classList.toggle('collapsed');
+            header.nextElementSibling.classList.toggle('collapsed');
+        }
+
+        function resetForm() {
+            document.querySelectorAll('input').forEach(input => {
+                if (input.type === 'checkbox') input.checked = false;
+                else if (input.id === 'vendorId') input.value = '0xFFF1';
+                else if (input.id === 'productId') input.value = '0x8000';
+                else if (input.id === 'deviceCount') input.value = '1';
+                else if (input.id === 'partitionSize') input.value = '0x6000';
+                else if (input.id === 'iterationCount') input.value = '10000';
+                else input.value = '';
+            });
+            document.querySelectorAll('select').forEach(select => select.selectedIndex = 0);
+            outputArea.innerHTML = '';
+            outputCard.style.display = 'none';
+            filesCard.style.display = 'none';
+            generatedFiles = {};
+        }
+
+        // Tab switching
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+                
+                const tabName = tab.dataset.tab;
+                document.getElementById('simpleTab').classList.toggle('hidden', tabName !== 'simple');
+                document.getElementById('advancedTab').classList.toggle('hidden', tabName !== 'advanced');
+            });
+        });
+
+        // Event listeners
+        generateBtn.addEventListener('click', generatePartition);
+        document.getElementById('resetBtn').addEventListener('click', resetForm);
+        document.getElementById('downloadAllBtn').addEventListener('click', downloadAllAsZip);
+
+        // Initialize
+        initPyodide();
+    </script>
+</body>
+</html>
