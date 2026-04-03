@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -20,13 +21,20 @@
             --warning: #d29922;
             --error: #f85149;
         }
-        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             background: var(--bg);
             color: var(--text);
             min-height: 100vh;
         }
+
         .header {
             background: var(--surface);
             border-bottom: 1px solid var(--border);
@@ -35,8 +43,17 @@
             align-items: center;
             gap: 1rem;
         }
-        .header svg { height: 32px; width: 32px; }
-        .header h1 { font-size: 1.25rem; font-weight: 600; }
+
+        .header svg {
+            height: 32px;
+            width: 32px;
+        }
+
+        .header h1 {
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+
         .header .badge {
             background: var(--primary);
             color: white;
@@ -45,11 +62,13 @@
             font-size: 0.75rem;
             font-weight: 600;
         }
+
         .container {
             max-width: 1400px;
             margin: 0 auto;
             padding: 2rem;
         }
+
         .status-bar {
             background: var(--surface);
             border: 1px solid var(--border);
@@ -60,6 +79,7 @@
             align-items: center;
             gap: 1rem;
         }
+
         .status-indicator {
             width: 12px;
             height: 12px;
@@ -67,13 +87,33 @@
             background: var(--warning);
             animation: pulse 2s infinite;
         }
-        .status-indicator.ready { background: var(--success); animation: none; }
-        .status-indicator.error { background: var(--error); animation: none; }
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
+
+        .status-indicator.ready {
+            background: var(--success);
+            animation: none;
         }
-        .status-text { flex: 1; }
+
+        .status-indicator.error {
+            background: var(--error);
+            animation: none;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.5;
+            }
+        }
+
+        .status-text {
+            flex: 1;
+        }
+
         .progress-bar {
             height: 4px;
             background: var(--surface-2);
@@ -81,20 +121,26 @@
             overflow: hidden;
             width: 200px;
         }
+
         .progress-bar .fill {
             height: 100%;
             background: var(--primary);
             width: 0%;
             transition: width 0.3s;
         }
+
         .main-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 1.5rem;
         }
+
         @media (max-width: 1024px) {
-            .main-grid { grid-template-columns: 1fr; }
+            .main-grid {
+                grid-template-columns: 1fr;
+            }
         }
+
         .card {
             background: var(--surface);
             border: 1px solid var(--border);
@@ -102,6 +148,7 @@
             padding: 1.5rem;
             margin-bottom: 1.5rem;
         }
+
         .card-title {
             font-size: 1rem;
             font-weight: 600;
@@ -110,18 +157,27 @@
             align-items: center;
             gap: 0.5rem;
         }
-        .card-title i { color: var(--primary); }
+
+        .card-title i {
+            color: var(--primary);
+        }
+
         .form-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
             gap: 1rem;
         }
+
         .form-group {
             display: flex;
             flex-direction: column;
             gap: 0.5rem;
         }
-        .form-group.full-width { grid-column: 1 / -1; }
+
+        .form-group.full-width {
+            grid-column: 1 / -1;
+        }
+
         .form-group label {
             font-size: 0.875rem;
             color: var(--text-muted);
@@ -129,8 +185,14 @@
             align-items: center;
             gap: 0.5rem;
         }
-        .form-group label .required { color: var(--error); }
-        .form-group input, .form-group select, .form-group textarea {
+
+        .form-group label .required {
+            color: var(--error);
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
             background: var(--bg);
             border: 1px solid var(--border);
             border-radius: 6px;
@@ -139,21 +201,30 @@
             font-size: 0.875rem;
             font-family: inherit;
         }
+
         .form-group textarea {
             min-height: 100px;
             resize: vertical;
             font-family: 'Monaco', 'Menlo', monospace;
             font-size: 0.75rem;
         }
-        .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
             outline: none;
             border-color: var(--primary);
         }
-        .form-group input::placeholder { color: var(--text-muted); }
+
+        .form-group input::placeholder {
+            color: var(--text-muted);
+        }
+
         .form-group .hint {
             font-size: 0.75rem;
             color: var(--text-muted);
         }
+
         .file-upload {
             border: 2px dashed var(--border);
             border-radius: 8px;
@@ -162,22 +233,34 @@
             cursor: pointer;
             transition: all 0.2s;
         }
+
         .file-upload:hover {
             border-color: var(--primary);
             background: rgba(231, 64, 17, 0.05);
         }
+
         .file-upload.has-file {
             border-color: var(--success);
             background: rgba(63, 185, 80, 0.05);
         }
-        .file-upload input { display: none; }
-        .file-upload i { font-size: 2rem; color: var(--text-muted); margin-bottom: 0.5rem; }
+
+        .file-upload input {
+            display: none;
+        }
+
+        .file-upload i {
+            font-size: 2rem;
+            color: var(--text-muted);
+            margin-bottom: 0.5rem;
+        }
+
         .file-upload .filename {
             font-size: 0.875rem;
             color: var(--success);
             margin-top: 0.5rem;
             word-break: break-all;
         }
+
         .btn {
             padding: 0.75rem 1.5rem;
             border: none;
@@ -190,28 +273,43 @@
             align-items: center;
             gap: 0.5rem;
         }
+
         .btn-primary {
             background: var(--primary);
             color: white;
         }
-        .btn-primary:hover:not(:disabled) { background: var(--primary-dark); }
+
+        .btn-primary:hover:not(:disabled) {
+            background: var(--primary-dark);
+        }
+
         .btn-primary:disabled {
             opacity: 0.5;
             cursor: not-allowed;
         }
+
         .btn-secondary {
             background: var(--surface-2);
             color: var(--text);
             border: 1px solid var(--border);
         }
-        .btn-secondary:hover { background: var(--border); }
-        .btn-sm { padding: 0.5rem 0.75rem; font-size: 0.75rem; }
+
+        .btn-secondary:hover {
+            background: var(--border);
+        }
+
+        .btn-sm {
+            padding: 0.5rem 0.75rem;
+            font-size: 0.75rem;
+        }
+
         .actions {
             display: flex;
             gap: 1rem;
             justify-content: flex-end;
             margin-top: 1.5rem;
         }
+
         .output-area {
             background: var(--bg);
             border: 1px solid var(--border);
@@ -224,10 +322,23 @@
             line-height: 1.6;
             white-space: pre-wrap;
         }
-        .output-area .log-info { color: var(--text); }
-        .output-area .log-success { color: var(--success); }
-        .output-area .log-warning { color: var(--warning); }
-        .output-area .log-error { color: var(--error); }
+
+        .output-area .log-info {
+            color: var(--text);
+        }
+
+        .output-area .log-success {
+            color: var(--success);
+        }
+
+        .output-area .log-warning {
+            color: var(--warning);
+        }
+
+        .output-area .log-error {
+            color: var(--error);
+        }
+
         .files-list {
             display: grid;
             gap: 0.5rem;
@@ -235,6 +346,7 @@
             max-height: 400px;
             overflow-y: auto;
         }
+
         .file-item {
             display: flex;
             align-items: center;
@@ -244,32 +356,59 @@
             border: 1px solid var(--border);
             border-radius: 6px;
         }
-        .file-item i { color: var(--text-muted); min-width: 16px; }
-        .file-item .name { flex: 1; font-size: 0.8rem; word-break: break-all; }
+
+        .file-item i {
+            color: var(--text-muted);
+            min-width: 16px;
+        }
+
+        .file-item .name {
+            flex: 1;
+            font-size: 0.8rem;
+            word-break: break-all;
+        }
+
         .file-item .size {
             font-size: 0.7rem;
             color: var(--text-muted);
             white-space: nowrap;
         }
-        .file-item .btn { padding: 0.4rem 0.6rem; font-size: 0.7rem; }
-        .file-item.binary { border-left: 3px solid var(--primary); }
-        .file-item.cert { border-left: 3px solid var(--success); }
-        .hidden { display: none !important; }
+
+        .file-item .btn {
+            padding: 0.4rem 0.6rem;
+            font-size: 0.7rem;
+        }
+
+        .file-item.binary {
+            border-left: 3px solid var(--primary);
+        }
+
+        .file-item.cert {
+            border-left: 3px solid var(--success);
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
         .section-divider {
             border-top: 1px solid var(--border);
             margin: 1.5rem 0;
             padding-top: 1.5rem;
         }
+
         .checkbox-group {
             display: flex;
             align-items: center;
             gap: 0.5rem;
         }
+
         .checkbox-group input[type="checkbox"] {
             width: 18px;
             height: 18px;
             accent-color: var(--primary);
         }
+
         .tabs {
             display: flex;
             gap: 0.5rem;
@@ -277,6 +416,7 @@
             border-bottom: 1px solid var(--border);
             padding-bottom: 0.5rem;
         }
+
         .tab {
             padding: 0.5rem 1rem;
             background: transparent;
@@ -286,28 +426,36 @@
             font-size: 0.875rem;
             border-radius: 4px;
         }
-        .tab:hover { background: var(--surface-2); }
-        .tab.active { 
-            color: var(--primary); 
+
+        .tab:hover {
+            background: var(--surface-2);
+        }
+
+        .tab.active {
+            color: var(--primary);
             background: var(--surface-2);
             font-weight: 600;
         }
+
         .alert {
             padding: 1rem;
             border-radius: 6px;
             margin-bottom: 1rem;
             font-size: 0.875rem;
         }
+
         .alert-info {
             background: rgba(56, 139, 253, 0.1);
             border: 1px solid rgba(56, 139, 253, 0.4);
             color: #58a6ff;
         }
+
         .alert-warning {
             background: rgba(210, 153, 34, 0.1);
             border: 1px solid rgba(210, 153, 34, 0.4);
             color: var(--warning);
         }
+
         .qr-preview {
             background: white;
             padding: 1rem;
@@ -315,6 +463,7 @@
             display: inline-block;
             margin: 0.5rem 0;
         }
+
         .device-summary {
             background: var(--bg);
             border: 1px solid var(--border);
@@ -322,26 +471,31 @@
             padding: 1rem;
             margin-top: 1rem;
         }
+
         .device-summary h4 {
             font-size: 0.875rem;
             margin-bottom: 0.5rem;
             color: var(--primary);
         }
+
         .device-summary .codes {
             font-family: 'Monaco', 'Menlo', monospace;
             font-size: 0.8rem;
         }
+
         .device-summary .codes span {
             display: block;
             margin: 0.25rem 0;
         }
     </style>
 </head>
+
 <body>
     <header class="header">
         <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <circle cx="50" cy="50" r="45" fill="#e74011"/>
-            <path d="M30 50 L45 65 L70 35" stroke="white" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+            <circle cx="50" cy="50" r="45" fill="#e74011" />
+            <path d="M30 50 L45 65 L70 35" stroke="white" stroke-width="8" stroke-linecap="round"
+                stroke-linejoin="round" fill="none" />
         </svg>
         <h1>ESP Matter Manufacturing Tool</h1>
         <span class="badge">Web UI v1.0</span>
@@ -451,9 +605,10 @@
                 <!-- Certificate Options -->
                 <div class="card">
                     <div class="card-title"><i class="fas fa-certificate"></i> Device Attestation Certificates</div>
-                    
+
                     <div class="alert alert-info">
-                        <i class="fas fa-info-circle"></i> Upload PAI certificate and key to generate DAC certificates for each device. Without certificates, only commissioning data (CSV) will be generated.
+                        <i class="fas fa-info-circle"></i> Upload PAI certificate and key to generate DAC certificates
+                        for each device. Without certificates, only commissioning data (CSV) will be generated.
                     </div>
 
                     <div class="tabs">
@@ -513,12 +668,14 @@
 
                     <div id="noneTab" class="hidden">
                         <div class="alert alert-warning">
-                            <i class="fas fa-exclamation-triangle"></i> Without certificates, only commissioning data CSV files will be generated. No DAC/PAI certificates or partition binaries with attestation data.
+                            <i class="fas fa-exclamation-triangle"></i> Without certificates, only commissioning data
+                            CSV files will be generated. No DAC/PAI certificates or partition binaries with attestation
+                            data.
                         </div>
                     </div>
 
                     <div class="section-divider"></div>
-                    
+
                     <div class="form-group">
                         <label>Certificate Declaration (optional)</label>
                         <div class="file-upload" id="cdUpload" style="padding: 1rem;">
@@ -616,7 +773,7 @@
             const upload = document.getElementById(uploadId);
             const input = document.getElementById(inputId);
             const nameEl = document.getElementById(nameId);
-            
+
             upload.addEventListener('click', () => input.click());
             input.addEventListener('change', async (e) => {
                 const file = e.target.files[0];
@@ -633,7 +790,7 @@
         setupFileUpload('paiKeyUpload', 'paiKeyFile', 'paiKeyName', (c, n) => { paiKeyContent = c; });
         setupFileUpload('paaCertUpload', 'paaCertFile', 'paaCertName', (c, n) => { paaCertContent = c; });
         setupFileUpload('paaKeyUpload', 'paaKeyFile', 'paaKeyName', (c, n) => { paaKeyContent = c; });
-        
+
         document.getElementById('cdUpload').addEventListener('click', () => document.getElementById('cdFile').click());
         document.getElementById('cdFile').addEventListener('change', async (e) => {
             const file = e.target.files[0];
@@ -651,7 +808,7 @@
                 document.querySelectorAll('[data-cert-tab]').forEach(t => t.classList.remove('active'));
                 tab.classList.add('active');
                 certMode = tab.dataset.certTab;
-                
+
                 document.getElementById('paiTab').classList.toggle('hidden', certMode !== 'pai');
                 document.getElementById('paaTab').classList.toggle('hidden', certMode !== 'paa');
                 document.getElementById('noneTab').classList.toggle('hidden', certMode !== 'none');
@@ -664,39 +821,39 @@
                 log('Starting Pyodide initialization...', 'info');
                 setStatus('Loading Pyodide runtime...', 'loading');
                 updateProgress(10);
-                
+
                 pyodide = await loadPyodide({
                     indexURL: "https://cdn.jsdelivr.net/pyodide/v0.24.1/full/"
                 });
                 log('Pyodide runtime loaded', 'success');
                 updateProgress(30);
-                
+
                 setStatus('Installing Python packages...', 'loading');
                 await pyodide.loadPackage(['micropip']);
                 updateProgress(40);
-                
+
                 const micropip = pyodide.pyimport('micropip');
                 log('Installing cryptography...', 'info');
                 await micropip.install(['cryptography']);
                 updateProgress(55);
-                
+
                 log('Installing ecdsa...', 'info');
                 await micropip.install(['ecdsa']);
                 updateProgress(70);
-                
+
                 log('Installing esp-idf-nvs-partition-gen...', 'info');
                 await micropip.install(['esp-idf-nvs-partition-gen']);
                 updateProgress(85);
-                
+
                 setStatus('Loading MFG tool modules...', 'loading');
                 await loadPythonModules();
                 updateProgress(100);
-                
+
                 setStatus('Ready to generate', 'ready');
                 generateBtn.disabled = false;
                 log('All modules loaded successfully!', 'success');
                 log('Ready to generate factory partition data.', 'success');
-                
+
             } catch (error) {
                 setStatus('Initialization failed: ' + error.message, 'error');
                 log('Initialization error: ' + error.message, 'error');
@@ -977,7 +1134,7 @@ def generate_mfg_data(config, pai_cert_pem=None, pai_key_pem=None, paa_cert_pem=
             pai_cert, pai_key = build_certificate(vendor_id, product_id, paa_cert, paa_key, pai_cn, is_pai=True)
             pai_cert_der = cert_to_der(pai_cert)
             results['staging']['pai_cert.pem'] = cert_to_pem(pai_cert).decode()
-            results['staging']['pai_cert.der'] = pai_cert_der
+            results['staging']['pai_cert.der'] = {'_b64': True, 'data': base64.b64encode(pai_cert_der).decode('ascii')}
             results['staging']['pai_key.pem'] = key_to_pem(pai_key).decode()
             has_certs = True
             print(f"Generated PAI certificate: {pai_cn}")
@@ -989,7 +1146,7 @@ def generate_mfg_data(config, pai_cert_pem=None, pai_key_pem=None, paa_cert_pem=
             pai_cert = load_cert_from_pem(pai_cert_pem)
             pai_key = load_key_from_pem(pai_key_pem)
             pai_cert_der = cert_to_der(pai_cert)
-            results['staging']['pai_cert.der'] = pai_cert_der
+            results['staging']['pai_cert.der'] = {'_b64': True, 'data': base64.b64encode(pai_cert_der).decode('ascii')}
             has_certs = True
             print("Using provided PAI certificate")
         except Exception as e:
@@ -1097,16 +1254,22 @@ def generate_mfg_data(config, pai_cert_pem=None, pai_key_pem=None, paa_cert_pem=
                 dac_private_bin = key_to_raw_private(dac_key)
                 dac_public_bin = key_to_raw_public(dac_key)
                 
-                device_data['files']['internal/DAC_cert.pem'] = dac_cert_pem
-                device_data['files']['internal/DAC_cert.der'] = dac_cert_der
-                device_data['files']['internal/DAC_key.pem'] = dac_key_pem
-                device_data['files']['internal/DAC_key.der'] = dac_key_der
-                device_data['files']['internal/DAC_private_key.bin'] = dac_private_bin
-                device_data['files']['internal/DAC_public_key.bin'] = dac_public_bin
-                device_data['files']['internal/PAI_cert.der'] = pai_cert_der
+                # Store binary data with base64 encoding for JS transfer
+                def encode_binary(data):
+                    if isinstance(data, bytes):
+                        return {'_b64': True, 'data': base64.b64encode(data).decode('ascii')}
+                    return data
+                
+                device_data['files']['internal/DAC_cert.pem'] = dac_cert_pem.decode() if isinstance(dac_cert_pem, bytes) else dac_cert_pem
+                device_data['files']['internal/DAC_cert.der'] = encode_binary(dac_cert_der)
+                device_data['files']['internal/DAC_key.pem'] = dac_key_pem.decode() if isinstance(dac_key_pem, bytes) else dac_key_pem
+                device_data['files']['internal/DAC_key.der'] = encode_binary(dac_key_der)
+                device_data['files']['internal/DAC_private_key.bin'] = encode_binary(dac_private_bin)
+                device_data['files']['internal/DAC_public_key.bin'] = encode_binary(dac_public_bin)
+                device_data['files']['internal/PAI_cert.der'] = encode_binary(pai_cert_der)
                 
                 # Add to CN/DAC CSV
-                cn_dac_rows.append([device_uuid, dac_cert_pem.decode()])
+                cn_dac_rows.append([device_uuid, dac_cert_pem.decode() if isinstance(dac_cert_pem, bytes) else dac_cert_pem])
                 
                 print(f"Generated DAC for device {i+1}: {device_uuid}")
             except Exception as e:
@@ -1156,12 +1319,18 @@ def generate_mfg_data(config, pai_cert_pem=None, pai_key_pem=None, paa_cert_pem=
                 dac_pub_path = os.path.join(temp_dir, 'dac_pub.bin')
                 pai_cert_path = os.path.join(temp_dir, 'pai_cert.der')
                 
+                # Helper to get raw bytes from encoded data
+                def get_raw_bytes(data):
+                    if isinstance(data, dict) and data.get('_b64'):
+                        return base64.b64decode(data['data'])
+                    return data
+                
                 with open(dac_cert_path, 'wb') as f:
-                    f.write(device_data['files']['internal/DAC_cert.der'])
+                    f.write(get_raw_bytes(device_data['files']['internal/DAC_cert.der']))
                 with open(dac_key_path, 'wb') as f:
-                    f.write(device_data['files']['internal/DAC_private_key.bin'])
+                    f.write(get_raw_bytes(device_data['files']['internal/DAC_private_key.bin']))
                 with open(dac_pub_path, 'wb') as f:
-                    f.write(device_data['files']['internal/DAC_public_key.bin'])
+                    f.write(get_raw_bytes(device_data['files']['internal/DAC_public_key.bin']))
                 with open(pai_cert_path, 'wb') as f:
                     f.write(pai_cert_der)
                 
@@ -1214,7 +1383,12 @@ def generate_mfg_data(config, pai_cert_pem=None, pai_key_pem=None, paa_cert_pem=
                 nvs_partition_gen.generate(args)
                 
                 with open(output_bin, 'rb') as f:
-                    device_data['files'][f'{device_uuid}-partition.bin'] = f.read()
+                    bin_data = f.read()
+                    # Store as base64 to preserve binary data through JS conversion
+                    device_data['files'][f'{device_uuid}-partition.bin'] = {
+                        '_b64': True,
+                        'data': base64.b64encode(bin_data).decode('ascii')
+                    }
                 
                 print(f"Generated partition binary for device {i+1}")
                 
@@ -1272,16 +1446,16 @@ print("MFG Tool fully loaded - ready for generation")
 
         async function generatePartition() {
             const config = getFormConfig();
-            
+
             clearLog();
             log('Starting factory data generation...', 'info');
             log(`Vendor ID: 0x${config.vendor_id.toString(16).toUpperCase()}, Product ID: 0x${config.product_id.toString(16).toUpperCase()}`, 'info');
             log(`Generating ${config.count} device(s)...`, 'info');
-            
+
             generateBtn.disabled = true;
             generatedFiles = {};
             deviceSummaries.innerHTML = '';
-            
+
             try {
                 // Set up Python variables
                 pyodide.globals.set('js_config', pyodide.toPy(config));
@@ -1289,7 +1463,7 @@ print("MFG Tool fully loaded - ready for generation")
                 pyodide.globals.set('js_pai_key', paiKeyContent || '');
                 pyodide.globals.set('js_paa_cert', paaCertContent || '');
                 pyodide.globals.set('js_paa_key', paaKeyContent || '');
-                
+
                 if (certMode === 'pai' && paiCertContent && paiKeyContent) {
                     log('Using PAI certificate for DAC generation', 'info');
                 } else if (certMode === 'paa' && paaCertContent && paaKeyContent) {
@@ -1297,7 +1471,7 @@ print("MFG Tool fully loaded - ready for generation")
                 } else {
                     log('No certificates provided - generating commissioning data only', 'warning');
                 }
-                
+
                 const result = await pyodide.runPythonAsync(`
 config = dict(js_config)
 pai_cert = js_pai_cert if js_pai_cert else None
@@ -1308,45 +1482,85 @@ paa_key = js_paa_key if js_paa_key else None
 result = generate_mfg_data(config, pai_cert, pai_key, paa_cert, paa_key)
 result
 `);
-                
-                const jsResult = result.toJs({dict_converter: Object.fromEntries});
-                
+
+                // Convert result with proper dict handling
+                const jsResult = result.toJs({ dict_converter: Object.fromEntries });
+
                 // Log any errors
                 if (jsResult.errors && jsResult.errors.length > 0) {
                     jsResult.errors.forEach(err => log(err, 'error'));
                 }
-                
+
                 const vidPid = `${config.vendor_id.toString(16).padStart(4, '0')}_${config.product_id.toString(16).padStart(4, '0')}`;
-                
+
+                // Helper to convert Map to Object recursively
+                function mapToObject(item) {
+                    if (item instanceof Map) {
+                        const obj = {};
+                        for (const [key, value] of item) {
+                            obj[key] = mapToObject(value);
+                        }
+                        return obj;
+                    }
+                    if (Array.isArray(item)) {
+                        return item.map(mapToObject);
+                    }
+                    return item;
+                }
+
+                // Helper to decode base64 binary data
+                function decodeContent(content) {
+                    // First convert Map to Object if needed
+                    const obj = mapToObject(content);
+
+                    // Check for base64 encoded binary
+                    if (obj && typeof obj === 'object' && obj._b64 === true && obj.data) {
+                        // Decode base64 to Uint8Array
+                        const binary = atob(obj.data);
+                        const bytes = new Uint8Array(binary.length);
+                        for (let i = 0; i < binary.length; i++) {
+                            bytes[i] = binary.charCodeAt(i);
+                        }
+                        return bytes;
+                    }
+                    return obj;
+                }
+
                 // Process staging files
                 for (const [filename, content] of Object.entries(jsResult.staging || {})) {
                     const path = `${vidPid}/staging/${filename}`;
-                    if (content instanceof Uint8Array) {
-                        generatedFiles[path] = content;
-                    } else {
-                        generatedFiles[path] = content;
-                    }
+                    generatedFiles[path] = decodeContent(content);
                     log(`Generated: staging/${filename}`, 'success');
                 }
-                
+
                 // Process per-device files
                 for (const device of jsResult.devices) {
                     const devicePath = `${vidPid}/${device.uuid}`;
-                    
-                    for (const [filename, content] of Object.entries(device.files || {})) {
+
+                    // Convert device.files from Map if needed
+                    const filesObj = mapToObject(device.files) || {};
+
+                    for (const [filename, content] of Object.entries(filesObj)) {
                         const fullPath = `${devicePath}/${filename}`;
-                        generatedFiles[fullPath] = content;
+                        const decoded = decodeContent(content);
+                        generatedFiles[fullPath] = decoded;
+
+                        // Log binary file sizes
+                        if (filename.endsWith('.bin')) {
+                            const size = decoded instanceof Uint8Array ? decoded.length : 'unknown';
+                            log(`  ${filename}: ${size} bytes`, 'info');
+                        }
                     }
-                    
+
                     // Log device info
                     const hasBin = Object.keys(device.files || {}).some(f => f.endsWith('.bin') && f.includes('partition'));
                     const hasDac = Object.keys(device.files || {}).some(f => f.includes('DAC_cert'));
-                    
+
                     let status = `Device ${device.index + 1}: ${device.uuid}`;
                     if (hasDac) status += ' [DAC]';
                     if (hasBin) status += ' [BIN]';
                     log(status, 'success');
-                    
+
                     // Add device summary
                     const summaryDiv = document.createElement('div');
                     summaryDiv.className = 'device-summary';
@@ -1360,28 +1574,28 @@ result
                     `;
                     deviceSummaries.appendChild(summaryDiv);
                 }
-                
+
                 // Summary and CN/DACs CSV
                 if (jsResult.summary_filename) {
                     generatedFiles[`${vidPid}/${jsResult.summary_filename}`] = jsResult.summary_content;
                     log(`Generated: ${jsResult.summary_filename}`, 'success');
                 }
-                
+
                 if (jsResult.cn_dacs_filename) {
                     generatedFiles[`${vidPid}/${jsResult.cn_dacs_filename}`] = jsResult.cn_dacs_content;
                     log(`Generated: ${jsResult.cn_dacs_filename}`, 'success');
                 }
-                
+
                 log('', 'info');
                 log(`Generation complete! ${jsResult.devices.length} device(s) generated.`, 'success');
                 if (jsResult.has_certs) {
                     log('Certificates and partition binaries included.', 'success');
                 }
-                
+
                 // Display files and summaries
                 displayFiles();
                 summaryCard.style.display = 'block';
-                
+
             } catch (error) {
                 log('Generation error: ' + error.message, 'error');
                 console.error(error);
@@ -1398,7 +1612,7 @@ result
                 }
                 return parseInt(val, 10);
             };
-            
+
             const config = {
                 vendor_id: parseHex(document.getElementById('vendorId').value) || 0xFFF1,
                 product_id: parseHex(document.getElementById('productId').value) || 0x8000,
@@ -1413,31 +1627,31 @@ result
                 iteration_count: parseInt(document.getElementById('iterationCount').value) || 10000,
                 enable_dynamic_passcode: document.getElementById('enableDynamicPasscode').checked,
             };
-            
+
             const passcode = document.getElementById('passcode').value;
             const discriminator = document.getElementById('discriminator').value;
             if (passcode) config.passcode = parseHex(passcode);
             if (discriminator) config.discriminator = parseHex(discriminator);
-            
+
             return config;
         }
 
         function displayFiles() {
             filesCard.style.display = 'block';
             filesList.innerHTML = '';
-            
+
             const sortedFiles = Object.keys(generatedFiles).sort();
-            
+
             for (const path of sortedFiles) {
                 const content = generatedFiles[path];
                 const item = document.createElement('div');
                 item.className = 'file-item';
-                
+
                 // Determine file type and icon
                 let icon = 'fa-file';
                 let isBinary = false;
                 let isCert = false;
-                
+
                 if (path.endsWith('.bin')) {
                     icon = 'fa-microchip';
                     isBinary = true;
@@ -1449,13 +1663,13 @@ result
                     isCert = true;
                     item.classList.add('cert');
                 }
-                
+
                 const size = content instanceof Uint8Array ? content.length : new Blob([content]).size;
                 const sizeStr = size > 1024 ? `${(size / 1024).toFixed(1)} KB` : `${size} B`;
-                
+
                 // Truncate path for display
                 const displayPath = path.length > 50 ? '...' + path.substring(path.length - 47) : path;
-                
+
                 item.innerHTML = `
                     <i class="fas ${icon}"></i>
                     <span class="name" title="${path}">${displayPath}</span>
@@ -1471,7 +1685,7 @@ result
         function downloadFile(path) {
             const content = generatedFiles[path];
             let blob;
-            
+
             if (content instanceof Uint8Array) {
                 blob = new Blob([content], { type: 'application/octet-stream' });
             } else if (typeof content === 'string') {
@@ -1479,7 +1693,7 @@ result
             } else {
                 blob = new Blob([content], { type: 'application/octet-stream' });
             }
-            
+
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
@@ -1490,7 +1704,7 @@ result
 
         async function downloadAllAsZip() {
             const zip = new JSZip();
-            
+
             for (const [path, content] of Object.entries(generatedFiles)) {
                 if (content instanceof Uint8Array) {
                     zip.file(path, content);
@@ -1498,7 +1712,7 @@ result
                     zip.file(path, content);
                 }
             }
-            
+
             const blob = await zip.generateAsync({ type: 'blob' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
@@ -1506,7 +1720,7 @@ result
             a.download = 'esp_matter_mfg_data.zip';
             a.click();
             URL.revokeObjectURL(url);
-            
+
             log('Downloaded all files as ZIP', 'success');
         }
 
@@ -1526,14 +1740,14 @@ result
             document.getElementById('discoveryMode').selectedIndex = 0;
             document.getElementById('iterationCount').value = '10000';
             document.getElementById('enableDynamicPasscode').checked = false;
-            
+
             // Reset certificates
             paiCertContent = null;
             paiKeyContent = null;
             paaCertContent = null;
             paaKeyContent = null;
             cdContent = null;
-            
+
             document.querySelectorAll('.file-upload').forEach(el => {
                 el.classList.remove('has-file');
             });
@@ -1543,7 +1757,7 @@ result
             document.querySelectorAll('input[type="file"]').forEach(el => {
                 el.value = '';
             });
-            
+
             // Reset output
             clearLog();
             log('Form reset. Ready to generate.', 'info');
@@ -1562,4 +1776,5 @@ result
         initPyodide();
     </script>
 </body>
+
 </html>
