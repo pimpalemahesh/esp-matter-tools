@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#E60012">
+<title>MatterDMDiff | Espressif</title>
+<link rel="icon" type="image/svg+xml" href="static/espressif-logo.svg">
+<link rel="apple-touch-icon" href="static/espressif-logo.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="static/css/style.css">
+</head>
+<body>
+
+<div id="initOverlay">
+  <div class="spinner"></div>
+  <div class="init-text" id="initStatus">Loading Python runtime...</div>
+</div>
+
+<div class="container">
+  <header class="header">
+    <button class="theme-toggle" id="themeToggle" title="Switch to dark mode">&#9790;</button>
+    <h1>Matter Data Model Diff Checker</h1>
+    <p class="header-subtitle">Compare Matter data model versions and track specification changes</p>
+    <div class="controls">
+      <div class="control-group">
+        <label>Base version:</label>
+        <select id="oldVersion"></select>
+      </div>
+      <button class="swap-btn" onclick="swapVersions()" title="Swap versions">&#8644;</button>
+      <div class="control-group">
+        <label>New version:</label>
+        <select id="newVersion"></select>
+      </div>
+      <div class="control-group">
+        <label>Category:</label>
+        <select id="category">
+          <option value="all">All</option>
+          <option value="clusters">Clusters only</option>
+          <option value="device_types">Device Types only</option>
+        </select>
+      </div>
+      <div class="control-group">
+        <label>Search:</label>
+        <input type="text" id="nameFilter" placeholder="Any term: attribute, command, event, cluster...">
+      </div>
+      <button class="btn" id="compareBtn" onclick="runDiff()" disabled>Compare</button>
+      <button class="btn" id="exportBtn" onclick="exportJSON()" style="background:var(--surface-alt);border:1px solid var(--border);color:var(--text-dim);display:none;" title="Export diff as JSON">Export JSON</button>
+    </div>
+  </header>
+
+  <div class="main-content">
+    <div id="resultArea">
+      <div class="empty-state">Select two versions and click <strong>Compare</strong>. Use search to find any attribute, command, event, feature, or cluster name across the spec.</div>
+    </div>
+  </div>
+
+  <footer class="footer">
+    <div class="footer-logo">
+      <img src="static/espressif-logo.svg" alt="Espressif Systems" width="28" height="28">
+      <span>Espressif Systems</span>
+    </div>
+    <div class="footer-links">
+      <a href="https://github.com/espressif/esp-matter-tools/tree/main/dm_diff_tool" target="_blank" rel="noopener noreferrer">
+        &#128736; GitHub repository
+      </a>
+      <a href="https://github.com/espressif/esp-matter-tools/issues/new" target="_blank" rel="noopener noreferrer">
+        &#128027; Report an issue
+      </a>
+    </div>
+    <p class="footer-copy">Copyright &copy; 2026 Espressif Systems</p>
+  </footer>
+</div>
+
+<script src="https://cdn.jsdelivr.net/pyodide/v0.27.5/full/pyodide.js"></script>
+<script src="static/js/app.js"></script>
+
+</body>
+</html>

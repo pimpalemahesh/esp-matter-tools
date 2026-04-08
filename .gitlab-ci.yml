@@ -106,3 +106,20 @@ test_dmv_tool:
     - python3 -m pip install dist/${PYTHON_VERSION}/esp_matter_dm_validator*.whl
     - python3 -m pip install -r requirements-test.txt
     - python3 -m pytest tests/ -v -s --log-cli-level=INFO
+
+
+test_dm_diff_tool:
+  stage: test
+  image: python:${PYTHON_VERSION}-bullseye
+
+  tags:
+    - build
+
+  parallel:
+    matrix:
+      - PYTHON_VERSION: ["3.10", "3.11", "3.12", "3.13"]
+
+  script:
+    - cd dm_diff_tool
+    - python3 -m pip install --upgrade pip pytest
+    - python3 -m pytest tests/ -v -s
