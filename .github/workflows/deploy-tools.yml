@@ -37,6 +37,34 @@ jobs:
           mkdir -p public/dmv_tool
           cp -r dmv_tool/ui/* public/dmv_tool/
 
+          # Copy DM Diff Tool
+          mkdir -p public/dm_diff_tool
+          cp dm_diff_tool/index.html public/dm_diff_tool/
+          cp dm_diff_tool/diff_engine.py public/dm_diff_tool/
+          cp -r dm_diff_tool/static public/dm_diff_tool/
+          cp -r dm_diff_tool/data_model public/dm_diff_tool/
+
+          # Generate data manifest for DM Diff Tool (GitHub Pages has no directory listing)
+          python3 -c "
+          import os, json
+          manifest = {}
+          data_dir = 'dm_diff_tool/data_model'
+          for ver in os.listdir(data_dir):
+              ver_path = os.path.join(data_dir, ver)
+              if not os.path.isdir(ver_path) or not ver[0].isdigit():
+                  continue
+              entry = {'clusters': [], 'device_types': []}
+              for cat in ['clusters', 'device_types']:
+                  cat_path = os.path.join(ver_path, cat)
+                  if os.path.isdir(cat_path):
+                      entry[cat] = sorted(f for f in os.listdir(cat_path) if f.endswith('.xml'))
+              manifest[ver] = entry
+          sorted_manifest = dict(sorted(manifest.items(), key=lambda x: [int(n) for n in x[0].split('.')]))
+          with open('public/dm_diff_tool/data_manifest.json', 'w') as f:
+              json.dump(sorted_manifest, f)
+          print(f'Generated manifest with {len(sorted_manifest)} versions')
+          "
+
       - name: Upload GitHub Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:

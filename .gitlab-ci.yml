@@ -24,6 +24,12 @@ build_mfg_tool:
   tags:
     - build
 
+  rules:
+    - changes:
+        compare_to: refs/heads/main
+        paths:
+          - mfg_tool/**/*
+
   parallel:
     matrix:
       - PYTHON_VERSION: ["3.8", "3.9", "3.10", "3.11", "3.12", "3.13", "3.14"]
@@ -45,6 +51,12 @@ build_dmv_tool:
 
   tags:
     - build
+
+  rules:
+    - changes:
+        compare_to: refs/heads/main
+        paths:
+          - dmv_tool/**/*
 
   parallel:
     matrix:
@@ -69,6 +81,12 @@ test_mfg_tool:
   tags:
     - build
 
+  rules:
+    - changes:
+        compare_to: refs/heads/main
+        paths:
+          - mfg_tool/**/*
+
   parallel:
     matrix:
       - PYTHON_VERSION: ["3.8", "3.9", "3.10", "3.11", "3.12", "3.13"] # TODO - 3.14 will be added after python:3.14-bullseye will be available
@@ -76,6 +94,7 @@ test_mfg_tool:
   needs:
     - job: build_mfg_tool
       artifacts: true
+      optional: true
 
   script:
     - cd mfg_tool
@@ -92,6 +111,12 @@ test_dmv_tool:
   tags:
     - build
 
+  rules:
+    - changes:
+        compare_to: refs/heads/main
+        paths:
+          - dmv_tool/**/*
+
   parallel:
     matrix:
       - PYTHON_VERSION: ["3.10", "3.11", "3.12", "3.13"] # TODO - 3.14 will be added after python:3.14-bullseye will be available
@@ -99,6 +124,7 @@ test_dmv_tool:
   needs:
     - job: build_dmv_tool
       artifacts: true
+      optional: true
 
   script:
     - cd dmv_tool
@@ -106,3 +132,26 @@ test_dmv_tool:
     - python3 -m pip install dist/${PYTHON_VERSION}/esp_matter_dm_validator*.whl
     - python3 -m pip install -r requirements-test.txt
     - python3 -m pytest tests/ -v -s --log-cli-level=INFO
+
+
+test_dm_diff_tool:
+  stage: test
+  image: python:${PYTHON_VERSION}-bullseye
+
+  tags:
+    - build
+
+  rules:
+    - changes:
+        compare_to: refs/heads/main
+        paths:
+          - dm_diff_tool/**/*
+
+  parallel:
+    matrix:
+      - PYTHON_VERSION: ["3.10", "3.11", "3.12", "3.13"]
+
+  script:
+    - cd dm_diff_tool
+    - python3 -m pip install --upgrade pip pytest
+    - python3 -m pytest tests/ -v -s
