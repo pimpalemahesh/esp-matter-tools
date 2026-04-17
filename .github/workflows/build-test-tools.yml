@@ -179,3 +179,23 @@ jobs:
       - name: Pytest
         run: python3 -m pytest tests/ -v -s
         working-directory: dm_diff_tool
+
+  check_dm_diff_manifest:
+    name: check dm_diff_tool manifest
+    runs-on: ubuntu-latest
+    needs: changes
+    if: needs.changes.outputs.dm_diff_tool == 'true'
+    container: python:3.12-bullseye
+    steps:
+      - uses: actions/checkout@v4
+      - name: Mark workspace safe for git
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+      - name: Regenerate manifest and diff against committed copy
+        working-directory: dm_diff_tool
+        run: |
+          python3 generate_manifest.py
+          if [ -n "$(git status --porcelain -- data_manifest.json)" ]; then
+            echo "::error::data_manifest.json is out of date or not committed. Run 'python3 dm_diff_tool/generate_manifest.py' and commit the result."
+            git --no-pager diff -- data_manifest.json || true
+            exit 1
+          fi

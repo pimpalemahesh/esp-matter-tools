@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2024-2025 Espressif Systems (Shanghai) CO LTD
+# SPDX-FileCopyrightText: 2024-2026 Espressif Systems (Shanghai) CO LTD
 # SPDX-License-Identifier: Apache-2.0
 
 stages:
@@ -155,3 +155,27 @@ test_dm_diff_tool:
     - cd dm_diff_tool
     - python3 -m pip install --upgrade pip pytest
     - python3 -m pytest tests/ -v -s
+
+
+check_dm_diff_manifest:
+  stage: test
+  image: python:3.12-bullseye
+
+  tags:
+    - build
+
+  rules:
+    - changes:
+        compare_to: refs/heads/main
+        paths:
+          - dm_diff_tool/**/*
+
+  script:
+    - cd dm_diff_tool
+    - python3 generate_manifest.py
+    - |
+      if [ -n "$(git status --porcelain -- data_manifest.json)" ]; then
+        echo "data_manifest.json is out of date or not committed. Run 'python3 dm_diff_tool/generate_manifest.py' and commit the result."
+        git --no-pager diff -- data_manifest.json || true
+        exit 1
+      fi

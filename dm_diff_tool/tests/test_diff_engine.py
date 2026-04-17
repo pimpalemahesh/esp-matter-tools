@@ -1,8 +1,8 @@
 """
-Comprehensive tests for MatterDMDiff diff_engine.py
+Comprehensive tests for dm_diff_tool/diff_engine.py
 
 Run:  python -m pytest tests/test_diff_engine.py -v
-From: MatterDMDiff/
+From: dm_diff_tool/
 """
 
 import json
@@ -167,6 +167,7 @@ DEVICE_TYPE_WITH_CONDITIONS_XML = """\
 # XML Parsing — Clusters
 # ---------------------------------------------------------------------------
 
+
 class TestParseClusterXml:
     def test_minimal_cluster(self):
         result = de.parse_cluster_xml_string(MINIMAL_CLUSTER_XML)
@@ -327,6 +328,7 @@ class TestParseClusterXml:
 # XML Parsing — Device Types
 # ---------------------------------------------------------------------------
 
+
 class TestParseDeviceTypeXml:
     def test_minimal_device_type(self):
         result = de.parse_device_type_xml_string(MINIMAL_DEVICE_TYPE_XML)
@@ -402,6 +404,7 @@ class TestParseDeviceTypeXml:
 # Conformance Rendering
 # ---------------------------------------------------------------------------
 
+
 class TestConformanceRendering:
     def _conf(self, xml_fragment):
         """Parse a cluster attribute with the given conformance children and return the conformance string."""
@@ -440,35 +443,46 @@ class TestConformanceRendering:
         assert result == "O.a+"
 
     def test_otherwise_conform(self):
-        result = self._conf('<otherwiseConform><mandatoryConform><feature name="A"/></mandatoryConform><optionalConform/></otherwiseConform>')
+        result = self._conf(
+            '<otherwiseConform><mandatoryConform><feature name="A"/></mandatoryConform><optionalConform/></otherwiseConform>'
+        )
         assert "A" in result
         assert "O" in result
 
     def test_not_term(self):
-        result = self._conf('<mandatoryConform><notTerm><feature name="LT"/></notTerm></mandatoryConform>')
+        result = self._conf(
+            '<mandatoryConform><notTerm><feature name="LT"/></notTerm></mandatoryConform>'
+        )
         assert "!" in result
         assert "LT" in result
 
     def test_or_term(self):
-        result = self._conf('<mandatoryConform><orTerm><feature name="A"/><feature name="B"/></orTerm></mandatoryConform>')
+        result = self._conf(
+            '<mandatoryConform><orTerm><feature name="A"/><feature name="B"/></orTerm></mandatoryConform>'
+        )
         assert "A" in result
         assert "B" in result
         assert "|" in result
 
     def test_and_term(self):
-        result = self._conf('<mandatoryConform><andTerm><feature name="A"/><feature name="B"/></andTerm></mandatoryConform>')
+        result = self._conf(
+            '<mandatoryConform><andTerm><feature name="A"/><feature name="B"/></andTerm></mandatoryConform>'
+        )
         assert "A" in result
         assert "B" in result
         assert "&" in result
 
     def test_condition_conform(self):
-        result = self._conf('<mandatoryConform><condition name="Latching"/></mandatoryConform>')
+        result = self._conf(
+            '<mandatoryConform><condition name="Latching"/></mandatoryConform>'
+        )
         assert result == "Latching"
 
 
 # ---------------------------------------------------------------------------
 # Access / Quality / Constraint Parsing
 # ---------------------------------------------------------------------------
+
 
 class TestAccessParsing:
     def _access(self, access_xml):
@@ -481,7 +495,9 @@ class TestAccessParsing:
         assert "view" in result
 
     def test_read_write(self):
-        result = self._access('<access read="true" write="true" readPrivilege="view" writePrivilege="manage"/>')
+        result = self._access(
+            '<access read="true" write="true" readPrivilege="view" writePrivilege="manage"/>'
+        )
         assert "read/write" in result
         assert "manage" in result
 
@@ -534,18 +550,22 @@ class TestConstraintParsing:
         return de.parse_cluster_xml_string(xml)["attributes"]["0x00"]["constraint"]
 
     def test_min_max(self):
-        result = self._constraint('<constraint><min value="0"/><max value="100"/></constraint>')
+        result = self._constraint(
+            '<constraint><min value="0"/><max value="100"/></constraint>'
+        )
         assert "min=0" in result
         assert "max=100" in result
 
     def test_between(self):
-        result = self._constraint('<constraint><between><from value="1"/><to value="10"/></between></constraint>')
+        result = self._constraint(
+            '<constraint><between><from value="1"/><to value="10"/></between></constraint>'
+        )
         assert "between" in result
         assert "1" in result
         assert "10" in result
 
     def test_desc(self):
-        result = self._constraint('<constraint><desc/></constraint>')
+        result = self._constraint("<constraint><desc/></constraint>")
         assert "desc" in result
 
     def test_max_length(self):
@@ -554,12 +574,15 @@ class TestConstraintParsing:
 
     def test_no_constraint(self):
         xml = '<cluster id="0x01" name="T" revision="1"><attributes><attribute id="0x00" name="A" type="uint8"/></attributes></cluster>'
-        assert de.parse_cluster_xml_string(xml)["attributes"]["0x00"]["constraint"] == ""
+        assert (
+            de.parse_cluster_xml_string(xml)["attributes"]["0x00"]["constraint"] == ""
+        )
 
 
 # ---------------------------------------------------------------------------
 # Diff Engine — Core
 # ---------------------------------------------------------------------------
+
 
 class TestDiffDicts:
     def test_added(self):
@@ -581,10 +604,7 @@ class TestDiffDicts:
         assert common == ["a"]
 
     def test_mixed(self):
-        added, removed, common = de.diff_dicts(
-            {"a": 1, "b": 2},
-            {"b": 3, "c": 4}
-        )
+        added, removed, common = de.diff_dicts({"a": 1, "b": 2}, {"b": 3, "c": 4})
         assert added == ["c"]
         assert removed == ["a"]
         assert common == ["b"]
@@ -680,7 +700,12 @@ class TestDiffItem:
 
     def test_list_diff(self):
         old = {"revisions": [{"name": "r1", "summary": "first"}]}
-        new = {"revisions": [{"name": "r1", "summary": "first"}, {"name": "r2", "summary": "second"}]}
+        new = {
+            "revisions": [
+                {"name": "r1", "summary": "first"},
+                {"name": "r2", "summary": "second"},
+            ]
+        }
         changes = de.diff_item(old, new)
         assert "revisions" in changes
         assert len(changes["revisions"]["added"]) == 1
@@ -689,14 +714,18 @@ class TestDiffItem:
 class TestComputeDiff:
     def test_added_cluster(self):
         old = OrderedDict()
-        new = OrderedDict([("OnOff.xml", {"id": "0x0006", "name": "OnOff", "revision": "6"})])
+        new = OrderedDict(
+            [("OnOff.xml", {"id": "0x0006", "name": "OnOff", "revision": "6"})]
+        )
         result = de.compute_diff(old, new)
         assert "OnOff.xml" in result["added"]
         assert result["removed"] == {}
         assert len(result["unchanged"]) == 0
 
     def test_removed_cluster(self):
-        old = OrderedDict([("OnOff.xml", {"id": "0x0006", "name": "OnOff", "revision": "6"})])
+        old = OrderedDict(
+            [("OnOff.xml", {"id": "0x0006", "name": "OnOff", "revision": "6"})]
+        )
         new = OrderedDict()
         result = de.compute_diff(old, new)
         assert "OnOff.xml" in result["removed"]
@@ -710,8 +739,12 @@ class TestComputeDiff:
         assert len(result["modified"]) == 0
 
     def test_modified_cluster(self):
-        old = OrderedDict([("OnOff.xml", {"id": "0x0006", "name": "OnOff", "revision": "5"})])
-        new = OrderedDict([("OnOff.xml", {"id": "0x0006", "name": "OnOff", "revision": "6"})])
+        old = OrderedDict(
+            [("OnOff.xml", {"id": "0x0006", "name": "OnOff", "revision": "5"})]
+        )
+        new = OrderedDict(
+            [("OnOff.xml", {"id": "0x0006", "name": "OnOff", "revision": "6"})]
+        )
         result = de.compute_diff(old, new)
         assert "OnOff.xml" in result["modified"]
         assert result["modified"]["OnOff.xml"]["changes"]["revision"]["old"] == "5"
@@ -721,6 +754,7 @@ class TestComputeDiff:
 # ---------------------------------------------------------------------------
 # Search / Filter
 # ---------------------------------------------------------------------------
+
 
 class TestNormalize:
     def test_lowercase(self):
@@ -812,58 +846,143 @@ class TestBroadSearchExcludesSummary:
         return {
             "added": {},
             "removed": {},
-            "modified": OrderedDict([
-                # Has "identifying" in summary of old/new — should NOT match
-                ("ContentLauncher.xml", {
-                    "name": "ContentLauncher",
-                    "old": {"id": "0x050A", "name": "ContentLauncher",
-                            "dataTypes": OrderedDict([
-                                ("enum:ParameterEnum", {
-                                    "kind": "enum", "name": "ParameterEnum",
-                                    "items": [{"value": "1", "name": "Channel",
-                                               "summary": "Channel represents the identifying data"}]
-                                }),
-                            ])},
-                    "new": {"id": "0x050A", "name": "ContentLauncher",
-                            "dataTypes": OrderedDict([
-                                ("enum:ParameterEnum", {
-                                    "kind": "enum", "name": "ParameterEnum",
-                                    "items": [{"value": "1", "name": "Channel",
-                                               "summary": "Channel represents the identifying data"}]
-                                }),
-                            ])},
-                    "changes": {"dataTypes": {"added": OrderedDict(), "removed": OrderedDict(), "modified": OrderedDict()}},
-                }),
-                # Has "AddGroupIfIdentifying" in old/new but NOT in changes — should NOT match
-                ("Groups.xml", {
-                    "name": "Groups",
-                    "old": {"id": "0x0004", "name": "Groups",
-                            "commands": OrderedDict([
-                                ("0x05_AddGroupIfIdentifying", {"name": "AddGroupIfIdentifying", "id": "0x05"}),
-                            ])},
-                    "new": {"id": "0x0004", "name": "Groups",
-                            "commands": OrderedDict([
-                                ("0x05_AddGroupIfIdentifying", {"name": "AddGroupIfIdentifying", "id": "0x05"}),
-                            ])},
-                    "changes": {"revision": {"old": "4", "new": "5"}},
-                }),
-                # Has "IdentifyTime" as an ADDED attribute in changes — SHOULD match
-                ("Scenes.xml", {
-                    "name": "Scenes",
-                    "old": {"id": "0x0005", "name": "Scenes"},
-                    "new": {"id": "0x0005", "name": "Scenes",
-                            "attributes": OrderedDict([
-                                ("0x0010", {"name": "IdentifyTime", "type": "uint16"}),
-                            ])},
-                    "changes": {
-                        "attributes": {
-                            "added": OrderedDict([("0x0010", {"name": "IdentifyTime", "type": "uint16"})]),
-                            "removed": OrderedDict(),
-                            "modified": OrderedDict(),
+            "modified": OrderedDict(
+                [
+                    # Has "identifying" in summary of old/new — should NOT match
+                    (
+                        "ContentLauncher.xml",
+                        {
+                            "name": "ContentLauncher",
+                            "old": {
+                                "id": "0x050A",
+                                "name": "ContentLauncher",
+                                "dataTypes": OrderedDict(
+                                    [
+                                        (
+                                            "enum:ParameterEnum",
+                                            {
+                                                "kind": "enum",
+                                                "name": "ParameterEnum",
+                                                "items": [
+                                                    {
+                                                        "value": "1",
+                                                        "name": "Channel",
+                                                        "summary": "Channel represents the identifying data",
+                                                    }
+                                                ],
+                                            },
+                                        ),
+                                    ]
+                                ),
+                            },
+                            "new": {
+                                "id": "0x050A",
+                                "name": "ContentLauncher",
+                                "dataTypes": OrderedDict(
+                                    [
+                                        (
+                                            "enum:ParameterEnum",
+                                            {
+                                                "kind": "enum",
+                                                "name": "ParameterEnum",
+                                                "items": [
+                                                    {
+                                                        "value": "1",
+                                                        "name": "Channel",
+                                                        "summary": "Channel represents the identifying data",
+                                                    }
+                                                ],
+                                            },
+                                        ),
+                                    ]
+                                ),
+                            },
+                            "changes": {
+                                "dataTypes": {
+                                    "added": OrderedDict(),
+                                    "removed": OrderedDict(),
+                                    "modified": OrderedDict(),
+                                }
+                            },
                         },
-                    },
-                }),
-            ]),
+                    ),
+                    # Has "AddGroupIfIdentifying" in old/new but NOT in changes — should NOT match
+                    (
+                        "Groups.xml",
+                        {
+                            "name": "Groups",
+                            "old": {
+                                "id": "0x0004",
+                                "name": "Groups",
+                                "commands": OrderedDict(
+                                    [
+                                        (
+                                            "0x05_AddGroupIfIdentifying",
+                                            {
+                                                "name": "AddGroupIfIdentifying",
+                                                "id": "0x05",
+                                            },
+                                        ),
+                                    ]
+                                ),
+                            },
+                            "new": {
+                                "id": "0x0004",
+                                "name": "Groups",
+                                "commands": OrderedDict(
+                                    [
+                                        (
+                                            "0x05_AddGroupIfIdentifying",
+                                            {
+                                                "name": "AddGroupIfIdentifying",
+                                                "id": "0x05",
+                                            },
+                                        ),
+                                    ]
+                                ),
+                            },
+                            "changes": {"revision": {"old": "4", "new": "5"}},
+                        },
+                    ),
+                    # Has "IdentifyTime" as an ADDED attribute in changes — SHOULD match
+                    (
+                        "Scenes.xml",
+                        {
+                            "name": "Scenes",
+                            "old": {"id": "0x0005", "name": "Scenes"},
+                            "new": {
+                                "id": "0x0005",
+                                "name": "Scenes",
+                                "attributes": OrderedDict(
+                                    [
+                                        (
+                                            "0x0010",
+                                            {"name": "IdentifyTime", "type": "uint16"},
+                                        ),
+                                    ]
+                                ),
+                            },
+                            "changes": {
+                                "attributes": {
+                                    "added": OrderedDict(
+                                        [
+                                            (
+                                                "0x0010",
+                                                {
+                                                    "name": "IdentifyTime",
+                                                    "type": "uint16",
+                                                },
+                                            )
+                                        ]
+                                    ),
+                                    "removed": OrderedDict(),
+                                    "modified": OrderedDict(),
+                                },
+                            },
+                        },
+                    ),
+                ]
+            ),
             "unchanged": [],
         }
 
@@ -890,31 +1009,60 @@ class TestFilterDiff:
     def _make_diff(self):
         return {
             "added": {
-                "OnOff.xml": {"id": "0x0006", "name": "OnOff", "revision": "6",
-                              "attributes": OrderedDict([("0x0000", {"name": "OnOff", "type": "bool"})])},
-                "DoorLock.xml": {"id": "0x0101", "name": "DoorLock", "revision": "7",
-                                 "attributes": OrderedDict([("0x0000", {"name": "LockState", "type": "enum8"})])},
+                "OnOff.xml": {
+                    "id": "0x0006",
+                    "name": "OnOff",
+                    "revision": "6",
+                    "attributes": OrderedDict(
+                        [("0x0000", {"name": "OnOff", "type": "bool"})]
+                    ),
+                },
+                "DoorLock.xml": {
+                    "id": "0x0101",
+                    "name": "DoorLock",
+                    "revision": "7",
+                    "attributes": OrderedDict(
+                        [("0x0000", {"name": "LockState", "type": "enum8"})]
+                    ),
+                },
             },
             "removed": {
                 "Old.xml": {"id": "0x0099", "name": "OldCluster", "revision": "1"},
             },
-            "modified": OrderedDict([
-                ("Test.xml", {
-                    "name": "TestCluster",
-                    "old": {"id": "0x0050", "name": "TestCluster", "revision": "1",
-                            "attributes": OrderedDict()},
-                    "new": {"id": "0x0050", "name": "TestCluster", "revision": "2",
-                            "attributes": OrderedDict([("0x0001", {"name": "OnOff", "type": "bool"})])},
-                    "changes": {
-                        "revision": {"old": "1", "new": "2"},
-                        "attributes": {
-                            "added": OrderedDict([("0x0001", {"name": "OnOff", "type": "bool"})]),
-                            "removed": OrderedDict(),
-                            "modified": OrderedDict(),
+            "modified": OrderedDict(
+                [
+                    (
+                        "Test.xml",
+                        {
+                            "name": "TestCluster",
+                            "old": {
+                                "id": "0x0050",
+                                "name": "TestCluster",
+                                "revision": "1",
+                                "attributes": OrderedDict(),
+                            },
+                            "new": {
+                                "id": "0x0050",
+                                "name": "TestCluster",
+                                "revision": "2",
+                                "attributes": OrderedDict(
+                                    [("0x0001", {"name": "OnOff", "type": "bool"})]
+                                ),
+                            },
+                            "changes": {
+                                "revision": {"old": "1", "new": "2"},
+                                "attributes": {
+                                    "added": OrderedDict(
+                                        [("0x0001", {"name": "OnOff", "type": "bool"})]
+                                    ),
+                                    "removed": OrderedDict(),
+                                    "modified": OrderedDict(),
+                                },
+                            },
                         },
-                    },
-                }),
-            ]),
+                    ),
+                ]
+            ),
             "unchanged": ["Unchanged.xml"],
         }
 
@@ -958,6 +1106,7 @@ class TestFilterDiff:
 # Serialization
 # ---------------------------------------------------------------------------
 
+
 class TestMakeSerializable:
     def test_ordered_dict_to_dict(self):
         od = OrderedDict([("a", 1), ("b", OrderedDict([("c", 2)]))])
@@ -981,6 +1130,7 @@ class TestMakeSerializable:
 # run_diff — End-to-End Integration
 # ---------------------------------------------------------------------------
 
+
 class TestRunDiff:
     def test_cluster_diff_json_output(self):
         old_map = {"OnOff.xml": CLUSTER_WITH_FEATURES_XML}
@@ -1002,7 +1152,9 @@ class TestRunDiff:
         assert "OnOff.xml" in result["removed"]
 
     def test_cluster_modified(self):
-        modified_xml = CLUSTER_WITH_FEATURES_XML.replace('revision="6"', 'revision="7"', 1)
+        modified_xml = CLUSTER_WITH_FEATURES_XML.replace(
+            'revision="6"', 'revision="7"', 1
+        )
         old_map = {"OnOff.xml": CLUSTER_WITH_FEATURES_XML}
         new_map = {"OnOff.xml": modified_xml}
         result = json.loads(de.run_diff(old_map, new_map, "clusters", "", "clusters"))
@@ -1011,20 +1163,28 @@ class TestRunDiff:
     def test_device_type_diff(self):
         old_map = {"Light.xml": MINIMAL_DEVICE_TYPE_XML}
         new_map = {"Light.xml": MINIMAL_DEVICE_TYPE_XML}
-        result = json.loads(de.run_diff(old_map, new_map, "device_types", "", "device_types"))
+        result = json.loads(
+            de.run_diff(old_map, new_map, "device_types", "", "device_types")
+        )
         assert "Light.xml" in result["unchanged"]
 
     def test_device_type_added(self):
         old_map = {}
         new_map = {"Light.xml": MINIMAL_DEVICE_TYPE_XML}
-        result = json.loads(de.run_diff(old_map, new_map, "device_types", "", "device_types"))
+        result = json.loads(
+            de.run_diff(old_map, new_map, "device_types", "", "device_types")
+        )
         assert "Light.xml" in result["added"]
 
     def test_filter_applied(self):
         old_map = {}
-        new_map = {"OnOff.xml": CLUSTER_WITH_FEATURES_XML,
-                    "DoorLock.xml": CLUSTER_WITH_DATATYPES_XML}
-        result = json.loads(de.run_diff(old_map, new_map, "clusters", "OnOff", "clusters"))
+        new_map = {
+            "OnOff.xml": CLUSTER_WITH_FEATURES_XML,
+            "DoorLock.xml": CLUSTER_WITH_DATATYPES_XML,
+        }
+        result = json.loads(
+            de.run_diff(old_map, new_map, "clusters", "OnOff", "clusters")
+        )
         assert "OnOff.xml" in result["added"]
 
     def test_invalid_xml_skipped(self):
@@ -1056,8 +1216,16 @@ class TestRunDiff:
         new_cluster_c = '<cluster id="0x0003" name="C" revision="1"></cluster>'
         old_cluster_d = '<cluster id="0x0004" name="D" revision="1"></cluster>'
 
-        old_map = {"a.xml": old_cluster_a, "b.xml": old_cluster_b, "d.xml": old_cluster_d}
-        new_map = {"b.xml": new_cluster_b, "c.xml": new_cluster_c, "d.xml": old_cluster_d}
+        old_map = {
+            "a.xml": old_cluster_a,
+            "b.xml": old_cluster_b,
+            "d.xml": old_cluster_d,
+        }
+        new_map = {
+            "b.xml": new_cluster_b,
+            "c.xml": new_cluster_c,
+            "d.xml": old_cluster_d,
+        }
         result = json.loads(de.run_diff(old_map, new_map, "clusters", "", "clusters"))
 
         assert "a.xml" in result["removed"]
@@ -1070,14 +1238,21 @@ class TestRunDiff:
 # Integration — Real XML Files (if available)
 # ---------------------------------------------------------------------------
 
+
 class TestRealXmlFiles:
-    DATA_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data_model")
+    DATA_DIR = os.path.join(
+        os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data_model"
+    )
 
     @pytest.fixture
     def has_data(self):
         if not os.path.isdir(self.DATA_DIR):
             pytest.skip("data_model directory not found")
-        versions = [d for d in os.listdir(self.DATA_DIR) if os.path.isdir(os.path.join(self.DATA_DIR, d))]
+        versions = [
+            d
+            for d in os.listdir(self.DATA_DIR)
+            if os.path.isdir(os.path.join(self.DATA_DIR, d))
+        ]
         if len(versions) < 2:
             pytest.skip("need at least 2 versions")
         versions.sort(key=lambda v: [int(x) for x in v.split(".")])
@@ -1135,7 +1310,9 @@ class TestRealXmlFiles:
         result = json.loads(result_str)
         # Over many versions, there should be at least some added or modified clusters
         total_changes = len(result["added"]) + len(result["modified"])
-        assert total_changes > 0, "Expected at least some changes between first and last version"
+        assert total_changes > 0, (
+            "Expected at least some changes between first and last version"
+        )
 
     def test_diff_with_search_filter(self, has_data):
         """Filtering a real diff with a common term should not crash."""

@@ -8,177 +8,31 @@ const xmlCache = {};  // cache fetched XML: "version/clusters/file.xml" -> strin
 // ---- Base URL for data files ----
 const BASE = new URL('.', window.location.href).href;
 
-// ---- Discover data model files ----
-function versionSortKey(v) {
-  return v.split('.').map(n => parseInt(n, 10));
-}
-
-function compareVersions(a, b) {
-  const pa = versionSortKey(a), pb = versionSortKey(b);
-  for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
-    const diff = (pa[i] || 0) - (pb[i] || 0);
-    if (diff !== 0) return diff;
+// ---- Load data manifest ----
+async function loadManifest(status) {
+  status.textContent = 'Loading data manifest...';
+  const resp = await fetch(BASE + 'data_manifest.json');
+  if (!resp.ok) {
+    throw new Error(`Cannot load data_manifest.json (HTTP ${resp.status}). Run generate_manifest.py before serving.`);
   }
-  return 0;
-}
-
-async function discoverManifest(status) {
-  // Strategy 1: Directory listing (local HTTP servers, nginx autoindex, Apache, etc.)
-  const dirManifest = await tryDirectoryListing(status);
-  if (dirManifest) return dirManifest;
-
-  // Strategy 2: S3 bucket listing (public S3 REST API)
-  const s3Manifest = await tryS3Listing(status);
-  if (s3Manifest) return s3Manifest;
-
-  // Strategy 3: Pre-generated manifest file (fallback for static hosting without listing)
-  try {
-    status.textContent = 'Loading data manifest...';
-    const resp = await fetch(BASE + 'data_manifest.json');
-    if (resp.ok) return await resp.json();
-  } catch (e) {}
-
-  throw new Error('Cannot discover data files. Ensure the server supports directory listing, or provide a data_manifest.json.');
-}
-
-async function tryDirectoryListing(status) {
-  try {
-    status.textContent = 'Discovering data files...';
-
-    const rootHtml = await fetchDirHtml(BASE + 'data_model/');
-    if (!rootHtml) return null;
-    const versionDirs = parseLinksFromHtml(rootHtml)
-      .map(name => name.replace(/\/$/, ''))
-      .filter(name => /^\d+(\.\d+)*$/.test(name));
-    if (versionDirs.length === 0) return null;
-
-    const manifest = {};
-    await Promise.all(versionDirs.map(async (ver) => {
-      const entry = { clusters: [], device_types: [] };
-      await Promise.all(['clusters', 'device_types'].map(async (cat) => {
-        const html = await fetchDirHtml(`${BASE}data_model/${ver}/${cat}/`);
-        if (html) {
-          entry[cat] = parseLinksFromHtml(html)
-            .filter(name => name.endsWith('.xml'))
-            .sort();
-        }
-      }));
-      manifest[ver] = entry;
-    }));
-
-    const sorted = {};
-    for (const ver of Object.keys(manifest).sort(compareVersions)) {
-      sorted[ver] = manifest[ver];
-    }
-    return sorted;
-  } catch (e) {
-    console.warn('Directory listing discovery failed:', e);
-    return null;
-  }
-}
-
-async function tryS3Listing(status) {
-  // Works with public S3 buckets (REST API endpoint).
-  // S3 ListObjectsV2 returns XML with all object keys under a prefix.
-  try {
-    status.textContent = 'Trying S3 bucket listing...';
-
-    // Derive the data_model prefix relative to the bucket root
-    const basePath = new URL(BASE).pathname.replace(/^\//, '');
-    const prefix = basePath + 'data_model/';
-
-    // Try ListObjectsV2 on the bucket root
-    const bucketRoot = window.location.origin;
-    const listUrl = `${bucketRoot}/?list-type=2&prefix=${encodeURIComponent(prefix)}&max-keys=5000`;
-    const resp = await fetch(listUrl);
-    if (!resp.ok) return null;
-
-    const ct = resp.headers.get('content-type') || '';
-    if (!ct.includes('xml')) return null;
-
-    const xmlText = await resp.text();
-    return parseS3Listing(xmlText, prefix);
-  } catch (e) {
-    console.warn('S3 listing discovery failed:', e);
-    return null;
-  }
-}
-
-function parseS3Listing(xmlText, prefix) {
-  const parser = new DOMParser();
-  const doc = parser.parseFromString(xmlText, 'application/xml');
-  const contents = doc.getElementsByTagName('Contents');
-  if (!contents.length) return null;
-
-  const manifest = {};
-  for (const item of contents) {
-    const keyEl = item.getElementsByTagName('Key')[0];
-    if (!keyEl) continue;
-    const key = keyEl.textContent;
-
-    // Strip the prefix to get relative path: "1.4/clusters/ACL.xml"
-    if (!key.startsWith(prefix)) continue;
-    const rel = key.slice(prefix.length);
-    const match = rel.match(/^([^/]+)\/(clusters|device_types)\/(.+\.xml)$/);
-    if (!match) continue;
-    const [, version, category, filename] = match;
-    if (!/^\d+(\.\d+)*$/.test(version)) continue;
-    if (!manifest[version]) manifest[version] = { clusters: [], device_types: [] };
-    manifest[version][category].push(filename);
-  }
-
-  if (!Object.keys(manifest).length) return null;
-
-  for (const ver of Object.keys(manifest)) {
-    manifest[ver].clusters.sort();
-    manifest[ver].device_types.sort();
-  }
-  const sorted = {};
-  for (const ver of Object.keys(manifest).sort(compareVersions)) {
-    sorted[ver] = manifest[ver];
-  }
-  return sorted;
-}
-
-async function fetchDirHtml(url) {
-  try {
-    const resp = await fetch(url);
-    if (!resp.ok) return null;
-    const ct = resp.headers.get('content-type') || '';
-    if (!ct.includes('text/html')) return null;
-    return await resp.text();
-  } catch (e) {
-    return null;
-  }
-}
-
-function parseLinksFromHtml(html) {
-  const names = [];
-  const re = /<a\s[^>]*href="([^"]+)"[^>]*>/gi;
-  let m;
-  while ((m = re.exec(html)) !== null) {
-    let href = decodeURIComponent(m[1]);
-    if (href === '../' || href.startsWith('/') || href.startsWith('http') || href.startsWith('?')) continue;
-    href = href.split('?')[0].split('#')[0];
-    if (href) names.push(href);
-  }
-  return names;
+  return await resp.json();
 }
 
 // ---- Initialization ----
 async function init() {
   const status = document.getElementById('initStatus');
 
-  // Discover available versions and files
-  manifest = await discoverManifest(status);
+  manifest = await loadManifest(status);
 
   // Populate version selects
   const versions = Object.keys(manifest);
   const oldSel = document.getElementById('oldVersion');
   const newSel = document.getElementById('newVersion');
+  const oldDefault = versions.length >= 2 ? versions.length - 2 : 0;
+  const newDefault = versions.length - 1;
   versions.forEach((v, i) => {
-    oldSel.add(new Option(v, v, false, i === versions.length - 2));
-    newSel.add(new Option(v, v, false, i === versions.length - 1));
+    oldSel.add(new Option(v, v, false, i === oldDefault));
+    newSel.add(new Option(v, v, false, i === newDefault));
   });
 
   // Load Pyodide
@@ -245,18 +99,20 @@ async function runDiff() {
     if (category === 'all' || category === 'clusters') categories.push('clusters');
     if (category === 'all' || category === 'device_types') categories.push('device_types');
 
+    const setLoading = (msg) => {
+      const el = document.querySelector('.loading div:last-child');
+      if (el) el.textContent = msg;
+    };
+
     for (const cat of categories) {
-      // Update loading message
-      document.querySelector('.loading div:last-child').textContent =
-        `Fetching ${cat.replace('_', ' ')} XML files...`;
+      setLoading(`Fetching ${cat.replace('_', ' ')} XML files...`);
 
       const [oldMap, newMap] = await Promise.all([
         fetchXmlMap(oldVer, cat),
         fetchXmlMap(newVer, cat),
       ]);
 
-      document.querySelector('.loading div:last-child').textContent =
-        `Computing ${cat.replace('_', ' ')} diff...`;
+      setLoading(`Computing ${cat.replace('_', ' ')} diff...`);
 
       // Pass data to Python via Pyodide
       const oldMapProxy = pyodide.toPy(oldMap);
@@ -467,7 +323,7 @@ function renderCategoryDiff(diff, catKey, oldVer, newVer) {
 
   if (unchanged.length) {
     html += `<div class="diff-section"><div class="diff-group-title" style="color:var(--unchanged-text)">Unchanged ${label}s (${unchanged.length})</div>`;
-    html += `<div style="color:var(--unchanged-text);font-size:13px;padding:4px 0;">${unchanged.map(f => f.replace('.xml','')).join(', ')}</div>`;
+    html += `<div style="color:var(--unchanged-text);font-size:13px;padding:4px 0;">${unchanged.map(f => esc(f.replace('.xml',''))).join(', ')}</div>`;
     html += `</div>`;
   }
 
@@ -1092,7 +948,7 @@ function formatVal(v) {
 }
 
 function esc(s) {
-  if (!s) return '';
+  if (s == null) return '';
   const d = document.createElement('div');
   d.textContent = String(s);
   return d.innerHTML;

@@ -12,6 +12,7 @@ from collections import OrderedDict
 # XML Parsing
 # ---------------------------------------------------------------------------
 
+
 def _text(el, default=""):
     return (el.text or "").strip() if el is not None else default
 
@@ -37,8 +38,11 @@ def _render_choice(el):
 def _render_value_term(el):
     tag = el.tag
     ops = {
-        "equalTerm": "==", "greaterTerm": ">", "greaterOrEqualTerm": ">=",
-        "lessTerm": "<", "lessOrEqualTerm": "<=",
+        "equalTerm": "==",
+        "greaterTerm": ">",
+        "greaterOrEqualTerm": ">=",
+        "lessTerm": "<",
+        "lessOrEqualTerm": "<=",
     }
     op = ops.get(tag, "?")
     children = list(el)
@@ -63,8 +67,13 @@ def _render_expr(el, parent_tag=None):
         return el.get("name", "?")
     if tag == "literal":
         return el.get("value", "?")
-    if tag in ("equalTerm", "greaterTerm", "greaterOrEqualTerm",
-               "lessTerm", "lessOrEqualTerm"):
+    if tag in (
+        "equalTerm",
+        "greaterTerm",
+        "greaterOrEqualTerm",
+        "lessTerm",
+        "lessOrEqualTerm",
+    ):
         return _render_value_term(el)
     if tag == "notTerm":
         children = list(el)
@@ -89,9 +98,15 @@ def _render_expr(el, parent_tag=None):
     if tag == "xorTerm":
         parts = [_render_expr(c, tag) for c in el]
         return " ^ ".join(parts)
-    if tag in ("mandatoryConform", "optionalConform", "provisionalConform",
-               "deprecateConform", "describedConform", "disallowConform",
-               "otherwiseConform"):
+    if tag in (
+        "mandatoryConform",
+        "optionalConform",
+        "provisionalConform",
+        "deprecateConform",
+        "describedConform",
+        "disallowConform",
+        "otherwiseConform",
+    ):
         return _render_conformance_single(el)
     return tag
 
@@ -137,9 +152,15 @@ def parse_conformance(el):
 
 
 def get_conformance(el):
-    conf_tags = {"mandatoryConform", "optionalConform", "otherwiseConform",
-                 "deprecateConform", "provisionalConform", "describedConform",
-                 "disallowConform"}
+    conf_tags = {
+        "mandatoryConform",
+        "optionalConform",
+        "otherwiseConform",
+        "deprecateConform",
+        "provisionalConform",
+        "describedConform",
+        "disallowConform",
+    }
     fake_parent = ET.Element("_wrap")
     for child in el:
         if child.tag in conf_tags:
@@ -162,13 +183,13 @@ def parse_access(el):
         parts.append("writable")
     rp = acc.get("readPrivilege")
     if rp:
-        parts.append(rp)
+        parts.append(f"read: {rp}")
     wp = acc.get("writePrivilege")
     if wp:
         parts.append(f"write: {wp}")
     ip = acc.get("invokePrivilege")
     if ip:
-        parts.append(ip)
+        parts.append(f"invoke: {ip}")
     if acc.get("fabricScoped") == "true":
         parts.append("fabric-scoped")
     if acc.get("fabricSensitive") == "true":
@@ -240,15 +261,18 @@ def parse_cluster_xml_string(xml_string):
     cluster["revisions"] = []
     if rh is not None:
         for rev in rh.findall("revision"):
-            cluster["revisions"].append({
-                "revision": rev.get("revision", ""),
-                "summary": rev.get("summary", ""),
-            })
+            cluster["revisions"].append(
+                {
+                    "revision": rev.get("revision", ""),
+                    "summary": rev.get("summary", ""),
+                }
+            )
 
     cls = root.find("classification")
     if cls is not None:
-        cluster["classification"] = {k: cls.get(k, "") for k in
-                                      ("hierarchy", "role", "picsCode", "scope")}
+        cluster["classification"] = {
+            k: cls.get(k, "") for k in ("hierarchy", "role", "picsCode", "scope")
+        }
     else:
         cluster["classification"] = {}
 
@@ -257,13 +281,15 @@ def parse_cluster_xml_string(xml_string):
     if feat_el is not None:
         feat_list = []
         for f in feat_el.findall("feature"):
-            feat_list.append({
-                "bit": f.get("bit", ""),
-                "code": f.get("code", ""),
-                "name": f.get("name", ""),
-                "summary": f.get("summary", ""),
-                "conformance": get_conformance(f),
-            })
+            feat_list.append(
+                {
+                    "bit": f.get("bit", ""),
+                    "code": f.get("code", ""),
+                    "name": f.get("name", ""),
+                    "summary": f.get("summary", ""),
+                    "conformance": get_conformance(f),
+                }
+            )
         feat_list.sort(key=lambda x: int(x["bit"]) if x["bit"].isdigit() else 999)
         for fd in feat_list:
             cluster["features"][fd["name"] or fd["code"]] = fd
@@ -278,31 +304,49 @@ def parse_cluster_xml_string(xml_string):
             if tag == "enum":
                 items = []
                 for item in child.findall("item"):
-                    items.append({
-                        "value": item.get("value", ""),
-                        "name": item.get("name", ""),
-                        "summary": item.get("summary", ""),
-                        "conformance": get_conformance(item),
-                    })
-                cluster["dataTypes"][key] = {"kind": "enum", "name": name, "items": items}
+                    items.append(
+                        {
+                            "value": item.get("value", ""),
+                            "name": item.get("name", ""),
+                            "summary": item.get("summary", ""),
+                            "conformance": get_conformance(item),
+                        }
+                    )
+                cluster["dataTypes"][key] = {
+                    "kind": "enum",
+                    "name": name,
+                    "items": items,
+                }
             elif tag == "bitmap":
                 fields = []
                 for bf in child.findall("bitfield"):
-                    fields.append({
-                        "bit": bf.get("bit", ""),
-                        "name": bf.get("name", ""),
-                        "summary": bf.get("summary", ""),
-                        "conformance": get_conformance(bf),
-                    })
-                cluster["dataTypes"][key] = {"kind": "bitmap", "name": name, "fields": fields}
+                    fields.append(
+                        {
+                            "bit": bf.get("bit", ""),
+                            "name": bf.get("name", ""),
+                            "summary": bf.get("summary", ""),
+                            "conformance": get_conformance(bf),
+                        }
+                    )
+                cluster["dataTypes"][key] = {
+                    "kind": "bitmap",
+                    "name": name,
+                    "fields": fields,
+                }
             elif tag == "struct":
                 fields = []
                 for sf in child.findall("field"):
                     fields.append(parse_field(sf))
-                cluster["dataTypes"][key] = {"kind": "struct", "name": name, "fields": fields}
+                cluster["dataTypes"][key] = {
+                    "kind": "struct",
+                    "name": name,
+                    "fields": fields,
+                }
             elif tag == "number":
                 cluster["dataTypes"][key] = {
-                    "kind": "number", "name": name, "type": child.get("type", "")
+                    "kind": "number",
+                    "name": name,
+                    "type": child.get("type", ""),
                 }
 
     attrs = []
@@ -310,15 +354,20 @@ def parse_cluster_xml_string(xml_string):
     if attr_el is not None:
         for a in attr_el.findall("attribute"):
             aid = a.get("id", "")
-            attrs.append((aid, {
-                "id": aid,
-                "name": a.get("name", ""),
-                "type": a.get("type", ""),
-                "conformance": get_conformance(a),
-                "access": parse_access(a),
-                "quality": parse_quality(a),
-                "constraint": parse_constraint(a),
-            }))
+            attrs.append(
+                (
+                    aid,
+                    {
+                        "id": aid,
+                        "name": a.get("name", ""),
+                        "type": a.get("type", ""),
+                        "conformance": get_conformance(a),
+                        "access": parse_access(a),
+                        "quality": parse_quality(a),
+                        "constraint": parse_constraint(a),
+                    },
+                )
+            )
     attrs.sort(key=lambda x: int(x[0], 16) if x[0].startswith("0x") else 0)
     cluster["attributes"] = OrderedDict(attrs)
 
@@ -330,16 +379,26 @@ def parse_cluster_xml_string(xml_string):
             cname = c.get("name", "")
             key = f"{cid}_{cname}"
             fields = [parse_field(f) for f in c.findall("field")]
-            cmds.append((key, {
-                "id": cid,
-                "name": cname,
-                "direction": c.get("direction", ""),
-                "response": c.get("response", ""),
-                "conformance": get_conformance(c),
-                "access": parse_access(c),
-                "fields": fields,
-            }))
-    cmds.sort(key=lambda x: (int(x[1]["id"], 16) if x[1]["id"].startswith("0x") else 0, x[1]["name"]))
+            cmds.append(
+                (
+                    key,
+                    {
+                        "id": cid,
+                        "name": cname,
+                        "direction": c.get("direction", ""),
+                        "response": c.get("response", ""),
+                        "conformance": get_conformance(c),
+                        "access": parse_access(c),
+                        "fields": fields,
+                    },
+                )
+            )
+    cmds.sort(
+        key=lambda x: (
+            int(x[1]["id"], 16) if x[1]["id"].startswith("0x") else 0,
+            x[1]["name"],
+        )
+    )
     cluster["commands"] = OrderedDict(cmds)
 
     evts = []
@@ -348,14 +407,19 @@ def parse_cluster_xml_string(xml_string):
         for e in evt_el.findall("event"):
             eid = e.get("id", "")
             fields = [parse_field(f) for f in e.findall("field")]
-            evts.append((eid, {
-                "id": eid,
-                "name": e.get("name", ""),
-                "priority": e.get("priority", ""),
-                "conformance": get_conformance(e),
-                "access": parse_access(e),
-                "fields": fields,
-            }))
+            evts.append(
+                (
+                    eid,
+                    {
+                        "id": eid,
+                        "name": e.get("name", ""),
+                        "priority": e.get("priority", ""),
+                        "conformance": get_conformance(e),
+                        "access": parse_access(e),
+                        "fields": fields,
+                    },
+                )
+            )
     evts.sort(key=lambda x: int(x[0], 16) if x[0].startswith("0x") else 0)
     cluster["events"] = OrderedDict(evts)
 
@@ -380,10 +444,12 @@ def parse_device_type_xml_string(xml_string):
     dt["revisions"] = []
     if rh is not None:
         for rev in rh.findall("revision"):
-            dt["revisions"].append({
-                "revision": rev.get("revision", ""),
-                "summary": rev.get("summary", ""),
-            })
+            dt["revisions"].append(
+                {
+                    "revision": rev.get("revision", ""),
+                    "summary": rev.get("summary", ""),
+                }
+            )
 
     cls = root.find("classification")
     if cls is not None:
@@ -473,7 +539,8 @@ def parse_device_type_xml_string(xml_string):
 # Diff Engine
 # ---------------------------------------------------------------------------
 
-def diff_dicts(old, new, key_label="key"):
+
+def diff_dicts(old, new):
     old_keys = set(old.keys())
     new_keys = set(new.keys())
     added = sorted(new_keys - old_keys)
@@ -516,7 +583,11 @@ def diff_list_of_dicts(old_list, new_list, id_field="name"):
 
 def diff_ordered_dict_items(old_dict, new_dict):
     added, removed, common = diff_dicts(old_dict, new_dict)
-    result = {"added": OrderedDict(), "removed": OrderedDict(), "modified": OrderedDict()}
+    result = {
+        "added": OrderedDict(),
+        "removed": OrderedDict(),
+        "modified": OrderedDict(),
+    }
     for k in added:
         result["added"][k] = new_dict[k]
     for k in removed:
@@ -555,7 +626,11 @@ def diff_item(old, new):
         elif isinstance(ov, list) and isinstance(nv, list):
             sample = ov[0] if ov else (nv[0] if nv else None)
             if sample and isinstance(sample, dict):
-                id_key = "name" if "name" in sample else ("id" if "id" in sample else "value")
+                id_key = (
+                    "name"
+                    if "name" in sample
+                    else ("id" if "id" in sample else "value")
+                )
                 sub = diff_list_of_dicts(ov, nv, id_field=id_key)
                 if sub["added"] or sub["removed"] or sub["modified"]:
                     changes[k] = sub
@@ -598,6 +673,7 @@ def compute_diff(old_items, new_items):
 # Search / Filter
 # ---------------------------------------------------------------------------
 
+
 def _normalize(s):
     return s.lower().replace(" ", "").replace("-", "").replace("_", "")
 
@@ -613,8 +689,16 @@ def _deep_match(obj, term):
     return False
 
 
-_ELEMENT_SECTIONS = ("features", "attributes", "commands", "events", "dataTypes",
-                     "clusters", "conditions", "conditionRequirements")
+_ELEMENT_SECTIONS = (
+    "features",
+    "attributes",
+    "commands",
+    "events",
+    "dataTypes",
+    "clusters",
+    "conditions",
+    "conditionRequirements",
+)
 
 # Fields that contain human-readable descriptions — excluded from broad search
 # to avoid false positives like "identifying" matching "identify".
@@ -645,8 +729,11 @@ def _filter_section_diff(section_diff, term):
     for bucket in ("added", "removed"):
         items = section_diff.get(bucket, {})
         if isinstance(items, dict):
-            matching = {k: v for k, v in items.items()
-                        if term in _normalize(k) or _deep_match(v, term)}
+            matching = {
+                k: v
+                for k, v in items.items()
+                if term in _normalize(k) or _deep_match(v, term)
+            }
             if matching:
                 result[bucket] = matching
         elif isinstance(items, list):
@@ -655,8 +742,11 @@ def _filter_section_diff(section_diff, term):
                 result[bucket] = matching
     modified = section_diff.get("modified", {})
     if isinstance(modified, dict):
-        matching = {k: v for k, v in modified.items()
-                    if term in _normalize(k) or _deep_match(v, term)}
+        matching = {
+            k: v
+            for k, v in modified.items()
+            if term in _normalize(k) or _deep_match(v, term)
+        }
         if matching:
             result["modified"] = matching
     elif isinstance(modified, list):
@@ -674,7 +764,8 @@ def _filter_changes_focused(changes, term):
         if not section_data:
             continue
         if isinstance(section_data, dict) and any(
-                k in section_data for k in ("added", "removed", "modified")):
+            k in section_data for k in ("added", "removed", "modified")
+        ):
             fs = _filter_section_diff(section_data, term)
             if fs:
                 filtered[section] = fs
@@ -706,8 +797,7 @@ def _filter_full_item_focused(item, term):
 
 
 def _name_matches(term, filename, item):
-    return (term in _normalize(filename)
-            or term in _normalize(item.get("name", "")))
+    return term in _normalize(filename) or term in _normalize(item.get("name", ""))
 
 
 def filter_diff(diff, term):
@@ -810,13 +900,18 @@ def make_serializable(obj):
 # Public API — called from JavaScript via Pyodide
 # ---------------------------------------------------------------------------
 
+
 def run_diff(old_xml_map, new_xml_map, category, name_filter, item_type):
     """
     Run diff on two maps of {filename: xml_string}.
     item_type: 'clusters' or 'device_types'
     Returns a JSON string.
     """
-    parse_fn = parse_cluster_xml_string if item_type == "clusters" else parse_device_type_xml_string
+    parse_fn = (
+        parse_cluster_xml_string
+        if item_type == "clusters"
+        else parse_device_type_xml_string
+    )
 
     old_items = OrderedDict()
     for fname in sorted(old_xml_map.keys()):
