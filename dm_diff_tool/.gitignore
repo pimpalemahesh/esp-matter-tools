@@ -1,0 +1,9 @@
+__pycache__/
+*.pyc
+*.pyo
+
+# data_model/ content is never committed — zips are built on-the-fly
+# during deployment (see deploy-tools.yml) or locally via build_zips.py.
+data_model/[0-9]*/
+data_model/zips/
+data_model/json/

@@ -1,0 +1,12 @@
+# dm_diff_tool — zip bundles are generated from connectedhomeip by build_zips.py
+dm_diff_tool/data_model/zips/*.zip binary
+dm_diff_tool/data_model/zips/*.zip linguist-generated=true
+
+# dm_diff_tool — static images
+dm_diff_tool/static/*.png binary
+
+# dmv_tool — validation data JSON files are generated from the Matter spec
+dmv_tool/data/*.json linguist-generated=true
+
+# dmv_tool — out/ contains generated tool output
+dmv_tool/out/*.txt linguist-generated=true

@@ -26,16 +26,30 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Sparse-clone connectedhomeip data_model
+        run: |
+          git clone --depth=1 --filter=blob:none --sparse \
+            https://github.com/project-chip/connectedhomeip.git /tmp/chip
+          cd /tmp/chip && git sparse-checkout set data_model
+
+      - name: Build dm_diff_tool zips and manifest
+        run: MATTER_SDK_PATH=/tmp/chip python3 dm_diff_tool/build_zips.py
+
       - name: Prepare Pages content
         run: |
           mkdir public
 
-          # Copy index file
           cp index.html public/index.html
 
-          # Copy DMV Tool
           mkdir -p public/dmv_tool
           cp -r dmv_tool/ui/* public/dmv_tool/
+
+          mkdir -p public/dm_diff_tool
+          cp dm_diff_tool/index.html public/dm_diff_tool/
+          cp dm_diff_tool/diff_engine.py public/dm_diff_tool/
+          cp -r dm_diff_tool/static public/dm_diff_tool/
+          cp -r dm_diff_tool/data_model public/dm_diff_tool/
+          cp dm_diff_tool/data_manifest.json public/dm_diff_tool/
 
       - name: Upload GitHub Pages artifact
         uses: actions/upload-pages-artifact@v3
