@@ -1,0 +1,8 @@
+__pycache__/
+*.pyc
+*.pyo
+out/
+data_manifest.json
+data_model/[0-9]*/
+data_model/zips/
+data_model/json/
