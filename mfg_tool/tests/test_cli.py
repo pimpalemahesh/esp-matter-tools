@@ -16,6 +16,10 @@
 
 """Unit tests for sources/cli.py — CLI option parsing, validation, and MultiValueOption."""
 
+import subprocess
+import sys
+from pathlib import Path
+
 import pytest
 from unittest.mock import patch
 from click.testing import CliRunner
@@ -263,3 +267,39 @@ class TestDefaults:
     def test_invalid_log_level(self, runner):
         result = runner.invoke(main, BASE_ARGS + ["--log-level", "verbose"])
         assert result.exit_code != 0
+
+
+class TestModuleInvocationCompatibility:
+    # Rainmaker backend invokes the tool as: python3 -m sources.cli <args>
+    # If this invocation path ever changes, either notify the Rainmaker backend
+    # team or maintain backward compatibility so their pipeline is not broken.
+
+    @pytest.fixture
+    def mfg_tool_dir(self):
+        return Path(__file__).parent.parent
+
+    def _run(self, mfg_tool_dir, args):
+        return subprocess.run(
+            [sys.executable, "-m", "sources.cli"] + args,
+            capture_output=True,
+            text=True,
+            cwd=mfg_tool_dir,
+        )
+
+    def test_help_exits_zero(self, mfg_tool_dir):
+        result = self._run(mfg_tool_dir, ["--help"])
+        assert result.returncode == 0
+
+    def test_help_lists_required_options(self, mfg_tool_dir):
+        result = self._run(mfg_tool_dir, ["--help"])
+        output = result.stdout.lower()
+        for opt in ["vendor-id", "product-id", "passcode", "discriminator", "count"]:
+            assert opt in output, f"expected '{opt}' in --help output"
+
+    def test_missing_required_args_exits_nonzero(self, mfg_tool_dir):
+        result = self._run(mfg_tool_dir, [])
+        assert result.returncode != 0
+
+    def test_invalid_option_exits_nonzero(self, mfg_tool_dir):
+        result = self._run(mfg_tool_dir, ["--nonexistent-option"])
+        assert result.returncode != 0

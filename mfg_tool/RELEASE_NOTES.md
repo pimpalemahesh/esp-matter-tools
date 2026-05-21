@@ -8,6 +8,10 @@
 * **[NOTE]** `--discovery-mode` now strictly validates input to the three values defined by the Matter spec:
   `2` (BLE), `4` (On-Network), `6` (BLE + On-Network). Previously any integer was accepted.
 
+##### Edits
+- The module invocation path has changed from `python3 -m sources.mfg_tool` to `python3 -m sources.cli`.
+  If you invoke the tool programmatically, update your invocation accordingly.
+
 # [1.0.22] - (17-February-2026)
 * Removed pkg_resources dependency
 
