@@ -1,5 +1,18 @@
-// Browser front-end: loads Pyodide, installs esp-matter-mfg-tool from PyPI, and
-// runs it entirely client-side. Nothing leaves the browser.
+//!/usr/bin/env python3
+
+// Copyright 2026 Espressif Systems (Shanghai) PTE LTD
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 const PYODIDE_VERSION = "0.28.3";
 const PYODIDE_CDN = `https://cdn.jsdelivr.net/pyodide/v${PYODIDE_VERSION}/full/`;
@@ -42,7 +55,20 @@ function logBoot(msg) {
   el.scrollTop = el.scrollHeight;
 }
 
-// Generate button states: "loading" | "ready" | "busy" | "failed".
+function populateChoices(choices) {
+  for (const [opt, names] of Object.entries(choices)) {
+    const sel = document.querySelector(`select[data-opt="${opt}"]`);
+    if (!sel) continue;
+    sel.innerHTML = sel.multiple ? "" : '<option value="">— not set —</option>';
+    for (const name of names) {
+      const o = document.createElement("option");
+      o.value = name;
+      o.textContent = name;
+      sel.appendChild(o);
+    }
+  }
+}
+
 function setGenerateState(state) {
   const btn = $("generate-btn");
   const label = $("generate-label");
@@ -100,14 +126,17 @@ async function initRuntime() {
   logBoot("Loading mfg_runner.py");
   await pyodide.runPythonAsync(await (await fetch("mfg_runner.py")).text());
 
+  const choices = JSON.parse(
+    await pyodide.runPythonAsync("import json; json.dumps(get_choices())")
+  );
+  populateChoices(choices);
+
   ready = true;
   setStatus("Ready — fill in the form and generate.", "ok");
   logBoot("Ready.");
   setGenerateState("ready");
 }
 
-// Bundled test credentials. PAA works with any VID/PID; PAI is fixed to
-// FFF2/8001 and pairs with its Certificate Declaration.
 const BUNDLED_CERTS = {
   "test-paa": {
     paa: true,
@@ -126,7 +155,6 @@ const BUNDLED_CERTS = {
   },
 };
 
-// Cert-related uploads (used only in "custom" mode).
 const CUSTOM_CERT_INPUTS = {
   "f-cert": "cert",
   "f-key": "key",
@@ -134,7 +162,6 @@ const CUSTOM_CERT_INPUTS = {
   "f-dac-key": "dac_key",
   "f-cert-dclrn": "cert_dclrn",
 };
-// Extra-NVS uploads (apply in every mode).
 const EXTRA_INPUTS = { "f-csv": "csv", "f-mcsv": "mcsv" };
 
 function readForm() {
@@ -143,6 +170,9 @@ function readForm() {
     const opt = el.dataset.opt;
     if (el.type === "checkbox") {
       config[opt] = el.checked;
+    } else if (el.multiple) {
+      const vals = [...el.selectedOptions].map((o) => o.value);
+      if (vals.length) config[opt] = vals.join(" ");
     } else if (el.value !== "") {
       config[opt] = el.value;
     }
@@ -161,13 +191,12 @@ async function addUpload(inputId, opt, config, files) {
   if (input && input.files.length > 0) {
     const file = input.files[0];
     files[file.name] = new Uint8Array(await file.arrayBuffer());
-    config[opt] = file.name; // runner maps name -> on-FS path
+    config[opt] = file.name;
     return true;
   }
   return false;
 }
 
-// Populate config + files for the selected attestation mode. Returns files map.
 async function gatherCertsAndFiles(config) {
   const files = {};
   const mode = $("cert-mode").value;
@@ -175,9 +204,8 @@ async function gatherCertsAndFiles(config) {
   config.pai = false;
 
   if (mode === "none") {
-    // commissioning data only
   } else if (mode === "custom") {
-    config[$("custom-cert-kind").value] = true; // paa or pai
+    config[$("custom-cert-kind").value] = true;
     for (const [id, opt] of Object.entries(CUSTOM_CERT_INPUTS)) {
       await addUpload(id, opt, config, files);
     }
@@ -192,7 +220,6 @@ async function gatherCertsAndFiles(config) {
     }
   }
 
-  // Extra NVS uploads apply regardless of attestation mode.
   for (const [id, opt] of Object.entries(EXTRA_INPUTS)) {
     await addUpload(id, opt, config, files);
   }
@@ -260,7 +287,6 @@ function renderResult(result, vid, pid) {
   $("run-log").textContent = result.log || "";
 }
 
-// Shared flash settings: offset field + optional partition-table auto-fill.
 function buildFlashPanel() {
   const panel = document.createElement("div");
   panel.className = "flash-panel";
@@ -300,7 +326,6 @@ async function onPartitionTable(evt) {
     .map((p) => `<option value="0x${p.offset.toString(16)}">${escapeHtml(p.name)} (${p.subtype}) @ 0x${p.offset.toString(16)}</option>`)
     .join("");
   sel.parentElement.style.display = "";
-  // Prefer a data/nvs partition; else the first entry.
   const nvs = parts.find((p) => p.subtype === "nvs" || p.subtype === "1");
   const pick = nvs || parts[0];
   sel.value = "0x" + pick.offset.toString(16);
@@ -392,7 +417,6 @@ json.dumps(run_mfg_tool(JS_CONFIG, JS_FILES))
   }
 }
 
-// Show a short note for the selected attestation mode.
 const CERT_MODE_NOTES = {
   "test-paa": "Generates a PAI then per-device DACs from the bundled Matter test PAA. Works with any VID/PID.",
   "test-pai": "Generates per-device DACs from the bundled test PAI. Requires VID 0xFFF2 and PID 0x8001.",

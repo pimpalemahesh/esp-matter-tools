@@ -90,6 +90,12 @@
               <label>Serial number <input class="form-control" data-opt="serial_num" type="text" placeholder="random if blank" /></label>
               <label>Part number <input class="form-control" data-opt="part_number" type="text" /></label>
               <label>Product label <input class="form-control" data-opt="product_label" type="text" /></label>
+              <label>Product finish
+                <select class="form-control" data-opt="product_finish"><option value="">loading…</option></select>
+              </label>
+              <label>Product color
+                <select class="form-control" data-opt="product_color"><option value="">loading…</option></select>
+              </label>
             </div>
           </div>
 
@@ -169,7 +175,11 @@
                 <input class="form-control" id="f-mcsv" type="file" accept=".csv" />
               </label>
               <label>Locales <input class="form-control" data-opt="locales" type="text" placeholder="en-US en-GB" /></label>
-              <label>Calendar types <input class="form-control" data-opt="calendar_types" type="text" placeholder="Gregorian Hebrew" /></label>
+              <label>Calendar types (Ctrl/Cmd-click for multiple)
+                <select class="form-control" data-opt="calendar_types" multiple size="6">
+                  <option disabled>loading…</option>
+                </select>
+              </label>
             </div>
           </div>
         </details>

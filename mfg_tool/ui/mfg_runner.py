@@ -1,8 +1,18 @@
-"""In-browser glue for the published esp-matter-mfg-tool under Pyodide.
+#!/usr/bin/env python3
 
-Loaded by app.js; exposes run_mfg_tool(config, files) and shims
-hashlib.pbkdf2_hmac (absent in Pyodide's CPython).
-"""
+# Copyright 2026 Espressif Systems (Shanghai) PTE LTD
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 import base64
 import copy
@@ -125,7 +135,7 @@ _INT_FIELDS = {
 _LIST_FIELDS = {"calendar_types", "locales", "fixed_labels", "supported_modes"}
 
 
-def _coerce(key, value):
+def _normalize(key, value):
     if value is None or value == "":
         return None
     if key in _INT_FIELDS:
@@ -144,7 +154,7 @@ def _build_args(config):
         if isinstance(value, bool):
             args[key] = value
         else:
-            coerced = _coerce(key, value)
+            coerced = _normalize(key, value)
             if coerced is not None:
                 args[key] = coerced
     args["outdir"] = OUT_DIR
@@ -183,9 +193,6 @@ def _reset_tool_state():
         for key in list(store):
             store[key] = None
 
-    # CHIP_NVS_MAP is mutated in place each run. mfg_tool imports chip_nvs as a
-    # top-level module via the sources sys.path shim, so reset whichever
-    # instance is loaded; snapshot pristine state on first use, restore after.
     global _PRISTINE_NVS_MAP
     import sys
 
@@ -199,12 +206,23 @@ def _reset_tool_state():
         cn.CHIP_NVS_MAP.update(copy.deepcopy(_PRISTINE_NVS_MAP))
 
 
+def get_choices():
+    """Enum-backed dropdown options, read from the installed package so the UI
+    never diverges from the tool's actual choices."""
+    import sources  # noqa: F401  (sys.path shim)
+    from sources.utils import ProductFinish, ProductColor, CalendarTypes
+    return {
+        "product_finish": [e.name for e in ProductFinish],
+        "product_color": [e.name for e in ProductColor],
+        "calendar_types": [e.name for e in CalendarTypes],
+    }
+
+
 def _reset_dirs():
     for d in (OUT_DIR, IN_DIR):
         shutil.rmtree(d, ignore_errors=True)
     os.makedirs(OUT_DIR, exist_ok=True)
     os.makedirs(IN_DIR, exist_ok=True)
-    # esp_secure_cert generation creates ./esp_secure_cert_data relative to cwd
     shutil.rmtree(os.path.join(os.getcwd(), "esp_secure_cert_data"), ignore_errors=True)
 
 
@@ -280,7 +298,6 @@ def run_mfg_tool(config, files=None):
     try:
         _reset_dirs()
         paths = _write_inputs(files)
-        # Map any uploaded-file option values to their on-FS paths.
         for opt in ("cert", "key", "dac_cert", "dac_key", "cert_dclrn", "csv", "mcsv"):
             val = config.get(opt)
             if val and val in paths:
@@ -294,8 +311,6 @@ def run_mfg_tool(config, files=None):
                 "log": "",
             }
 
-        # Import the published package lazily so import errors surface as logs.
-        import sources  # noqa: F401  (runs sys.path shim in __init__)
         from sources.mfg_tool import main_internal
 
         _reset_tool_state()
@@ -313,7 +328,7 @@ def run_mfg_tool(config, files=None):
             "error": f"Tool exited (code {exc.code}). Check the inputs and log below.",
             "log": "\n".join(handler.records),
         }
-    except BaseException as exc:  # noqa: BLE001  surface everything to the UI
+    except BaseException as exc:
         return {
             "ok": False,
             "error": f"{type(exc).__name__}: {exc}",

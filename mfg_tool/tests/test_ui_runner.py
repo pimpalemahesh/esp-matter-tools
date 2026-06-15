@@ -180,6 +180,32 @@ def test_multiple_devices():
     assert sum(n.endswith("-partition.bin") for n in _zip_names(res)) == 3
 
 
+def test_get_choices_matches_package_enums():
+    """Dropdown options are sourced from the package enums, not hardcoded."""
+    from sources.utils import ProductFinish, ProductColor, CalendarTypes
+
+    choices = mfg_runner.get_choices()
+    assert choices["product_finish"] == [e.name for e in ProductFinish]
+    assert choices["product_color"] == [e.name for e in ProductColor]
+    assert choices["calendar_types"] == [e.name for e in CalendarTypes]
+
+
+def test_choice_fields_accept_enum_names():
+    """product_finish/color and calendar_types (multi) use enum names from the UI."""
+    res = mfg_runner.run_mfg_tool(
+        {
+            "vendor_id": "0xFFF1",
+            "product_id": "0x8000",
+            "count": "1",
+            "product_finish": "matte",
+            "product_color": "gold",
+            "calendar_types": "Gregorian Hebrew",
+        },
+        {},
+    )
+    assert res["ok"] is True, res.get("error")
+
+
 def test_state_reset_between_runs():
     """Two back-to-back runs must not leak device state into each other."""
     cfg = {"vendor_id": "0xFFF1", "product_id": "0x8000", "count": "2"}

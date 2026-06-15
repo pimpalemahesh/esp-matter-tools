@@ -1,10 +1,19 @@
-// Direct-to-device flashing over Web Serial using esptool-js. Chromium only;
-// the CDN bundle loads lazily on first use. Exposes window.MfgFlasher.
+//!/usr/bin/env python3
+
+// Copyright 2026 Espressif Systems (Shanghai) PTE LTD
 //
-// Each flash is self-contained: connect (sync once), write, reset the chip to
-// run its firmware, release the port. The reset uses the ESP Web Tools sequence
-// (assert RTS, then chip-specific release) which leaves the chip and DTR/RTS
-// lines clean so the next flash connects reliably without a physical replug.
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 (function () {
   const ESPTOOL_CDN = "https://cdn.jsdelivr.net/npm/esptool-js@0.5.7/bundle.js";
 
@@ -14,7 +23,7 @@
 
   async function flashDevice(partitionB64, offset, { onLog, onProgress }) {
     if (!isSupported()) throw new Error("Web Serial is not available in this browser.");
-    const log = onLog || (() => {});
+    const log = onLog || (() => { });
     if (!mod) mod = await import(ESPTOOL_CDN);
     const { ESPLoader, Transport } = mod;
 
@@ -25,7 +34,7 @@
       baudrate: 115200,
       romBaudrate: 115200,
       enableTracing: false,
-      terminal: { clean() {}, writeLine: (d) => log(d), write: (d) => log(d) },
+      terminal: { clean() { }, writeLine: (d) => log(d), write: (d) => log(d) },
     });
 
     try {
@@ -41,7 +50,6 @@
       log("Flash complete; resetting device.");
       return chip;
     } finally {
-      // Reset to run firmware and leave the lines clean for the next connect.
       try {
         await transport.setRTS(true);
         await sleep(100);
@@ -51,8 +59,6 @@
     }
   }
 
-  // Parse an ESP-IDF partition table (CSV text or binary) into
-  // [{name, type, subtype, offset}]. Offsets are numbers.
   function parsePartitionTable(filename, bytes) {
     if (bytes[0] === 0xaa && bytes[1] === 0x50) return parseBinary(bytes);
     return parseCsv(new TextDecoder().decode(bytes));
