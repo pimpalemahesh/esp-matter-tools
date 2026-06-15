@@ -34,6 +34,12 @@ python3 -m pip wheel --no-deps -w wheels \
     "pyqrcode==${PYQRCODE_VERSION}" \
     "esp-secure-cert-tool==${ESP_SECURE_CERT_VERSION}"
 
+# Normalize wheel filenames to lowercase.
+for w in wheels/*.whl; do
+    lower="wheels/$(basename "$w" | tr '[:upper:]' '[:lower:]')"
+    [ "$w" != "$lower" ] && mv -f "$w" "$lower"
+done
+
 # --- 2. test certificates (from the tool's test fixtures) ---
 TD="../test_data"
 mkdir -p test_certs

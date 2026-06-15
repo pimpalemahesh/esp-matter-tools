@@ -28,8 +28,11 @@ const PYPI_PURE_DEPS = [
 
 // Pure-Python deps that publish *only* sdists on PyPI (micropip can't build
 // sdists in-browser), so we ship pre-built wheels next to this page.
+// Names are lowercase: modern pip/wheel normalizes the distribution name in the
+// wheel filename, and prepare_assets.sh lowercases them so this matches whoever
+// built the wheels.
 const VENDORED_WHEELS = [
-  "wheels/PyQRCode-1.2.1-py3-none-any.whl",
+  "wheels/pyqrcode-1.2.1-py3-none-any.whl",
   "wheels/esp_secure_cert_tool-2.3.6-py3-none-any.whl",
 ];
 
