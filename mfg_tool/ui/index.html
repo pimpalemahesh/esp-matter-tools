@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ESP Matter Manufacturing Tool</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23e8362a'/%3E%3Ctext x='16' y='22' font-size='18' text-anchor='middle' fill='white' font-family='sans-serif' font-weight='bold'%3EM%3C/text%3E%3C/svg%3E" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="top">
+    <h1>ESP&nbsp;Matter Manufacturing Tool</h1>
+    <p class="sub">
+      Generate Matter factory NVS partitions, attestation credentials, onboarding
+      payloads and QR codes — entirely in your browser. Powered by
+      <a href="https://pypi.org/project/esp-matter-mfg-tool/" target="_blank" rel="noopener">esp-matter-mfg-tool</a>
+      on Pyodide (WebAssembly). Nothing you enter leaves your machine.
+    </p>
+  </header>
+
+  <div id="status" class="status busy">Starting…</div>
+
+  <main>
+    <form id="mfg-form">
+      <section class="card">
+        <h2>Generate a partition</h2>
+        <p class="hint">
+          The defaults below produce a complete test partition (with a DAC signed
+          by the bundled Matter test PAA). Just press <strong>Generate</strong>,
+          or tweak the values first. Open <em>Advanced options</em> for the full
+          set of controls.
+        </p>
+        <div class="grid">
+          <label>Vendor ID (VID)
+            <input data-opt="vendor_id" type="text" value="0xFFF1" required />
+          </label>
+          <label>Product ID (PID)
+            <input data-opt="product_id" type="text" value="0x8000" required />
+          </label>
+          <label>Number of devices
+            <input data-opt="count" type="text" value="1" />
+          </label>
+          <label>Target
+            <select data-opt="target">
+              <option>esp32</option><option>esp32c2</option><option>esp32c3</option>
+              <option>esp32c6</option><option>esp32s3</option><option>esp32h2</option>
+              <option>esp32p4</option>
+            </select>
+          </label>
+          <label>Device attestation (DAC)
+            <select id="cert-mode">
+              <option value="test-paa" selected>Bundled test certs — works with any VID/PID</option>
+              <option value="test-pai">Bundled test PAI — VID 0xFFF2 / PID 0x8001 only</option>
+              <option value="none">No DAC — commissioning data only</option>
+              <option value="custom">Custom — upload your own (Advanced)</option>
+            </select>
+          </label>
+        </div>
+        <p id="cert-mode-note" class="note"></p>
+      </section>
+
+      <details class="card adv">
+        <summary>Advanced options</summary>
+
+        <div class="adv-section">
+          <h3>Device information</h3>
+          <div class="grid">
+            <label>Vendor name <input data-opt="vendor_name" type="text" value="Test Vendor" /></label>
+            <label>Product name <input data-opt="product_name" type="text" value="Test Product" /></label>
+            <label>Hardware version (int) <input data-opt="hw_ver" type="text" value="1" /></label>
+            <label>Hardware version string <input data-opt="hw_ver_str" type="text" value="v1.0" /></label>
+            <label>Manufacturing date <input data-opt="mfg_date" type="text" placeholder="YYYY-MM-DD" /></label>
+            <label>Serial number <input data-opt="serial_num" type="text" placeholder="random if blank" /></label>
+            <label>Part number <input data-opt="part_number" type="text" /></label>
+            <label>Product label <input data-opt="product_label" type="text" /></label>
+          </div>
+        </div>
+
+        <div class="adv-section">
+          <h3>Commissioning</h3>
+          <div class="grid">
+            <label>Passcode <input data-opt="passcode" type="text" placeholder="random if blank" /></label>
+            <label>Discriminator <input data-opt="discriminator" type="text" placeholder="random if blank" /></label>
+            <label>Commissioning flow
+              <select data-opt="commissioning_flow">
+                <option value="0">0 — Standard</option>
+                <option value="1">1 — User-Intent</option>
+                <option value="2">2 — Custom</option>
+              </select>
+            </label>
+            <label>Discovery mode
+              <select data-opt="discovery_mode">
+                <option value="2">2 — BLE</option>
+                <option value="4">4 — On-network</option>
+                <option value="6">6 — BLE + On-network</option>
+              </select>
+            </label>
+            <label>Iteration count <input data-opt="iteration_count" type="text" value="10000" /></label>
+            <label>Partition size <input data-opt="size" type="text" value="0x6000" /></label>
+          </div>
+          <div class="checks">
+            <label class="chk"><input data-opt="encrypt" type="checkbox" /> Encrypt factory NVS partition</label>
+            <label class="chk"><input data-opt="enable_dynamic_passcode" type="checkbox" /> Dynamic passcode (no verifier in binary)</label>
+            <label class="chk"><input data-opt="enable_rotating_device_id" type="checkbox" /> Enable rotating device ID</label>
+          </div>
+        </div>
+
+        <div class="adv-section">
+          <h3>Attestation — custom inputs & options</h3>
+          <p class="hint">Used when “Custom” is selected above. CN prefix and the
+            secure-cert options also apply to the bundled cert modes.</p>
+          <div id="cert-files" class="grid file-grid">
+            <label>Certificate (PAA/PAI, PEM)
+              <input id="f-cert" type="file" accept=".pem,.crt" />
+            </label>
+            <label>Private key (PEM)
+              <input id="f-key" type="file" accept=".pem,.key" />
+            </label>
+            <label>Certificate Declaration (DER)
+              <input id="f-cert-dclrn" type="file" accept=".der,.bin" />
+            </label>
+            <label>Pre-generated DAC cert (PEM)
+              <input id="f-dac-cert" type="file" accept=".pem,.crt" />
+            </label>
+            <label>Pre-generated DAC key (PEM)
+              <input id="f-dac-key" type="file" accept=".pem,.key" />
+            </label>
+            <label>Custom input is treated as
+              <select id="custom-cert-kind">
+                <option value="paa">PAA certificate</option>
+                <option value="pai">PAI certificate</option>
+              </select>
+            </label>
+          </div>
+          <div class="grid">
+            <label>CN prefix <input data-opt="cn_prefix" type="text" value="ESP32" /></label>
+            <label>Certificate lifetime (days) <input data-opt="lifetime" type="text" value="36500" /></label>
+          </div>
+          <div class="checks">
+            <label class="chk"><input data-opt="dac_in_secure_cert" type="checkbox" /> Store DAC in esp_secure_cert partition</label>
+            <label class="chk"><input data-opt="no_secure_cert_bin" type="checkbox" /> Do not generate secure-cert binary</label>
+          </div>
+        </div>
+
+        <div class="adv-section">
+          <h3>Extra NVS values</h3>
+          <div class="grid">
+            <label>Config CSV (schema)
+              <input id="f-csv" type="file" accept=".csv" />
+            </label>
+            <label>Master CSV (values)
+              <input id="f-mcsv" type="file" accept=".csv" />
+            </label>
+            <label>Locales <input data-opt="locales" type="text" placeholder="en-US en-GB" /></label>
+            <label>Calendar types <input data-opt="calendar_types" type="text" placeholder="Gregorian Hebrew" /></label>
+          </div>
+        </div>
+      </details>
+
+      <button id="generate-btn" class="primary big" type="submit" disabled>Generate</button>
+    </form>
+
+    <section id="output" class="card output">
+      <h2>Output</h2>
+      <div id="results" class="results"></div>
+      <details class="log-details" open>
+        <summary>Run log</summary>
+        <pre id="run-log" class="log"></pre>
+      </details>
+      <details class="log-details">
+        <summary>Startup log</summary>
+        <pre id="boot-log" class="log"></pre>
+      </details>
+    </section>
+  </main>
+
+  <footer>
+    <p>
+      Runs the published
+      <a href="https://pypi.org/project/esp-matter-mfg-tool/" target="_blank" rel="noopener">esp-matter-mfg-tool</a>
+      package via WebAssembly. Bundled test certificates are Matter
+      <em>development</em> credentials — never use them in production. Source:
+      <a href="https://github.com/espressif/esp-matter-tools" target="_blank" rel="noopener">espressif/esp-matter-tools</a>.
+    </p>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>

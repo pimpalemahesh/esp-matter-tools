@@ -6,6 +6,13 @@ secure certificate partitions.
 Manufacturing partition can contain the Matter specific data as well as it
 supports adding custom manufacturer specific data using csv files.
 
+## Web UI (no install)
+
+A browser version of this tool available at : https://espressif.github.io/esp-matter-tools/mfg_tool/
+
+The site (`mfg_tool/ui/`) loads the published `esp-matter-mfg-tool` from PyPI and
+is deployed to GitHub Pages by `.github/workflows/deploy-tools.yml`.
+
 ## How to install
 
 ### Install using pip

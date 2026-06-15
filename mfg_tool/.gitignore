@@ -3,3 +3,5 @@ out/
 *.egg-info/
 sdist/
 dist/
+ui/wheels/
+ui/test_certs/
