@@ -21,13 +21,16 @@ from types import SimpleNamespace
 
 # pbkdf2_hmac is absent in Pyodide (no OpenSSL backend) but used by spake2p.
 if not hasattr(hashlib, "pbkdf2_hmac"):
+
     def _pbkdf2_hmac(hash_name, password, salt, iterations, dklen=None):
         size = hmac.new(password, None, hash_name).digest_size
         dklen = dklen or size
         out = b""
         block = 1
         while len(out) < dklen:
-            prev = hmac.new(password, salt + struct.pack(">I", block), hash_name).digest()
+            prev = hmac.new(
+                password, salt + struct.pack(">I", block), hash_name
+            ).digest()
             acc = bytearray(prev)
             for _ in range(iterations - 1):
                 prev = hmac.new(password, prev, hash_name).digest()
@@ -47,27 +50,76 @@ IN_DIR = os.path.join(WORK_DIR, "inputs")
 # Every argument main_internal() expects, with CLI defaults. The UI overrides a
 # subset; anything it leaves out keeps these defaults.
 DEFAULTS = dict(
-    count=1, target="esp32", size=0x6000, encrypt=False, log_level="info",
-    outdir=OUT_DIR, generate_bin=True, no_secure_cert_bin=False,
-    passcode=None, discriminator=None, commissioning_flow=0, discovery_mode=2,
-    enable_dynamic_passcode=False, salt=None, verifier=None, iteration_count=10000,
-    commissionable_data_in_secure_cert=False, dac_in_secure_cert=False,
-    lifetime=36500, valid_from=None, cn_prefix="ESP32", cert=None, key=None,
-    cert_dclrn=None, dac_cert=None, dac_key=None, ds_peripheral=False,
-    efuse_key_id=-1, port=None, priv_key_pass=None, paa=False, pai=False,
-    vendor_id=None, vendor_name=None, product_id=None, product_name=None,
-    hw_ver=None, hw_ver_str=None, mfg_date=None, serial_num=None,
-    enable_rotating_device_id=False, rd_id_uid=None, product_finish=None,
-    rd_id_uid_in_secure_cert=False, product_color=None, part_number=None,
-    calendar_types=None, locales=None, fixed_labels=None, supported_modes=None,
-    product_label=None, product_url=None, csv=None, mcsv=None,
+    count=1,
+    target="esp32",
+    size=0x6000,
+    encrypt=False,
+    log_level="info",
+    outdir=OUT_DIR,
+    generate_bin=True,
+    no_secure_cert_bin=False,
+    passcode=None,
+    discriminator=None,
+    commissioning_flow=0,
+    discovery_mode=2,
+    enable_dynamic_passcode=False,
+    salt=None,
+    verifier=None,
+    iteration_count=10000,
+    commissionable_data_in_secure_cert=False,
+    dac_in_secure_cert=False,
+    lifetime=36500,
+    valid_from=None,
+    cn_prefix="ESP32",
+    cert=None,
+    key=None,
+    cert_dclrn=None,
+    dac_cert=None,
+    dac_key=None,
+    ds_peripheral=False,
+    efuse_key_id=-1,
+    port=None,
+    priv_key_pass=None,
+    paa=False,
+    pai=False,
+    vendor_id=None,
+    vendor_name=None,
+    product_id=None,
+    product_name=None,
+    hw_ver=None,
+    hw_ver_str=None,
+    mfg_date=None,
+    serial_num=None,
+    enable_rotating_device_id=False,
+    rd_id_uid=None,
+    product_finish=None,
+    rd_id_uid_in_secure_cert=False,
+    product_color=None,
+    part_number=None,
+    calendar_types=None,
+    locales=None,
+    fixed_labels=None,
+    supported_modes=None,
+    product_label=None,
+    product_url=None,
+    csv=None,
+    mcsv=None,
 )
 
 # Fields parsed with int(x, 0) so the UI can accept hex (0xFFF1) or decimal.
 _INT_FIELDS = {
-    "count", "size", "passcode", "discriminator", "commissioning_flow",
-    "discovery_mode", "iteration_count", "lifetime", "efuse_key_id",
-    "vendor_id", "product_id", "hw_ver",
+    "count",
+    "size",
+    "passcode",
+    "discriminator",
+    "commissioning_flow",
+    "discovery_mode",
+    "iteration_count",
+    "lifetime",
+    "efuse_key_id",
+    "vendor_id",
+    "product_id",
+    "hw_ver",
 }
 # Space/comma separated multi-value fields.
 _LIST_FIELDS = {"calendar_types", "locales", "fixed_labels", "supported_modes"}
@@ -124,6 +176,7 @@ def _reset_tool_state():
     interpreter, so stale state (e.g. appended NVS keys) corrupts later runs.
     """
     import sources.mfg_tool as mt
+
     mt.UUIDs.clear()
     mt.SECURE_CERT_INFO.clear()
     for store in (mt.PAI, mt.OUT_DIR, mt.OUT_FILE):
@@ -135,6 +188,7 @@ def _reset_tool_state():
     # instance is loaded; snapshot pristine state on first use, restore after.
     global _PRISTINE_NVS_MAP
     import sys
+
     for modname in ("chip_nvs", "sources.chip_nvs"):
         cn = sys.modules.get(modname)
         if cn is None or not hasattr(cn, "CHIP_NVS_MAP"):
@@ -175,11 +229,13 @@ def _collect_devices():
             with open(os.path.join(root, fname)) as fh:
                 rows = list(csv.DictReader(fh))
             if rows:
-                dev.update({
-                    "manualcode": rows[0].get("manualcode", "").strip('"'),
-                    "discriminator": rows[0].get("discriminator", ""),
-                    "passcode": rows[0].get("passcode", ""),
-                })
+                dev.update(
+                    {
+                        "manualcode": rows[0].get("manualcode", "").strip('"'),
+                        "discriminator": rows[0].get("discriminator", ""),
+                        "passcode": rows[0].get("passcode", ""),
+                    }
+                )
             png_path = os.path.join(root, f"{uuid}-qrcode.png")
             if os.path.exists(png_path):
                 with open(png_path, "rb") as fh:

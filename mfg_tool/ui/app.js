@@ -3,13 +3,16 @@
 
 const PYODIDE_VERSION = "0.28.3";
 const PYODIDE_CDN = `https://cdn.jsdelivr.net/pyodide/v${PYODIDE_VERSION}/full/`;
-const MFG_TOOL_SPEC = "esp-matter-mfg-tool==1.0.23";
+// Unpinned: always install the latest published release.
+const MFG_TOOL_SPEC = "esp-matter-mfg-tool";
 
 // WASM-native wheels bundled with Pyodide.
 const NATIVE_PACKAGES = ["micropip", "cryptography", "cffi", "bitarray"];
 
-// Pure-Python deps installed by name from PyPI. python-stdnum 1.18 avoids a
-// top-level `import ssl`, which Pyodide lacks.
+// Dependencies are installed here (not resolved from the package) because it is
+// installed with deps=False — its pins have no WASM wheels. Keep this list in
+// sync with the latest esp-matter-mfg-tool's requirements.
+// python-stdnum 1.18 avoids a top-level `import ssl`, which Pyodide lacks.
 const PYPI_PURE_DEPS = [
   "ecdsa", "pypng", "python-stdnum==1.18", "click",
   "click-option-group", "construct", "esp-idf-nvs-partition-gen",

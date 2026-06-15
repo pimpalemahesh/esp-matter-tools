@@ -31,9 +31,9 @@ PAA_KEY = ("paa_key.pem", "Chip-Test-PAA-NoVID-Key.pem")
 PAI_CERT = ("pai_cert.pem", "Chip-Test-PAI-FFF2-8001-Cert.pem")
 PAI_KEY = ("pai_key.pem", "Chip-Test-PAI-FFF2-8001-Key.pem")
 CD_DER = ("cd.der", "Chip-Test-CD-FFF2-8001.der")
-DAC_CERT = ("DAC_cert.pem", "DAC_cert.pem")              # signed by FFF2/8001 PAI
+DAC_CERT = ("DAC_cert.pem", "DAC_cert.pem")  # signed by FFF2/8001 PAI
 DAC_KEY = ("DAC_key.pem", "DAC_key.pem")
-DAC_FFF1_CERT = ("dac.pem", "DAC-FFF1-8000-Cert.pem")    # signed by a *different* PAI
+DAC_FFF1_CERT = ("dac.pem", "DAC-FFF1-8000-Cert.pem")  # signed by a *different* PAI
 DAC_FFF1_KEY = ("dac_key.pem", "DAC-FFF1-8000-Key.pem")
 
 
@@ -58,6 +58,7 @@ def _zip_names(result):
 
 # --- validation / coercion -------------------------------------------------
 
+
 def test_missing_vendor_id_is_rejected():
     res = mfg_runner.run_mfg_tool({"product_id": "0x8000"}, {})
     assert res["ok"] is False
@@ -74,6 +75,7 @@ def test_hex_and_decimal_ids_are_accepted():
 
 
 # --- the four "Device attestation (DAC)" modes -----------------------------
+
 
 def test_mode_none_has_no_dac(tmp_path):
     """Dropdown: 'No DAC — commissioning data only'."""
@@ -93,8 +95,14 @@ def test_mode_none_has_no_dac(tmp_path):
 def test_mode_bundled_paa_generates_dac():
     """Dropdown: 'Bundled test certs' — PAA works with any VID/PID."""
     res = mfg_runner.run_mfg_tool(
-        {"vendor_id": "0xFFF1", "product_id": "0x8000", "count": "1",
-         "paa": True, "cert": PAA_CERT[0], "key": PAA_KEY[0]},
+        {
+            "vendor_id": "0xFFF1",
+            "product_id": "0x8000",
+            "count": "1",
+            "paa": True,
+            "cert": PAA_CERT[0],
+            "key": PAA_KEY[0],
+        },
         _files(PAA_CERT, PAA_KEY),
     )
     assert res["ok"] is True, res.get("error")
@@ -104,9 +112,15 @@ def test_mode_bundled_paa_generates_dac():
 def test_mode_bundled_pai_generates_dac():
     """Dropdown: 'Bundled test PAI' — fixed to VID 0xFFF2 / PID 0x8001."""
     res = mfg_runner.run_mfg_tool(
-        {"vendor_id": "0xFFF2", "product_id": "0x8001", "count": "1",
-         "pai": True, "cert": PAI_CERT[0], "key": PAI_KEY[0],
-         "cert_dclrn": CD_DER[0]},
+        {
+            "vendor_id": "0xFFF2",
+            "product_id": "0x8001",
+            "count": "1",
+            "pai": True,
+            "cert": PAI_CERT[0],
+            "key": PAI_KEY[0],
+            "cert_dclrn": CD_DER[0],
+        },
         _files(PAI_CERT, PAI_KEY, CD_DER),
     )
     assert res["ok"] is True, res.get("error")
@@ -116,9 +130,16 @@ def test_mode_bundled_pai_generates_dac():
 def test_mode_custom_with_matching_dac_and_pai():
     """Dropdown: 'Custom' — user uploads a DAC + the PAI that signed it."""
     res = mfg_runner.run_mfg_tool(
-        {"vendor_id": "0xFFF2", "product_id": "0x8001", "count": "1",
-         "pai": True, "cert": PAI_CERT[0], "key": PAI_KEY[0],
-         "dac_cert": DAC_CERT[0], "dac_key": DAC_KEY[0]},
+        {
+            "vendor_id": "0xFFF2",
+            "product_id": "0x8001",
+            "count": "1",
+            "pai": True,
+            "cert": PAI_CERT[0],
+            "key": PAI_KEY[0],
+            "dac_cert": DAC_CERT[0],
+            "dac_key": DAC_KEY[0],
+        },
         _files(PAI_CERT, PAI_KEY, DAC_CERT, DAC_KEY),
     )
     assert res["ok"] is True, res.get("error")
@@ -128,16 +149,27 @@ def test_mode_custom_with_matching_dac_and_pai():
 def test_mode_custom_mismatched_dac_pai_is_rejected():
     """A DAC from one chain + a PAI from another must fail (the reported bug)."""
     res = mfg_runner.run_mfg_tool(
-        {"vendor_id": "0xFFF2", "product_id": "0x8001", "count": "1",
-         "pai": True, "cert": PAI_CERT[0], "key": PAI_KEY[0],
-         "dac_cert": DAC_FFF1_CERT[0], "dac_key": DAC_FFF1_KEY[0]},
+        {
+            "vendor_id": "0xFFF2",
+            "product_id": "0x8001",
+            "count": "1",
+            "pai": True,
+            "cert": PAI_CERT[0],
+            "key": PAI_KEY[0],
+            "dac_cert": DAC_FFF1_CERT[0],
+            "dac_key": DAC_FFF1_KEY[0],
+        },
         _files(PAI_CERT, PAI_KEY, DAC_FFF1_CERT, DAC_FFF1_KEY),
     )
     assert res["ok"] is False
-    assert "chain" in res["error"].lower() or "mismatch" in (res.get("log", "") + res["error"]).lower()
+    assert (
+        "chain" in res["error"].lower()
+        or "mismatch" in (res.get("log", "") + res["error"]).lower()
+    )
 
 
 # --- misc behavior ---------------------------------------------------------
+
 
 def test_multiple_devices():
     res = mfg_runner.run_mfg_tool(
