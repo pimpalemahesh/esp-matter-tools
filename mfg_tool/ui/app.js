@@ -1,36 +1,22 @@
-/*
- * esp-matter-mfg-tool — browser front-end.
- *
- * Loads Pyodide, installs the *published* esp-matter-mfg-tool from PyPI (plus a
- * couple of pure-Python dependencies that only ship as sdists, vendored here as
- * wheels), then drives it entirely client-side. No data leaves the browser.
- */
+// Browser front-end: loads Pyodide, installs esp-matter-mfg-tool from PyPI, and
+// runs it entirely client-side. Nothing leaves the browser.
 
 const PYODIDE_VERSION = "0.28.3";
 const PYODIDE_CDN = `https://cdn.jsdelivr.net/pyodide/v${PYODIDE_VERSION}/full/`;
-
-// esp-matter-mfg-tool release to pull from PyPI.
 const MFG_TOOL_SPEC = "esp-matter-mfg-tool==1.0.23";
 
-// WASM-native wheels bundled with Pyodide (loaded via loadPackage).
+// WASM-native wheels bundled with Pyodide.
 const NATIVE_PACKAGES = ["micropip", "cryptography", "cffi", "bitarray"];
 
-// Pure-Python deps that publish wheels on PyPI (installed by name via micropip).
+// Pure-Python deps installed by name from PyPI. python-stdnum 1.18 avoids a
+// top-level `import ssl`, which Pyodide lacks.
 const PYPI_PURE_DEPS = [
-  "ecdsa",
-  "pypng",
-  "python-stdnum==1.18", // 1.18 has no top-level `import ssl` (absent in Pyodide)
-  "click",
-  "click-option-group",
-  "construct",
-  "esp-idf-nvs-partition-gen",
+  "ecdsa", "pypng", "python-stdnum==1.18", "click",
+  "click-option-group", "construct", "esp-idf-nvs-partition-gen",
 ];
 
-// Pure-Python deps that publish *only* sdists on PyPI (micropip can't build
-// sdists in-browser), so we ship pre-built wheels next to this page.
-// Names are lowercase: modern pip/wheel normalizes the distribution name in the
-// wheel filename, and prepare_assets.sh lowercases them so this matches whoever
-// built the wheels.
+// Deps that publish sdists only (micropip can't build sdists); served as
+// pre-built wheels. Lowercase names match prepare_assets.sh output.
 const VENDORED_WHEELS = [
   "wheels/pyqrcode-1.2.1-py3-none-any.whl",
   "wheels/esp_secure_cert_tool-2.3.6-py3-none-any.whl",
@@ -53,6 +39,20 @@ function logBoot(msg) {
   el.scrollTop = el.scrollHeight;
 }
 
+// Generate button states: "loading" | "ready" | "busy" | "failed".
+function setGenerateState(state) {
+  const btn = $("generate-btn");
+  const label = $("generate-label");
+  btn.classList.toggle("is-busy", state === "loading" || state === "busy");
+  btn.disabled = state !== "ready";
+  label.textContent = {
+    loading: "Preparing runtime…",
+    ready: "Generate",
+    busy: "Generating…",
+    failed: "Runtime unavailable",
+  }[state];
+}
+
 async function loadPyodideScript() {
   await new Promise((resolve, reject) => {
     const s = document.createElement("script");
@@ -63,58 +63,48 @@ async function loadPyodideScript() {
   });
 }
 
+async function micropipInstall(specs, deps) {
+  pyodide.globals.set("SPECS", pyodide.toPy(specs));
+  await pyodide.runPythonAsync(
+    `import micropip\nawait micropip.install([str(s) for s in SPECS], deps=${deps ? "True" : "False"})`
+  );
+}
+
 async function initRuntime() {
   setStatus("Loading Python runtime (Pyodide)…", "busy");
-  logBoot("Loading Pyodide " + PYODIDE_VERSION + " …");
+  logBoot("Loading Pyodide " + PYODIDE_VERSION);
   await loadPyodideScript();
   pyodide = await loadPyodide({ indexURL: PYODIDE_CDN });
 
-  logBoot("Loading native packages: " + NATIVE_PACKAGES.join(", "));
-  setStatus("Loading native crypto packages…", "busy");
+  setStatus("Loading native packages…", "busy");
+  logBoot("loadPackage: " + NATIVE_PACKAGES.join(", "));
   await pyodide.loadPackage(NATIVE_PACKAGES);
 
-  setStatus("Installing pure-Python dependencies from PyPI…", "busy");
-  logBoot("micropip: installing " + PYPI_PURE_DEPS.join(", "));
-  pyodide.globals.set("PURE_DEPS", pyodide.toPy(PYPI_PURE_DEPS));
-  await pyodide.runPythonAsync(`
-import micropip
-await micropip.install(list(PURE_DEPS), deps=True)
-`);
+  setStatus("Installing dependencies from PyPI…", "busy");
+  logBoot("micropip: " + PYPI_PURE_DEPS.join(", "));
+  await micropipInstall(PYPI_PURE_DEPS, true);
 
-  setStatus("Installing vendored dependency wheels…", "busy");
-  logBoot("micropip: installing vendored wheels");
-  pyodide.globals.set("VENDORED", pyodide.toPy(VENDORED_WHEELS));
-  await pyodide.runPythonAsync(`
-import micropip
-await micropip.install([str(w) for w in VENDORED], deps=False)
-`);
+  setStatus("Installing vendored wheels…", "busy");
+  logBoot("micropip: vendored wheels");
+  await micropipInstall(VENDORED_WHEELS, false);
 
+  // deps=False: the published package pins versions with no WASM wheels
+  // (e.g. cryptography==44.0.1); deps are satisfied above.
   setStatus("Installing esp-matter-mfg-tool from PyPI…", "busy");
-  logBoot("micropip: installing " + MFG_TOOL_SPEC + " (from PyPI, deps disabled)");
-  pyodide.globals.set("MFG_SPEC", MFG_TOOL_SPEC);
-  // deps=False: the published package pins versions that have no WASM wheels
-  // (e.g. cryptography==44.0.1); we satisfy the deps ourselves above.
-  await pyodide.runPythonAsync(`
-import micropip
-await micropip.install(MFG_SPEC, deps=False)
-`);
+  logBoot("micropip: " + MFG_TOOL_SPEC);
+  await micropipInstall([MFG_TOOL_SPEC], false);
 
-  setStatus("Loading runner glue…", "busy");
   logBoot("Loading mfg_runner.py");
-  const runnerSrc = await (await fetch("mfg_runner.py")).text();
-  await pyodide.runPythonAsync(runnerSrc);
+  await pyodide.runPythonAsync(await (await fetch("mfg_runner.py")).text());
 
   ready = true;
   setStatus("Ready — fill in the form and generate.", "ok");
   logBoot("Ready.");
-  $("generate-btn").disabled = false;
+  setGenerateState("ready");
 }
 
-// ---- form handling -------------------------------------------------------
-
-// Bundled Matter test credentials shipped next to the page. The PAA has no VID
-// constraint (works with any VID/PID); the PAI is fixed to FFF2/8001 and pairs
-// with the matching Certificate Declaration.
+// Bundled test credentials. PAA works with any VID/PID; PAI is fixed to
+// FFF2/8001 and pairs with its Certificate Declaration.
 const BUNDLED_CERTS = {
   "test-paa": {
     paa: true,
@@ -273,8 +263,7 @@ async function onGenerate(evt) {
   evt.preventDefault();
   if (!ready) return;
 
-  const btn = $("generate-btn");
-  btn.disabled = true;
+  setGenerateState("busy");
   setStatus("Generating manufacturing partitions…", "busy");
   $("results").innerHTML = "";
   $("run-log").textContent = "";
@@ -297,7 +286,7 @@ json.dumps(run_mfg_tool(JS_CONFIG, JS_FILES))
     setStatus("Error: " + err.message, "error");
     $("run-log").textContent = String(err.stack || err);
   } finally {
-    btn.disabled = false;
+    setGenerateState("ready");
   }
 }
 
@@ -324,5 +313,6 @@ window.addEventListener("DOMContentLoaded", () => {
   initRuntime().catch((err) => {
     setStatus("Failed to initialise: " + err.message, "error");
     logBoot("FATAL: " + (err.stack || err));
+    setGenerateState("failed");
   });
 });

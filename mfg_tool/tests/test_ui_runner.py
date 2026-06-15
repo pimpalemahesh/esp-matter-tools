@@ -1,12 +1,8 @@
-"""Tests for the browser UI's Python glue (mfg_tool/ui/mfg_runner.py).
+"""Tests for the browser UI glue (mfg_tool/ui/mfg_runner.py).
 
-run_mfg_tool() is what app.js calls inside Pyodide. It is plain CPython, so we
-exercise it directly here (no browser/Pyodide needed) to cover the four "Device
-attestation (DAC)" modes the UI exposes, argument coercion, validation, and the
-zipped output — mirroring exactly the (config, files) payloads app.js sends.
-
-The underlying generation logic is covered by test_integration.py; this guards
-the UI-specific mapping layer.
+run_mfg_tool() is plain CPython, so we drive it directly (no Pyodide) with the
+same (config, files) payloads app.js sends, covering the four DAC modes,
+coercion, validation, and zipped output.
 """
 
 import base64

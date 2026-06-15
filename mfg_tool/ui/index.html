@@ -18,12 +18,9 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
 
   <script>
-    // Apply saved/preferred theme before paint to avoid a flash.
-    (function () {
-      var saved = localStorage.getItem('esp-matter-tools-theme');
-      if (!saved) saved = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-      document.documentElement.setAttribute('data-theme', saved);
-    })();
+    // Apply saved theme before paint to avoid a flash; default to light.
+    document.documentElement.setAttribute(
+      'data-theme', localStorage.getItem('esp-matter-tools-theme') || 'light');
   </script>
 </head>
 
@@ -177,8 +174,10 @@
           </div>
         </details>
 
-        <button id="generate-btn" class="btn btn-primary btn-block" type="submit" disabled>
-          <i class="fas fa-cog"></i> Generate
+        <button id="generate-btn" class="btn btn-primary btn-block is-busy" type="submit" disabled>
+          <span class="btn-spinner" aria-hidden="true"></span>
+          <i class="fas fa-bolt btn-icon" aria-hidden="true"></i>
+          <span id="generate-label">Preparing runtime…</span>
         </button>
       </form>
 

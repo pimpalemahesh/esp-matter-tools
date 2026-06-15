@@ -1,13 +1,7 @@
-"""
-In-browser glue for esp-matter-mfg-tool running under Pyodide.
+"""In-browser glue for the published esp-matter-mfg-tool under Pyodide.
 
-This module is loaded into the Pyodide runtime by app.js. It:
-  * shims hashlib.pbkdf2_hmac (Pyodide's CPython is built without the OpenSSL
-    _hashlib backend, so pbkdf2_hmac is missing),
-  * exposes run_mfg_tool(config, files) which the JavaScript front-end calls.
-
-It drives the *published* esp-matter-mfg-tool package (installed from PyPI by
-app.js); it never imports anything from the source checkout.
+Loaded by app.js; exposes run_mfg_tool(config, files) and shims
+hashlib.pbkdf2_hmac (absent in Pyodide's CPython).
 """
 
 import base64
@@ -25,7 +19,7 @@ import zipfile
 from types import SimpleNamespace
 
 
-# --- Shim: hashlib.pbkdf2_hmac (absent in Pyodide, used by deps/spake2p.py) ---
+# pbkdf2_hmac is absent in Pyodide (no OpenSSL backend) but used by spake2p.
 if not hasattr(hashlib, "pbkdf2_hmac"):
     def _pbkdf2_hmac(hash_name, password, salt, iterations, dklen=None):
         size = hmac.new(password, None, hash_name).digest_size
@@ -124,12 +118,10 @@ _PRISTINE_NVS_MAP = None
 
 
 def _reset_tool_state():
-    """Reset the tool's module-level globals between runs.
+    """Reset the tool's module globals so repeated runs don't leak state.
 
-    The published tool keeps run state in module globals — fine for a one-shot
-    CLI process, but stale across repeated calls in the same long-lived Pyodide
-    session. Without this, a second generation inherits the first run's state
-    (e.g. leftover NVS keys) and is corrupted. Clear them so each run is clean.
+    The tool assumes a fresh process per run; the browser reuses one
+    interpreter, so stale state (e.g. appended NVS keys) corrupts later runs.
     """
     import sources.mfg_tool as mt
     mt.UUIDs.clear()
@@ -138,10 +130,9 @@ def _reset_tool_state():
         for key in list(store):
             store[key] = None
 
-    # chip_nvs.CHIP_NVS_MAP is mutated in place (keys appended, values set) on
-    # every run. mfg_tool imports chip_nvs as a top-level module via the sources
-    # sys.path shim, so reset whichever instance(s) are actually loaded. Snapshot
-    # its pristine state on first use, restore it on later runs.
+    # CHIP_NVS_MAP is mutated in place each run. mfg_tool imports chip_nvs as a
+    # top-level module via the sources sys.path shim, so reset whichever
+    # instance is loaded; snapshot pristine state on first use, restore after.
     global _PRISTINE_NVS_MAP
     import sys
     for modname in ("chip_nvs", "sources.chip_nvs"):
@@ -185,7 +176,6 @@ def _collect_devices():
                 rows = list(csv.DictReader(fh))
             if rows:
                 dev.update({
-                    "qrcode": rows[0].get("qrcode", ""),
                     "manualcode": rows[0].get("manualcode", "").strip('"'),
                     "discriminator": rows[0].get("discriminator", ""),
                     "passcode": rows[0].get("passcode", ""),
@@ -209,21 +199,11 @@ def _zip_outputs():
     return base64.b64encode(buf.getvalue()).decode()
 
 
-def _read_summary():
-    for root, _dirs, files in os.walk(OUT_DIR):
-        for fname in files:
-            if fname.startswith("summary-") and fname.endswith(".csv"):
-                with open(os.path.join(root, fname)) as fh:
-                    return fh.read()
-    return ""
-
-
 def run_mfg_tool(config, files=None):
-    """Entry point called from JavaScript.
+    """Entry point called from JavaScript. Returns a JSON-serialisable dict.
 
-    config : plain object of CLI-equivalent options (keys match arg names).
-    files  : optional object of {filename: bytes} for uploaded cert/csv inputs.
-    Returns a JSON-serialisable dict.
+    config : CLI-equivalent options (keys match arg names).
+    files  : optional {filename: bytes} for uploaded cert/csv inputs.
     """
     if hasattr(config, "to_py"):
         config = config.to_py()
@@ -265,7 +245,6 @@ def run_mfg_tool(config, files=None):
             "ok": True,
             "log": "\n".join(handler.records),
             "devices": _collect_devices(),
-            "summary_csv": _read_summary(),
             "zip_b64": _zip_outputs(),
         }
     except SystemExit as exc:

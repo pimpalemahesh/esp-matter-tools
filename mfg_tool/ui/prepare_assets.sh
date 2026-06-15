@@ -1,25 +1,8 @@
 #!/usr/bin/env bash
-# Prepare the local-only assets the browser UI needs to be served. These are
-# build artifacts (git-ignored), regenerated here so nothing is duplicated in
-# the repo.
-#
-# 1. Vendored wheels (wheels/)
-#    esp-matter-mfg-tool and most of its deps are installed in the browser from
-#    PyPI by micropip. Two deps — PyQRCode and esp-secure-cert-tool — publish
-#    *only* an sdist, which micropip cannot build in the browser. Both are pure
-#    Python, so `pip wheel` turns each into a universal py3-none-any wheel that
-#    the page installs from wheels/.
-#
-# 2. Bundled test certificates (test_certs/)
-#    Copied from the tool's existing test fixtures in ../test_data so they live
-#    in exactly one place in the repo. They power the one-click "bundled test
-#    certs" attestation modes. These are Matter *development* credentials.
-#
-# WHO runs it:
-#   The GitHub Pages workflow (.github/workflows/deploy-tools.yml) runs this on
-#   every deploy. Run it yourself once before serving the site locally.
-#
-# Keep the wheel versions in sync with VENDORED_WHEELS in app.js.
+# Build the UI's git-ignored assets (run by the deploy workflow and locally):
+#   wheels/      sdist-only deps (PyQRCode, esp-secure-cert-tool) built as wheels
+#   test_certs/  bundled test certs copied from ../test_data (single source)
+# Keep wheel versions in sync with VENDORED_WHEELS in app.js.
 set -euo pipefail
 
 cd "$(dirname "$0")"
