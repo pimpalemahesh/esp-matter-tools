@@ -230,6 +230,9 @@ function renderResult(result, vid, pid) {
   header.appendChild(dlBtn);
   out.appendChild(header);
 
+  const canFlash = window.MfgFlasher && MfgFlasher.isSupported();
+  if (canFlash) out.appendChild(buildFlashPanel());
+
   const grid = document.createElement("div");
   grid.className = "device-grid";
   for (const dev of result.devices) {
@@ -246,11 +249,107 @@ function renderResult(result, vid, pid) {
         <div><span>Manual</span><code>${escapeHtml(dev.manualcode || "—")}</code></div>
         <div class="uuid"><span>UUID</span><code>${escapeHtml(dev.uuid)}</code></div>
       </div>`;
+    if (canFlash && dev.partition_b64) card.appendChild(buildFlashControls(dev));
     grid.appendChild(card);
   }
   out.appendChild(grid);
 
   $("run-log").textContent = result.log || "";
+}
+
+// Shared flash settings: offset field + optional partition-table auto-fill.
+function buildFlashPanel() {
+  const panel = document.createElement("div");
+  panel.className = "flash-panel";
+  panel.innerHTML = `
+    <div class="flash-row">
+      <label>Flash offset
+        <input id="flash-offset" class="form-control" type="text" value="0x10000" />
+      </label>
+      <label>Auto-fill from partition table (CSV or .bin)
+        <input id="flash-ptable" class="form-control" type="file" accept=".csv,.bin" />
+      </label>
+      <label class="flash-ptable-pick" style="display:none">Partition
+        <select id="flash-ptable-sel" class="form-control"></select>
+      </label>
+    </div>
+    <p class="hint">Flashes the generated partition to an ESP over USB (Chrome/Edge), then resets
+      it to run. The offset must match your partition table; this writes only the partition, not
+      the app. If connecting fails, unplug and replug the board, then try again.</p>`;
+  panel.querySelector("#flash-ptable").addEventListener("change", onPartitionTable);
+  panel.querySelector("#flash-ptable-sel").addEventListener("change", (e) => {
+    $("flash-offset").value = e.target.value;
+  });
+  return panel;
+}
+
+async function onPartitionTable(evt) {
+  const file = evt.target.files[0];
+  if (!file) return;
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  const parts = MfgFlasher.parsePartitionTable(file.name, bytes);
+  const sel = $("flash-ptable-sel");
+  if (!parts.length) {
+    sel.parentElement.style.display = "none";
+    return;
+  }
+  sel.innerHTML = parts
+    .map((p) => `<option value="0x${p.offset.toString(16)}">${escapeHtml(p.name)} (${p.subtype}) @ 0x${p.offset.toString(16)}</option>`)
+    .join("");
+  sel.parentElement.style.display = "";
+  // Prefer a data/nvs partition; else the first entry.
+  const nvs = parts.find((p) => p.subtype === "nvs" || p.subtype === "1");
+  const pick = nvs || parts[0];
+  sel.value = "0x" + pick.offset.toString(16);
+  $("flash-offset").value = sel.value;
+}
+
+function buildFlashControls(dev) {
+  const wrap = document.createElement("div");
+  wrap.className = "flash-controls";
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "btn btn-secondary btn-flash";
+  btn.innerHTML = '<i class="fas fa-bolt"></i> Flash to device';
+  const bar = document.createElement("div");
+  bar.className = "flash-progress";
+  bar.innerHTML = '<span></span>';
+  btn.onclick = () => flashOne(dev, btn, bar);
+  wrap.append(btn, bar);
+  return wrap;
+}
+
+async function flashOne(dev, btn, bar) {
+  const offset = parseInt($("flash-offset").value, 0);
+  if (Number.isNaN(offset)) {
+    setStatus("Enter a valid flash offset (e.g. 0x10000).", "error");
+    return;
+  }
+  const fill = bar.firstElementChild;
+  btn.disabled = true;
+  btn.classList.add("is-busy");
+  setStatus("Flashing — select the serial port…", "busy");
+  try {
+    await MfgFlasher.flashDevice(dev.partition_b64, offset, {
+      onLog: appendRunLog,
+      onProgress: (f) => { fill.style.width = Math.round(f * 100) + "%"; },
+    });
+    fill.style.width = "100%";
+    setStatus("Flashed " + dev.uuid.slice(0, 8) + " at 0x" + offset.toString(16) +
+      " — device reset and running.", "ok");
+  } catch (err) {
+    setStatus("Flash failed: " + err.message, "error");
+    appendRunLog("Flash error: " + (err.stack || err));
+  } finally {
+    btn.disabled = false;
+    btn.classList.remove("is-busy");
+  }
+}
+
+function appendRunLog(line) {
+  const el = $("run-log");
+  el.textContent += (el.textContent ? "\n" : "") + line;
+  el.scrollTop = el.scrollHeight;
 }
 
 function escapeHtml(s) {

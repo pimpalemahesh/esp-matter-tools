@@ -184,6 +184,10 @@ def _collect_devices():
             if os.path.exists(png_path):
                 with open(png_path, "rb") as fh:
                     dev["qrcode_png_b64"] = base64.b64encode(fh.read()).decode()
+            bin_path = os.path.join(root, f"{uuid}-partition.bin")
+            if os.path.exists(bin_path):
+                with open(bin_path, "rb") as fh:
+                    dev["partition_b64"] = base64.b64encode(fh.read()).decode()
             devices.append(dev)
     return devices
 

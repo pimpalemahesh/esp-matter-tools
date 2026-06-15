@@ -84,6 +84,7 @@ def test_mode_none_has_no_dac(tmp_path):
     assert len(res["devices"]) == 1
     dev = res["devices"][0]
     assert dev["passcode"] and dev["discriminator"] and dev["qrcode_png_b64"]
+    assert dev["partition_b64"]  # exposed for in-browser flashing
     names = _zip_names(res)
     assert any(n.endswith("-partition.bin") for n in names)
     assert not any("DAC_cert" in n for n in names)

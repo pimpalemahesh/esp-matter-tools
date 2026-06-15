@@ -285,6 +285,45 @@ details.adv[open] > summary::after { transform: rotate(90deg); }
 .btn.is-busy .btn-icon { display: none; }
 @keyframes btn-spin { to { transform: rotate(360deg); } }
 
+/* Secondary button */
+.btn-secondary {
+  background: transparent;
+  color: var(--accent-color);
+  border: 2px solid var(--accent-color);
+}
+.btn-secondary:hover:not(:disabled) { background: var(--accent-color); color: #fff; }
+.btn-secondary:disabled { opacity: 0.6; cursor: not-allowed; }
+
+/* Flash panel */
+.flash-panel {
+  background: var(--surface-alt);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  padding: 16px 18px;
+  margin-bottom: 18px;
+}
+.flash-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 14px;
+}
+.flash-controls { margin-top: 14px; }
+.btn-flash { width: 100%; padding: 9px 14px; font-size: 0.9rem; }
+.flash-progress {
+  height: 6px;
+  margin-top: 8px;
+  background: var(--border-color);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.flash-progress > span {
+  display: block;
+  height: 100%;
+  width: 0;
+  background: var(--accent-color);
+  transition: width 0.2s ease;
+}
+
 /* Output */
 .result-header {
   display: flex;
