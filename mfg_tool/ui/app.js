@@ -234,8 +234,8 @@ function renderResult(result, vid, pid) {
   const dlName = `matter_mfg_${vid || "out"}_${pid || ""}.zip`;
   header.innerHTML = `<span>✅ Generated ${result.devices.length} device(s).</span>`;
   const dlBtn = document.createElement("button");
-  dlBtn.textContent = "⬇ Download all (.zip)";
-  dlBtn.className = "primary";
+  dlBtn.innerHTML = '<i class="fas fa-download"></i> Download all (.zip)';
+  dlBtn.className = "btn btn-primary";
   dlBtn.onclick = () => downloadZip(result.zip_b64, dlName);
   header.appendChild(dlBtn);
   out.appendChild(header);
