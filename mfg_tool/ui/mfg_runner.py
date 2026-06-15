@@ -11,6 +11,7 @@ app.js); it never imports anything from the source checkout.
 """
 
 import base64
+import copy
 import csv
 import hashlib
 import hmac
@@ -119,12 +120,16 @@ def _write_inputs(files):
     return paths
 
 
-def _reset_tool_state():
-    """Reset mfg_tool's module-level globals.
+_PRISTINE_NVS_MAP = None
 
-    The published tool keeps run state in module globals (UUIDs, OUT_DIR, …),
-    fine for a one-shot CLI process but stale across repeated calls in the same
-    long-lived Pyodide session. Clear them so each generation starts clean.
+
+def _reset_tool_state():
+    """Reset the tool's module-level globals between runs.
+
+    The published tool keeps run state in module globals — fine for a one-shot
+    CLI process, but stale across repeated calls in the same long-lived Pyodide
+    session. Without this, a second generation inherits the first run's state
+    (e.g. leftover NVS keys) and is corrupted. Clear them so each run is clean.
     """
     import sources.mfg_tool as mt
     mt.UUIDs.clear()
@@ -132,6 +137,21 @@ def _reset_tool_state():
     for store in (mt.PAI, mt.OUT_DIR, mt.OUT_FILE):
         for key in list(store):
             store[key] = None
+
+    # chip_nvs.CHIP_NVS_MAP is mutated in place (keys appended, values set) on
+    # every run. mfg_tool imports chip_nvs as a top-level module via the sources
+    # sys.path shim, so reset whichever instance(s) are actually loaded. Snapshot
+    # its pristine state on first use, restore it on later runs.
+    global _PRISTINE_NVS_MAP
+    import sys
+    for modname in ("chip_nvs", "sources.chip_nvs"):
+        cn = sys.modules.get(modname)
+        if cn is None or not hasattr(cn, "CHIP_NVS_MAP"):
+            continue
+        if _PRISTINE_NVS_MAP is None:
+            _PRISTINE_NVS_MAP = copy.deepcopy(cn.CHIP_NVS_MAP)
+        cn.CHIP_NVS_MAP.clear()
+        cn.CHIP_NVS_MAP.update(copy.deepcopy(_PRISTINE_NVS_MAP))
 
 
 def _reset_dirs():
