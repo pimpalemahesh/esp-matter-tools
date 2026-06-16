@@ -25,6 +25,7 @@ jobs:
     outputs:
       mfg_tool: ${{ steps.filter.outputs.mfg_tool }}
       dmv_tool: ${{ steps.filter.outputs.dmv_tool }}
+      dm_diff_tool: ${{ steps.filter.outputs.dm_diff_tool }}
     steps:
       - uses: actions/checkout@v4
       - uses: dorny/paths-filter@v3
@@ -35,6 +36,8 @@ jobs:
               - 'mfg_tool/**'
             dmv_tool:
               - 'dmv_tool/**'
+            dm_diff_tool:
+              - 'dm_diff_tool/**'
 
   lint:
     name: ruff check
@@ -156,3 +159,23 @@ jobs:
       - name: Pytest
         run: python3 -m pytest tests/ -v -s --log-cli-level=INFO
         working-directory: dmv_tool
+
+  test_dm_diff_tool:
+    name: test dm_diff_tool (Python ${{ matrix.python_version }})
+    runs-on: ubuntu-latest
+    needs: changes
+    if: needs.changes.outputs.dm_diff_tool == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        python_version: ["3.10", "3.11", "3.12", "3.13"]
+    container: python:${{ matrix.python_version }}-bullseye
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install test deps
+        run: |
+          cd dm_diff_tool
+          python3 -m pip install --upgrade pip pytest
+      - name: Pytest
+        run: python3 -m pytest tests/ -v -s
+        working-directory: dm_diff_tool
