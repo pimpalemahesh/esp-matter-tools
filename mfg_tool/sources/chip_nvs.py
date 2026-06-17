@@ -83,6 +83,10 @@ def chip_factory_update(key, value):
 def chip_factory_delete(key):
     CHIP_NVS_MAP['chip-factory'].pop(key, None)
 
+def chip_nvs_map_append(namespace, key, type, encoding, value):
+    if (namespace not in list(CHIP_NVS_MAP.keys())):
+        CHIP_NVS_MAP.update(get_namespace_dict(namespace))
+    chip_nvs_map_update(namespace, key, type, encoding, value)
 
 def chip_nvs_map_update(namespace, key, type, encoding, value):
     CHIP_NVS_MAP[namespace].update(get_dict(key, type, encoding, value))
@@ -109,7 +113,7 @@ def chip_get_keys_as_csv():
     keys = list()
     for ns in CHIP_NVS_MAP:
         keys.extend(list(CHIP_NVS_MAP[ns]))
-    
+
     output = StringIO()
     writer = csv.writer(output)
     writer.writerow(keys)
@@ -121,7 +125,7 @@ def chip_get_values_as_csv():
     for ns in CHIP_NVS_MAP:
         for k in CHIP_NVS_MAP[ns]:
             values.append(str(CHIP_NVS_MAP[ns][k]['value']))
-    
+
     output = StringIO()
     writer = csv.writer(output)
     writer.writerow(values)

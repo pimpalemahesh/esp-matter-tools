@@ -475,6 +475,14 @@
       "expected_output": "Generated output files at:",
       "validate_cn_in_path": true,
       "validate_cert": true
+    },
+    {
+      "test_num": 67,
+      "description": "factory partition with mqtt-host for RainMaker credentials",
+      "command": "esp-matter-mfg-tool -v 0xFFF2 -p 0x8001 --pai -k test_data/Chip-Test-PAI-FFF2-8001-Key.pem -c test_data/Chip-Test-PAI-FFF2-8001-Cert.pem -cd test_data/Chip-Test-CD-FFF2-8001.der --mqtt-host mqtt.rainmaker.espressif.com",
+      "expected_output": "Generated output files at:",
+      "validate_cn_in_path": true,
+      "validate_cert": true
     }
   ]
 }

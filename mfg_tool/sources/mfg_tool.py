@@ -35,7 +35,7 @@ from types import SimpleNamespace
 from cryptography.hazmat.primitives import serialization
 
 from chip_nvs import (
-    chip_nvs_get_config_csv, chip_get_keys_as_csv, chip_nvs_map_update,
+    chip_nvs_get_config_csv, chip_get_keys_as_csv, chip_nvs_map_update, chip_nvs_map_append,
     chip_factory_update, chip_factory_append, chip_get_values_as_csv,
     chip_nvs_map_append_config_csv, chip_factory_delete
 )
@@ -698,6 +698,10 @@ def add_optional_KVs(args):
     # Add certificate declaration
     if args.cert_dclrn:
         chip_factory_append('cert-dclrn','file','binary', os.path.relpath(args.cert_dclrn))
+
+    # Add rainmaker info
+    if args.mqtt_host is not None:
+        chip_nvs_map_append('rmaker_creds', 'mqtt_host', 'data', 'string', args.mqtt_host)
 
     # Add the Keys in csv files
     if args.csv is not None:

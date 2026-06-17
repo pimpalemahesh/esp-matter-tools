@@ -339,6 +339,10 @@ class MultiValueOption(GroupedOption):
 @optgroup.option("--product-url", help="Product URL")
 @optgroup.group("\nExtra information options using csv files")
 @optgroup.option(
+    "--mqtt-host",
+    help='MQTT broker hostname for RainMaker credentials, e.g. --mqtt-host "mqtt.rainmaker.espressif.com"',
+)
+@optgroup.option(
     "--csv", help="CSV file containing the partition schema for extra options."
 )
 @optgroup.option(

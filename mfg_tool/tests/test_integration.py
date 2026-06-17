@@ -32,6 +32,7 @@ from tests.utils import (
     parse_command_arguments,
     parse_partition_bin,
     validate_single_partition,
+    validate_rmaker_creds,
     safe_read_bytes,
     load_test_data,
 )
@@ -319,3 +320,4 @@ class TestEspMatterMfgToolIntegration:
             partition_data = parse_partition_bin(str(partition_bin_path))
             logger.debug(f"parsed partition {partition_bin_path}: {partition_data}")
             validate_single_partition(cmd_args, partition_data)
+            validate_rmaker_creds(cmd_args, str(partition_bin_path))

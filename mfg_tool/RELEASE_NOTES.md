@@ -1,3 +1,8 @@
+# [1.0.24] - (9-June-2026)
+
+* Added `--mqtt-host` option to specify the MQTT broker hostname for RainMaker credentials.
+  The value is stored in the `rmaker_creds` NVS namespace as `mqtt_host`.
+
 # [1.0.23] - (30-April-2026)
 
 ### CLI migration from argparse to Click

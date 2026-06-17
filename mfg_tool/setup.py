@@ -22,7 +22,7 @@ except ImportError:
     )
     sys.exit(1)
 
-VERSION = "1.0.23"
+VERSION = "1.0.24"
 
 long_description = """
 ====================
