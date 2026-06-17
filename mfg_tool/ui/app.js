@@ -323,7 +323,7 @@ async function onPartitionTable(evt) {
     return;
   }
   sel.innerHTML = parts
-    .map((p) => `<option value="0x${p.offset.toString(16)}">${escapeHtml(p.name)} (${p.subtype}) @ 0x${p.offset.toString(16)}</option>`)
+    .map((p) => `<option value="0x${p.offset.toString(16)}">${escapeHtml(p.name)} (${escapeHtml(p.subtype)}) @ 0x${p.offset.toString(16)}</option>`)
     .join("");
   sel.parentElement.style.display = "";
   const nvs = parts.find((p) => p.subtype === "nvs" || p.subtype === "1");
