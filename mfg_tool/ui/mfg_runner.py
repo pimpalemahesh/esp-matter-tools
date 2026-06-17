@@ -18,37 +18,36 @@ import base64
 import copy
 import csv
 import hashlib
-import hmac
 import io
 import logging
 import os
 import shutil
-import struct
 import traceback
 import zipfile
 from types import SimpleNamespace
 
 
-# pbkdf2_hmac is absent in Pyodide (no OpenSSL backend) but used by spake2p.
+# pbkdf2_hmac is absent in Pyodide (no OpenSSL stdlib backend) but used by
+# spake2p and esp_idf_nvs_partition_gen. Delegate to cryptography's vetted
+# PBKDF2HMAC (already loaded for cert generation) instead of reimplementing it.
 if not hasattr(hashlib, "pbkdf2_hmac"):
+    from cryptography.hazmat.primitives import hashes as _hashes
+    from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC as _PBKDF2HMAC
+
+    _PBKDF2_ALGOS = {
+        "sha1": _hashes.SHA1,
+        "sha256": _hashes.SHA256,
+        "sha512": _hashes.SHA512,
+    }
 
     def _pbkdf2_hmac(hash_name, password, salt, iterations, dklen=None):
-        size = hmac.new(password, None, hash_name).digest_size
-        dklen = dklen or size
-        out = b""
-        block = 1
-        while len(out) < dklen:
-            prev = hmac.new(
-                password, salt + struct.pack(">I", block), hash_name
-            ).digest()
-            acc = bytearray(prev)
-            for _ in range(iterations - 1):
-                prev = hmac.new(password, prev, hash_name).digest()
-                for i in range(size):
-                    acc[i] ^= prev[i]
-            out += bytes(acc)
-            block += 1
-        return bytes(out[:dklen])
+        algo = _PBKDF2_ALGOS[hash_name]()
+        return _PBKDF2HMAC(
+            algorithm=algo,
+            length=dklen or algo.digest_size,
+            salt=salt,
+            iterations=iterations,
+        ).derive(password)
 
     hashlib.pbkdf2_hmac = _pbkdf2_hmac
 
