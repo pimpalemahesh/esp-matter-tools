@@ -1,5 +1,3 @@
-//!/usr/bin/env python3
-
 // Copyright 2026 Espressif Systems (Shanghai) PTE LTD
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -32,7 +30,7 @@ const PYPI_PURE_DEPS = [
 ];
 
 // Deps that publish sdists only (micropip can't build sdists); served as
-// pre-built wheels. Lowercase names match prepare_assets.sh output.
+// pre-built wheels. Lowercase names match build_tool.sh output.
 const VENDORED_WHEELS = [
   "wheels/pyqrcode-1.2.1-py3-none-any.whl",
   "wheels/esp_secure_cert_tool-2.3.6-py3-none-any.whl",
@@ -49,11 +47,13 @@ function setStatus(msg, kind = "info") {
   el.className = `status ${kind}`;
 }
 
-function logBoot(msg) {
-  const el = $("boot-log");
-  el.textContent += msg + "\n";
+function appendLog(id, line) {
+  const el = $(id);
+  el.textContent += (el.textContent ? "\n" : "") + line;
   el.scrollTop = el.scrollHeight;
 }
+const logBoot = (line) => appendLog("boot-log", line);
+const appendRunLog = (line) => appendLog("run-log", line);
 
 function populateChoices(choices) {
   for (const [opt, names] of Object.entries(choices)) {
@@ -203,13 +203,12 @@ async function gatherCertsAndFiles(config) {
   config.paa = false;
   config.pai = false;
 
-  if (mode === "none") {
-  } else if (mode === "custom") {
+  if (mode === "custom") {
     config[$("custom-cert-kind").value] = true;
     for (const [id, opt] of Object.entries(CUSTOM_CERT_INPUTS)) {
       await addUpload(id, opt, config, files);
     }
-  } else {
+  } else if (mode !== "none") {
     const spec = BUNDLED_CERTS[mode];
     config.paa = !!spec.paa;
     config.pai = !!spec.pai;
@@ -372,12 +371,6 @@ async function flashOne(dev, btn, bar) {
     btn.disabled = false;
     btn.classList.remove("is-busy");
   }
-}
-
-function appendRunLog(line) {
-  const el = $("run-log");
-  el.textContent += (el.textContent ? "\n" : "") + line;
-  el.scrollTop = el.scrollHeight;
 }
 
 function escapeHtml(s) {

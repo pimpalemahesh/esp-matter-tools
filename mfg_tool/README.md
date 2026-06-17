@@ -10,8 +10,11 @@ supports adding custom manufacturer specific data using csv files.
 
 A browser version of this tool available at : https://espressif.github.io/esp-matter-tools/mfg_tool/
 
-The site (`mfg_tool/ui/`) loads the published `esp-matter-mfg-tool` from PyPI and
-is deployed to GitHub Pages by `.github/workflows/deploy-tools.yml`.
+To run it locally, build its assets and serve them with:
+
+```
+./mfg_tool/ui/build_tool.sh --serve   # then open http://localhost:8000
+```
 
 ## How to install
 

@@ -34,7 +34,7 @@ jobs:
           python-version: "3.12"
 
       - name: Prepare mfg-tool assets (wheels + test certs)
-        run: ./mfg_tool/ui/prepare_assets.sh
+        run: ./mfg_tool/ui/build_tool.sh
 
       - name: Prepare Pages content
         run: |
