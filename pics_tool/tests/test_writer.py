@@ -69,3 +69,15 @@ def test_only_support_lines_change(tmp_path):
         return [ln for ln in text.splitlines() if "<support>" not in ln]
 
     assert non_support(TEMPLATE) == non_support(dst.read_text(encoding="utf-8"))
+
+
+def test_pixit_checklist_written(tmp_path):
+    from pics_tool.generate.writer import write_pics
+
+    summary = write_pics("1.6", {0: {"CNET.S", "CNET.S.F00"}}, tmp_path)
+    checklist = tmp_path / "PIXIT_CHECKLIST.md"
+    assert checklist.exists()
+    text = checklist.read_text(encoding="utf-8")
+    assert "PIXIT.CNET.WIFI_1ST_ACCESSPOINT_SSID" in text
+    assert "endpoint0" in text
+    assert summary.pixits >= 9  # CNET alone carries 9 PIXITs

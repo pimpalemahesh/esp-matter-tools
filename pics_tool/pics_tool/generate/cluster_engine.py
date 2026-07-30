@@ -164,15 +164,51 @@ def all_enabled_cluster_ids(endpoints: list[EndpointPics]) -> set[str]:
     return ids
 
 
+@dataclass
+class _BaselineRequirement:
+    """Stand-in requirement for a USER-claimed cluster side.
+
+    No device type mandates the side, so there are no per-device-type
+    overrides; the cluster spec baseline applies and presence is forced.
+    """
+
+    id: str
+    feature_overrides: dict = field(default_factory=dict)
+    attribute_overrides: dict = field(default_factory=dict)
+    command_overrides: dict = field(default_factory=dict)
+    conformance: object = None  # never evaluated (force=True)
+
+
+def claim_cluster_side(model: DataModel, cluster_id: str, side: str,
+                       conditions: frozenset[str],
+                       seed_feature_codes: set[str] | None = None) -> set[str]:
+    """PICS codes the spec mandates once the USER claims a cluster side.
+
+    Option-b of the gateway model: claiming ``X.C`` (or ``X.S``) is a fact, and
+    the spec then dictates the side's mandatory elements -- pure derivation,
+    no guessing. Returns the full enabled set for that side.
+    """
+    definition = model.clusters.get(cluster_id)
+    if definition is None or not definition.pics:
+        return set()
+    req = _BaselineRequirement(cluster_id)
+    if side == pics_codes.CLIENT:
+        return _enable_client_cluster(req, definition, conditions, force=True)
+    return _enable_cluster(req, definition, conditions,
+                           set(seed_feature_codes or ()), force=True)
+
+
 def _enable_cluster(
     req: ClusterRequirement,
     definition: Cluster | None,
     conditions: frozenset[str],
     seed_codes: set[str],
+    force: bool = False,
 ) -> set[str]:
     # Cluster presence never depends on cluster element state -> empty ctx + conditions.
+    # ``force`` = the user claimed the side; elements still follow conformance.
     presence_ctx = ConformanceContext(active_conditions=conditions)
-    if not evaluate(req.conformance, presence_ctx).is_mandatory():
+    if not force and not evaluate(req.conformance, presence_ctx).is_mandatory():
         return set()
 
     if definition is None or not definition.pics:
@@ -209,6 +245,7 @@ def _enable_client_cluster(
     req: ClusterRequirement,
     definition: Cluster | None,
     conditions: frozenset[str],
+    force: bool = False,
 ) -> set[str]:
     """Client-side PICS for a device type's mandatory client cluster.
 
@@ -220,7 +257,7 @@ def _enable_client_cluster(
     features, and the client cannot know them at generation time).
     """
     presence_ctx = ConformanceContext(active_conditions=conditions)
-    if not evaluate(req.conformance, presence_ctx).is_mandatory():
+    if not force and not evaluate(req.conformance, presence_ctx).is_mandatory():
         return set()
     if definition is None or not definition.pics:
         logger.warning("client cluster %s present but no definition/pics", req.id)

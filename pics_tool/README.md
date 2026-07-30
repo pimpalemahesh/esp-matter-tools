@@ -87,6 +87,28 @@ pics_out/
 Each file is the maintained template with `<support>` set to `true` for the
 enabled items.
 
+## CSA PICS Validator notes
+
+The generated set validates with **0 errors** in the official CSA PICS tool.
+Expect a handful of *warnings*, which are by design:
+
+- **Unfilled PIXITs** (network SSIDs/credentials, fail-safe timings, product
+  color/finish, ACE app-endpoint ids): these are test-bed/product values that
+  cannot be generated. The export includes a `PIXIT_CHECKLIST.md` listing every
+  applicable PIXIT — fill them in the CSA tool before running the Test Harness.
+- **`MCORE.DD.STANDARD_COMM_FLOW`** on a commissionee: Base.xml only defines
+  "M if `MCORE.DD.11_MANUAL_PC`" (a commissioner-side item) with no plain `O`
+  status, so claiming the standard flow on a commissionee trips a "selected but
+  not applicable" warning. It is claimed deliberately — DD test selection keys
+  off it.
+- **"Dependency item could not be found … evaluated as false: `X.C`"** (e.g.
+  `CC.C`): the exported file does contain the `X.C` item (`support=false`) in
+  the same file as the conditions referencing it — the validator just fails to
+  index unclaimed client-role items. Benign whenever the client role really is
+  unsupported: "evaluated as false" equals its actual value, so every dependent
+  condition resolves correctly. Only if you claim `X.C = Yes` should you
+  double-check its client items in the CSA tool after upload.
+
 ## Configuration data
 
 - `pics_tool/transport_map.yaml` — transport → data-model conditions + seeded

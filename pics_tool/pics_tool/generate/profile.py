@@ -37,6 +37,7 @@ VALID_POWER = {"mains", "battery"}
 _KNOWN_KEYS = {
     "spec_version", "device_type", "transport", "role", "ble_commissioning",
     "onboarding", "node_device_types", "is_icd", "icd_mode", "power_source",
+    "im_client",
 }
 
 
@@ -57,6 +58,10 @@ class DeviceProfile:
     # bridge node-level PICS are DERIVED from the clusters these pull in, rather
     # than asked as separate flags.
     node_device_types: list[str] = field(default_factory=list)
+    # Interaction Model role override: None = derive from the device type's
+    # mandatory client clusters; True/False = the user states the device does /
+    # does not act as an IM client (initiates reads/writes/invokes to others).
+    im_client: bool | None = None
     # Deferred facts (ICD/SIT-LIT depends on the ICD cluster feature; skipped for now).
     is_icd: bool = False
     icd_mode: str | None = None  # "sit" | "lit"

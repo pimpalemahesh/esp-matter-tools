@@ -12,6 +12,11 @@ deny:
   - MCORE.ROLE.CONTROLLER
 
 feature_area_gates:
+  ota_requestor:
+    - MCORE.OTA.HTTPS
+    - MCORE.OTA.RequestorConsent
+    - MCORE.OTA.Resume
+    - MCORE.OTA.Retry
   bridge:
     - MCORE.BRIDGE
     - MCORE.BRIDGE.*

@@ -20,16 +20,19 @@ deny:
   - MCORE.DD.SCAN_*
   - MCORE.DD.QR_COMMISSIONING
   - MCORE.DD.MANUAL_PC_COMMISSIONING
+  - MCORE.DD.11_MANUAL_PC
   - MCORE.DD.21_MANUAL_PC
   - MCORE.DD.COMM_DISCOVERY
   - MCORE.DD.CTRL_*
   - MCORE.ACL.Administrator
-  - MCORE.BRIDGECLIENT
-  - MCORE.DEVLIST.*
-  - MCORE.FS
 
 # Leaves enabled only when the corresponding profile fact is on.
 feature_area_gates:
+  ota_requestor:
+    - MCORE.OTA.HTTPS
+    - MCORE.OTA.RequestorConsent
+    - MCORE.OTA.Resume
+    - MCORE.OTA.Retry
   bridge:
     - MCORE.BRIDGE
     - MCORE.BRIDGE.*

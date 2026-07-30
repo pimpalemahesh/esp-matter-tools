@@ -72,21 +72,23 @@ Plus the deferred flags `is_bridge` / `is_icd` (feature-area gates).
 ### Coverage for a reference profile (commissionee, wifi_2g)
 
 > **Policy note:** the earlier "maximum options" default (blanket-enabling
-> role-appropriate optional leaves) was **dropped as over-claiming**. Optional
-> leaves now stay OFF unless a profile input seeds them or a cond derivation
-> forces them; the genuinely product-specific ones surface in the web UI as
-> "awaiting your answer" (review) items.
+> role-appropriate optional leaves) was **dropped as over-claiming**. And the
+> classification is strictly honest: an item counts as *tool-decided* only when
+> some profile input or spec rule can actually derive it — absence of
+> information is NOT a "No". Everything else is a *manual selection* item
+> (default No until the engineer claims it).
 
 | Category | Items | Meaning |
 |---|---:|---|
-| Enabled (input seeds + cond fixpoint) | 12 | transport/role/onboarding atoms and their derivations |
-| Review ("awaiting your answer") | 39 | product facts only the engineer can confirm |
-| Off (role-contradictory, gated, or safe-off) | 81 | commissioner/controller/IDM-client/bridge/provider/PAF leaves |
+| Tool-decided (input seeds, cond fixpoint, IM role, role deny lists) | 65 | transport/role/onboarding atoms and derivations, IDM client/server, role-contradictory items (commissioner-side questions are a defendable No for a commissionee) |
+| Manual selection (no derivation path *from the current inputs*) | 67 | product facts (TCP, PAF, tamper resistance, DLOG fields, TXT/mDNS keys, commissioning-flow variants) plus node-composition facts the phase-1 UI does not ask (bridge, OTA roles and sub-caps, device lists, BDX, ICD) |
 | **Total** | **132** | |
 
-**So the 5 inputs + role gating decide 93 of 132 items deterministically**, and
-the remaining 39 are surfaced for explicit review instead of being silently
-defaulted — that is where manual judgement belongs.
+Numbers above are for a web (phase-1) profile with no node composition
+declared. When a profile *does* declare `node_device_types` (CLI / profile
+file), the OTA/bridge atoms and their gated leaves become tool-decided again —
+a declared composition is decisive; an undeclared one is unknown, and
+**absence of information is never a "No"**.
 
 ## 4. The optional leaves — safe vs. needs-manual
 

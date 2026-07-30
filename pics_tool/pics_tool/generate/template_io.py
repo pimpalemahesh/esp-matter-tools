@@ -21,6 +21,7 @@ XML in place separately.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from functools import lru_cache
 from importlib.resources import files
 from pathlib import Path
 
@@ -47,6 +48,23 @@ def templates_dir(version: str) -> Path:
 
 def list_templates(version: str) -> list[Path]:
     return sorted(templates_dir(version).glob("*.xml"))
+
+
+@lru_cache(maxsize=4)
+def known_item_numbers(version: str) -> frozenset[str]:
+    """Every PICS itemNumber that exists in this version's templates.
+
+    The engine derives codes from the data model, but a code is only claimable
+    (question text, export, CSA validation) if some template carries it. Codes
+    outside this set -- e.g. the OTA clusters, whose test plan uses MCORE.OTA.*
+    / MCORE.BDX.* instead of the per-element grid -- must be filtered out of
+    anything user-facing.
+    """
+    numbers: set[str] = set()
+    for path in list_templates(version):
+        for item in parse_pics_items(path):
+            numbers.add(item.number)
+    return frozenset(numbers)
 
 
 def base_template_path(version: str) -> Path:

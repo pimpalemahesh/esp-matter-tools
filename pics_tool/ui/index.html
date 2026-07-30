@@ -53,75 +53,114 @@
 
     <!-- Device profile -->
     <section class="card profile-card">
-      <div class="card-title">Device profile</div>
+      <div class="card-title"><span class="stepno">1</span> Describe your device</div>
       <div class="profile-grid">
+        <div class="control-group">
+          <label for="specVersion">Matter spec version
+            <span class="helptip" tabindex="0" aria-label="Which versions are available?">?
+              <span class="helptext">The Matter specification release to generate PICS against.
+                Versions appear here automatically once their CSA PICS templates and data model
+                are added to the tool.</span>
+            </span>
+          </label>
+          <select id="specVersion"></select>
+        </div>
         <div class="control-group grow">
           <label for="deviceType">Application device type <span class="req">required</span></label>
           <select id="deviceType"></select>
         </div>
         <div class="control-group">
-          <label>Node-level device types</label>
-          <div class="chips" id="nodeTypes">
-            <button class="opt" data-v="OTA Requestor" aria-pressed="true">OTA Requestor</button>
-            <button class="opt" data-v="OTA Provider">OTA Provider</button>
-            <button class="opt" data-v="Aggregator">Aggregator</button>
-          </div>
-        </div>
-        <div class="control-group">
-          <label>Transport</label>
+          <label>Network transport
+            <span class="helptip" tabindex="0" aria-label="What is transport?">?
+              <span class="helptext">How the device joins the IP network. Pick every one your
+                product supports — it decides the Network Commissioning features (Wi-Fi / Thread /
+                Ethernet interface) and the MCORE.COM.* items.</span>
+            </span>
+          </label>
           <div class="chips" id="transport">
-            <button class="opt" data-v="wifi_2g" aria-pressed="true">wifi_2g</button>
-            <button class="opt" data-v="wifi_5g">wifi_5g</button>
-            <button class="opt" data-v="thread">thread</button>
-            <button class="opt" data-v="ethernet">ethernet</button>
+            <button class="opt" data-v="wifi_2g" aria-pressed="true">Wi-Fi 2.4 GHz</button>
+            <button class="opt" data-v="wifi_5g">Wi-Fi 5 GHz</button>
+            <button class="opt" data-v="thread">Thread</button>
+            <button class="opt" data-v="ethernet">Ethernet</button>
           </div>
         </div>
         <div class="control-group">
-          <label>BLE commissioning</label>
+          <label>BLE commissioning
+            <span class="helptip" tabindex="0" aria-label="What is BLE commissioning?">?
+              <span class="helptext">Whether the device can be commissioned over Bluetooth LE
+                (the usual method for Wi-Fi and Thread products). Ethernet-only devices typically
+                commission over the network instead.</span>
+            </span>
+          </label>
           <div class="chips" id="ble">
-            <button class="opt seg-one" data-v="on" aria-pressed="true">on</button>
-            <button class="opt seg-one" data-v="off">off</button>
+            <button class="opt seg-one" data-v="on" aria-pressed="true">Yes</button>
+            <button class="opt seg-one" data-v="off">No</button>
           </div>
         </div>
         <div class="control-group">
-          <label>Onboarding</label>
+          <label>Onboarding material
+            <span class="helptip" tabindex="0" aria-label="What is onboarding?">?
+              <span class="helptext">How a user gets the setup payload into a commissioner:
+                a printed/displayed QR code, an 11-digit manual pairing code, or an NFC tag.
+                Select everything that ships with the product.</span>
+            </span>
+          </label>
           <div class="chips" id="onboarding">
-            <button class="opt" data-v="qr" aria-pressed="true">qr</button>
-            <button class="opt" data-v="manual_pairing_code" aria-pressed="true">manual_pairing_code</button>
-            <button class="opt" data-v="nfc">nfc</button>
+            <button class="opt" data-v="qr" aria-pressed="true">QR code</button>
+            <button class="opt" data-v="manual_pairing_code" aria-pressed="true">Manual pairing code</button>
+            <button class="opt" data-v="nfc">NFC tag</button>
           </div>
         </div>
         <div class="control-group">
-          <label>ICD (intermittently connected)</label>
-          <div class="chips" id="icd">
-            <button class="opt seg-one" data-v="none" aria-pressed="true">no</button>
-            <button class="opt seg-one" data-v="sit" title="Short Idle Time ICD">SIT</button>
-            <button class="opt seg-one" data-v="lit" title="Long Idle Time ICD">LIT</button>
-          </div>
-        </div>
-        <div class="control-group">
-          <label>Role</label>
+          <label>Device role
+            <span class="helptip" tabindex="0" aria-label="What is the device role?">?
+              <span class="helptext"><b>Commissionee</b>: a device that gets added to a Matter
+                network (light, plug, sensor — the common case). <b>Commissioner</b>: adds other
+                devices to the network (hub, phone app). <b>Controller</b>: administers devices
+                after commissioning. This gates all commissioner-/controller-side questions.</span>
+            </span>
+          </label>
           <div class="chips" id="role">
-            <button class="opt seg-one" data-v="commissionee" aria-pressed="true">commissionee</button>
-            <button class="opt seg-one" data-v="commissioner">commissioner</button>
-            <button class="opt seg-one" data-v="controller">controller</button>
+            <button class="opt seg-one" data-v="commissionee" aria-pressed="true">Commissionee</button>
+            <button class="opt seg-one" data-v="commissioner">Commissioner</button>
+            <button class="opt seg-one" data-v="controller">Controller</button>
           </div>
-          <div class="derived">IM client/server, OTA &amp; bridge are <b>derived</b> from the device types
-            above — not asked.</div>
+        </div>
+        <div class="control-group">
+          <label>IM role
+            <span class="helptip" tabindex="0" aria-label="What is the IM role?">?
+              <span class="helptext">The Interaction Model (IM) role says how the device talks Matter.
+                <b>Server only</b>: it only answers requests from others (typical light, sensor, plug).
+                <b>Client + server</b>: it also <i>initiates</i> reads/writes/commands toward other
+                nodes (a switch controlling a light, a controller, a device reading other devices).
+                It drives the MCORE.IDM.C.* items in the Base PICS.
+                <b>auto</b> derives it from whether the chosen device type requires any client
+                clusters — override it only if your firmware adds client behavior the device type
+                does not require.</span>
+            </span>
+          </label>
+          <div class="chips" id="imrole">
+            <button class="opt seg-one" data-v="auto" aria-pressed="true">auto (derived)</button>
+            <button class="opt seg-one" data-v="server">server only</button>
+            <button class="opt seg-one" data-v="client">client + server</button>
+          </div>
+          <div class="derived" id="imRole"></div>
         </div>
       </div>
       <div class="profile-actions">
-        <button class="btn" id="generateBtn" disabled>Generate PICS</button>
-        <button class="btn ghost" id="exportBtn" disabled title="Download filled PICS XML as a zip">Export PICS ↓</button>
-        <button class="btn ghost" id="resetBtn" title="Clear saved answers and start over">Reset</button>
-        <span class="im-role" id="imRole"></span>
+        <button class="btn" id="exportBtn" disabled
+          title="Validate the selection against the spec, then download the filled PICS XML files as a zip">Export PICS ↓</button>
+        <button class="btn ghost" id="resetBtn"
+          title="Discard your manual Yes/No changes and regenerate from the engine">Clear my answers</button>
+        <span class="muted small">Results update automatically as you change the profile.
+          Answers are saved in this browser and restored on reload.</span>
       </div>
-      <div class="derived">Your answers are saved in this browser and restored on reload.</div>
     </section>
 
     <!-- Results -->
     <div id="resultArea">
-      <div class="empty-state">Choose a device type and click <strong>Generate PICS</strong>.</div>
+      <div class="empty-state">Describe your device above — the tool answers every question it can,
+        updates as you change things, and separates the rest for your manual selection.</div>
     </div>
 
     <footer class="footer">

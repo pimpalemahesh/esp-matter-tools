@@ -35,6 +35,42 @@ logger = logging.getLogger(__name__)
 class WriteSummary:
     files: list[str] = field(default_factory=list)
     supported: int = 0
+    pixits: int = 0
+
+
+def _pixits_of(src: Path) -> list[tuple[str, str]]:
+    """(itemNumber, question text) of every PIXIT in a template."""
+    out = []
+    for px in ET.parse(str(src)).getroot().iter("pixitItem"):
+        num = (px.findtext("itemNumber") or "").strip()
+        if num:
+            out.append((num, " ".join((px.findtext("feature") or "").split())))
+    return out
+
+
+def _pixit_checklist(per_endpoint: dict[int, list[tuple[str, list[tuple[str, str]]]]]) -> str:
+    """Render PIXIT_CHECKLIST.md: the test-bed values only the engineer can fill.
+
+    The CSA PICS validator flags every unfilled applicable PIXIT as a warning;
+    this file turns those warnings into an explicit TODO list.
+    """
+    lines = [
+        "# PIXIT checklist",
+        "",
+        "PIXITs are test-bed / product-specific values (network credentials,",
+        "timings, product info). They CANNOT be generated -- fill them in the",
+        "CSA PICS tool / Test Harness before running certification tests.",
+        "The PICS validator reports each applicable unfilled PIXIT as a warning.",
+        "",
+    ]
+    for endpoint, files in sorted(per_endpoint.items()):
+        lines.append(f"## endpoint{endpoint}")
+        for fname, pixits in files:
+            lines.append(f"\n### {fname}")
+            for num, feature in pixits:
+                lines.append(f"- [ ] `{num}`" + (f" -- {feature}" if feature else ""))
+        lines.append("")
+    return "\n".join(lines) + "\n"
 
 
 def _fill_tree(src: Path, enabled: set[str]) -> tuple[ET.ElementTree, str, int]:
@@ -88,6 +124,7 @@ def write_pics(version: str, endpoints_enabled: dict[int, set[str]],
         raise FileNotFoundError(f"no templates found for version {version!r}")
 
     summary = WriteSummary()
+    pixits_by_ep: dict[int, list[tuple[str, list[tuple[str, str]]]]] = {}
     for endpoint, enabled in sorted(endpoints_enabled.items()):
         ep_dir = out / f"endpoint{endpoint}"
         for src in templates:
@@ -103,4 +140,14 @@ def write_pics(version: str, endpoints_enabled: dict[int, set[str]],
                 f.write("\n")
             summary.files.append(str(dst))
             summary.supported += count
+            pixits = _pixits_of(src)
+            if pixits:
+                pixits_by_ep.setdefault(endpoint, []).append((src.name, pixits))
+                summary.pixits += len(pixits)
+
+    if pixits_by_ep:
+        checklist = out / "PIXIT_CHECKLIST.md"
+        checklist.parent.mkdir(parents=True, exist_ok=True)
+        checklist.write_text(_pixit_checklist(pixits_by_ep), encoding="utf-8")
+        summary.files.append(str(checklist))
     return summary

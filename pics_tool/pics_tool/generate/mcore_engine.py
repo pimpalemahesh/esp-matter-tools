@@ -111,9 +111,14 @@ def profile_seeds(profile: DeviceProfile, facts: NodeFacts,
 
     transport_map = transport_map or load_transport_map()
     seeds: set[str] = set()
+    # Every DUT is a commissionee -- it is commissioned onto a fabric. Role is
+    # ADDITIVE: commissioner/controller are extra capabilities the per-role YAML
+    # layers on top, but the commissionee atom is universal and seeded here so it
+    # is true for every role (never a false "No" when role=commissioner/controller).
+    seeds.add("MCORE.ROLE.COMMISSIONEE")
     # Transport atoms come from transport_map.yaml -- the single place a
     # transport's policy (conditions, cluster features, MCORE atoms) is authored.
-    # Role atoms are NOT seeded here: the per-role profile YAML seeds them.
+    # Other role atoms are NOT seeded here: the per-role profile YAML seeds them.
     for t in profile.transport:
         seeds.update(transport_map.get("transports", {}).get(t, {}).get("mcore_atoms", []))
     if profile.ble_commissioning:
@@ -132,11 +137,25 @@ def profile_seeds(profile: DeviceProfile, facts: NodeFacts,
     return seeds
 
 
+def gated_area(number: str, role_profile: dict) -> str | None:
+    """The feature area (bridge / ota_requestor / ...) gating an item, if any."""
+    for area, patterns in role_profile.get("feature_area_gates", {}).items():
+        if any(fnmatch(number, pat) for pat in patterns):
+            return area
+    return None
+
+
+def role_denied(number: str, role_profile: dict) -> bool:
+    """True when the role's deny list (role-contradictory items) matches."""
+    return any(fnmatch(number, pat) for pat in role_profile.get("deny", []))
+
+
 def _gated_off(number: str, profile: DeviceProfile, facts: NodeFacts,
                role_profile: dict) -> bool:
     gates = role_profile.get("feature_area_gates", {})
     active = {
         "bridge": facts.has_bridge,
+        "ota_requestor": facts.has_ota_requestor,
         "ota_provider": facts.has_ota_provider,
         "icd": profile.is_icd,
     }

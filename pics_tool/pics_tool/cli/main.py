@@ -23,6 +23,7 @@ from esp_matter_datamodel import loader
 from ..generate.cluster_engine import all_enabled_cluster_ids, generate_cluster_pics
 from ..generate.mcore_engine import compute_mcore_pics
 from ..generate.profile import load_profile
+from ..generate.template_io import known_item_numbers
 from ..generate.writer import write_pics
 
 
@@ -68,7 +69,10 @@ def gen_pics(profile_path, spec_version, device_type, transport, role,
     cluster_ids = all_enabled_cluster_ids(cluster_endpoints)
     mcore = compute_mcore_pics(profile, profile.spec_version, cluster_ids)
 
-    endpoints_enabled = {ep.endpoint: set(ep.pics) for ep in cluster_endpoints}
+    # Only template-backed codes are claimable (e.g. OTA clusters have no
+    # per-element grid -- their test plan runs off MCORE.OTA/BDX instead).
+    known = known_item_numbers(profile.spec_version)
+    endpoints_enabled = {ep.endpoint: set(ep.pics) & known for ep in cluster_endpoints}
     endpoints_enabled.setdefault(0, set()).update(mcore)  # MCORE lives on endpoint 0
 
     summary = write_pics(profile.spec_version, endpoints_enabled, output)
@@ -78,6 +82,8 @@ def gen_pics(profile_path, spec_version, device_type, transport, role,
     for ep in sorted(endpoints_enabled):
         click.echo(f"  endpoint{ep}: {len(endpoints_enabled[ep])} PICS codes enabled")
     click.echo(f"Wrote {len(summary.files)} files ({summary.supported} supported items) to {output}/")
+    if summary.pixits:
+        click.echo(f"Note: {summary.pixits} PIXIT values need manual entry -- see PIXIT_CHECKLIST.md")
 
 
 if __name__ == "__main__":
