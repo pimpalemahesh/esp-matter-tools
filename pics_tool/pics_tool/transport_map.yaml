@@ -1,0 +1,37 @@
+# Copyright 2025 Espressif Systems (Shanghai) PTE LTD
+#
+# Transport policy as data (see design decision D11).
+#
+# Network transport is a device fact that lives OUTSIDE the Matter data model,
+# so the mapping from a profile transport to (a) the data-model conditions it
+# activates and (b) the specific cluster feature(s) it selects is authored here
+# rather than buried in code.
+#
+# - conditions: named <condition> values the data-model conformance references
+#   (e.g. Network/diagnostic clusters gated on "Wi-Fi"/"Thread"/"Ethernet"/"IP").
+# - cluster_features: cluster id -> feature codes to force-enable. Needed where
+#   the spec marks the feature as an optional CHOICE (e.g. Network Commissioning
+#   WI/TH/ET) that only the device (transport) can pick.
+# - mcore_atoms: Base.xml (MCORE) seed atoms the transport switches on.
+
+transports:
+  wifi_2g:
+    conditions: [Wi-Fi, IP]
+    cluster_features:
+      "0x0031": [WI]        # Network Commissioning: WiFiNetworkInterface
+    mcore_atoms: [MCORE.COM.WIFI_2P4GHZ]
+  wifi_5g:
+    conditions: [Wi-Fi, IP]
+    cluster_features:
+      "0x0031": [WI]
+    mcore_atoms: [MCORE.COM.WIFI_5GHZ]
+  thread:
+    conditions: [Thread, IP]
+    cluster_features:
+      "0x0031": [TH]        # Network Commissioning: ThreadNetworkInterface
+    mcore_atoms: [MCORE.COM.THR]
+  ethernet:
+    conditions: [Ethernet, IP]
+    cluster_features:
+      "0x0031": [ET]        # Network Commissioning: EthernetNetworkInterface
+    mcore_atoms: [MCORE.COM.ETH]

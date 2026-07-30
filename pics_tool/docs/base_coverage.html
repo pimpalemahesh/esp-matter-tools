@@ -1,0 +1,272 @@
+<title>Base.xml coverage at a glance</title>
+<style>
+:root{--paper:#f7f7f5;--card:#fff;--ink:#1b1f24;--muted:#5d6470;--line:#e6e6e0;--accent:#2f6fb3;
+--c-auto:#2f6fb3;--c-imrole:#d9822b;--c-curated:#1b9e77;--c-manualkeep:#c0492f;--c-manualwire:#7b5ea7;
+--track:#ececee;--shadow:0 1px 2px rgba(20,24,29,.05),0 8px 24px rgba(20,24,29,.06);}
+@media (prefers-color-scheme:dark){:root{--paper:#111417;--card:#1a1e24;--ink:#e7eaef;--muted:#9aa3b0;
+--line:#282e38;--accent:#4a90d9;--c-auto:#4a90d9;--c-imrole:#c17f36;--c-curated:#1f9e7c;
+--c-manualkeep:#d6604d;--c-manualwire:#9b7fd0;--track:#262b33;--shadow:0 1px 2px rgba(0,0,0,.3),0 10px 30px rgba(0,0,0,.35);}}
+:root[data-theme=dark]{--paper:#111417;--card:#1a1e24;--ink:#e7eaef;--muted:#9aa3b0;--line:#282e38;
+--accent:#4a90d9;--c-auto:#4a90d9;--c-imrole:#c17f36;--c-curated:#1f9e7c;--c-manualkeep:#d6604d;--c-manualwire:#9b7fd0;--track:#262b33;}
+:root[data-theme=light]{--paper:#f7f7f5;--card:#fff;--ink:#1b1f24;--muted:#5d6470;--line:#e6e6e0;
+--accent:#2f6fb3;--c-auto:#2f6fb3;--c-imrole:#d9822b;--c-curated:#1b9e77;--c-manualkeep:#c0492f;--c-manualwire:#7b5ea7;--track:#ececee;}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);line-height:1.5;
+font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+.wrap{max-width:920px;margin:0 auto;padding:44px 22px 80px}
+code,.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.84em}
+.num,.bnum{font-variant-numeric:tabular-nums}
+h1{font-size:1.85rem;letter-spacing:-.02em;margin:.15em 0 .1em;text-wrap:balance}
+h2{font-size:1.05rem;margin:2.1em 0 .2em;padding-left:10px;border-left:3px solid var(--accent)}
+.eyebrow{text-transform:uppercase;letter-spacing:.14em;font-size:.72rem;font-weight:600;color:var(--c-curated)}
+.sub{color:var(--muted);max-width:68ch;margin:.3em 0 0}
+.tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:13px;margin:26px 0 6px}
+.tile{background:var(--card);border:1px solid var(--line);border-radius:13px;padding:16px 17px;box-shadow:var(--shadow)}
+.tile .big{font-size:2rem;font-weight:750;letter-spacing:-.02em;line-height:1}
+.tile .lbl{color:var(--muted);font-size:.77rem;margin-top:6px}
+.tile.ok .big{color:var(--c-curated)} .tile.warn .big{color:var(--c-manualkeep)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:13px;box-shadow:var(--shadow);padding:18px 20px;margin-top:12px}
+.brow{display:grid;grid-template-columns:210px 1fr 34px;align-items:center;gap:12px;padding:5px 0}
+.blabel{font-size:.86rem} .blabel span{display:block;color:var(--muted);font-size:.76rem}
+.btrack{background:var(--track);border-radius:6px;height:16px;overflow:hidden}
+.bfill{height:100%;border-radius:6px;min-width:3px}
+.bnum{text-align:right;font-weight:700;font-size:.9rem}
+.refbar{display:flex;height:30px;border-radius:8px;overflow:hidden;gap:2px;margin:6px 0 10px}
+.refseg{display:flex;align-items:center;justify-content:center;color:#fff;font-size:.78rem;font-weight:600}
+.keygrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:10px;margin-top:12px}
+.keyitem{display:flex;gap:9px;align-items:flex-start;font-size:.82rem}
+.dot{width:13px;height:13px;border-radius:4px;flex:none;margin-top:2px}
+.keyitem b{font-weight:650} .keyitem span{color:var(--muted)}
+.filters{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0 2px}
+.fbtn{cursor:pointer;background:var(--card);border:1px solid var(--line);border-left:4px solid var(--fc);
+border-radius:9px;padding:8px 12px;color:var(--ink);font:inherit;display:flex;flex-direction:column;gap:1px;min-width:118px}
+.fbtn b{font-size:1.15rem;color:var(--fc)}
+.fbtn[aria-pressed=true]{box-shadow:0 0 0 2px var(--fc) inset}
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);background:var(--card);margin-top:12px}
+table{border-collapse:collapse;width:100%;font-size:.84rem}
+th,td{text-align:left;padding:8px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+thead th{position:sticky;top:0;background:var(--card);font-size:.7rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+tbody tr:last-child td{border-bottom:none} .muted{color:var(--muted)} .small{font-size:.85em}
+.tag{display:inline-block;font-size:.68rem;font-weight:700;color:#fff;padding:2px 8px;border-radius:20px}
+.t-auto{background:var(--c-auto)}.t-imrole{background:var(--c-imrole)}.t-curated{background:var(--c-curated)}
+.t-manualkeep{background:var(--c-manualkeep)}.t-manualwire{background:var(--c-manualwire)}
+footer{margin-top:34px;color:var(--muted);font-size:.77rem}
+.inrow{display:grid;grid-template-columns:180px 1fr;gap:14px;padding:9px 0;border-bottom:1px dashed var(--line)}
+.inrow:last-child{border-bottom:none}
+.inrow code{font-weight:700;font-size:.9em}
+.inrow .vals{font-weight:600;font-size:.85rem}
+.inrow .drv{display:block;color:var(--muted);font-size:.8rem;margin-top:2px}
+.pill{display:inline-block;font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;
+padding:1px 6px;border-radius:20px;margin-left:6px;vertical-align:middle}
+.pill.req{background:var(--c-auto);color:#fff}
+.pill.prop{background:var(--c-manualwire);color:#fff}
+.pill.def{background:var(--track);color:var(--muted)}
+</style>
+
+<div class="wrap">
+  <div class="eyebrow">Matter PICS · MCORE / Base.xml</div>
+  <h1>Base.xml coverage at a glance</h1>
+  <p class="sub">Base.xml asks 132 node-level (MCORE) questions. You answer a few of them by giving the
+  tool a short list of inputs; the tool turns those into PICS and leaves the rest for you to set by hand.
+  Here's the split. Bars are item counts — hover any bar, or filter the table below.</p>
+
+  <div class="tiles">
+    <div class="tile"><div class="big">132</div><div class="lbl">questions in Base.xml</div></div>
+    <div class="tile"><div class="big">26</div><div class="lbl">the tool sets for you, from your inputs</div></div>
+    <div class="tile warn"><div class="big">30</div><div class="lbl">you set by hand (product-specific)</div></div>
+  </div>
+
+  <h2>The inputs you give</h2>
+  <p class="sub">You describe the device with these few inputs (a "device profile"). They decide what the
+  tool can; anything they don't cover stays off, so the tool never assumes a capability it can't know.</p>
+  <div class="card"><div class="inrow"><div><code>device_types</code><span class="pill req">required</span></div><div><span class="vals">&quot;Extended Color Light&quot; · OTA Requestor · Aggregator · …</span><span class="drv">every device type the node implements (app + node-level). Drives the cluster PICS, OTA/bridge (MCORE.OTA.* / BRIDGE + BDX), and the IM client/server role — a device type with a mandatory client cluster (a switch/controller) is an IM client; a light/sensor is server-only</span></div></div>
+<div class="inrow"><div><code>transport</code></div><div><span class="vals">wifi_2g · wifi_5g · thread · ethernet</span><span class="drv">COM.* radios, CNET features, network-diagnostics clusters</span></div></div>
+<div class="inrow"><div><code>ble_commissioning</code></div><div><span class="vals">true / false</span><span class="drv">COM.BLE + BLE discovery (default true unless ethernet-only)</span></div></div>
+<div class="inrow"><div><code>role</code></div><div><span class="vals">commissionee (default) · commissioner · controller</span><span class="drv">ROLE.* — commissionee is the universal default (every DUT is one); commissioner/controller only for a bridge or standalone controller product</span></div></div>
+<div class="inrow"><div><code>onboarding</code></div><div><span class="vals">qr · manual_pairing_code · nfc</span><span class="drv">DD.QR / MANUAL_PC / NFC + Standard Commissioning Flow</span></div></div></div>
+
+  <h2>How every question gets answered</h2>
+  <p class="sub">Each of the 132 questions is either set for you (from an input) or left for you to set by
+  hand. Every question falls in exactly one row:</p>
+  <div class="card"><div class="brow" title="IM client / server: 38 (29%)"><div class="blabel">IM client / server</div><div class="btrack"><div class="bfill" style="width:29%;background:var(--c-imrole)"></div></div><div class="bnum">38</div></div>
+<div class="brow" title="You set — product-specific: 30 (23%)"><div class="blabel">You set — product-specific</div><div class="btrack"><div class="bfill" style="width:23%;background:var(--c-manualkeep)"></div></div><div class="bnum">30</div></div>
+<div class="brow" title="You set — role/bridge (later): 27 (20%)"><div class="blabel">You set — role/bridge (later)</div><div class="btrack"><div class="bfill" style="width:20%;background:var(--c-manualwire)"></div></div><div class="bnum">27</div></div>
+<div class="brow" title="Set by your inputs: 26 (20%)"><div class="blabel">Set by your inputs</div><div class="btrack"><div class="bfill" style="width:20%;background:var(--c-auto)"></div></div><div class="bnum">26</div></div>
+<div class="brow" title="You set — true in reference: 11 (8%)"><div class="blabel">You set — true in reference</div><div class="btrack"><div class="bfill" style="width:8%;background:var(--c-curated)"></div></div><div class="bnum">11</div></div></div>
+  <div class="keygrid">
+    <div class="keyitem"><span class="dot" style="background:var(--c-auto)"></span><div><b>Set by your inputs</b> — <span>the tool turns it on/off from an input you gave (or something derived from it, or a device type you listed)</span></div></div><div class="keyitem"><span class="dot" style="background:var(--c-imrole)"></span><div><b>IM client / server</b> — <span>Interaction Model role — derived from the device type (a switch/controller with a mandatory client cluster is an IM client; a light/sensor is server-only)</span></div></div><div class="keyitem"><span class="dot" style="background:var(--c-curated)"></span><div><b>You set — true in reference</b> — <span>the tool leaves it off, but your hand-curated reference set it true (DNS-SD advertising keys)</span></div></div><div class="keyitem"><span class="dot" style="background:var(--c-manualkeep)"></span><div><b>You set — product-specific</b> — <span>a real product/design fact no input can know — you decide it per device</span></div></div><div class="keyitem"><span class="dot" style="background:var(--c-manualwire)"></span><div><b>You set — role/bridge (later)</b> — <span>off for a normal accessory; a role / bridge / diagnostics input would decide it later</span></div></div>
+  </div>
+
+  <h2>How many questions each input answers</h2>
+  <p class="sub">The more a single input decides, the fewer you answer by hand. Some overlap, where a
+  question needs two inputs (e.g. BLE discovery needs role + BLE).</p>
+  <div class="card"><div class="brow" title="device_types: 10 (100%)"><div class="blabel">device_types</div><div class="btrack"><div class="bfill" style="width:100%;background:var(--accent)"></div></div><div class="bnum">10</div></div>
+<div class="brow" title="transport: 7 (70%)"><div class="blabel">transport</div><div class="btrack"><div class="bfill" style="width:70%;background:var(--accent)"></div></div><div class="bnum">7</div></div>
+<div class="brow" title="role: 6 (60%)"><div class="blabel">role</div><div class="btrack"><div class="bfill" style="width:60%;background:var(--accent)"></div></div><div class="bnum">6</div></div>
+<div class="brow" title="onboarding: 4 (40%)"><div class="blabel">onboarding</div><div class="btrack"><div class="bfill" style="width:40%;background:var(--accent)"></div></div><div class="bnum">4</div></div>
+<div class="brow" title="ble_commissioning: 1 (10%)"><div class="blabel">ble_commissioning</div><div class="btrack"><div class="bfill" style="width:10%;background:var(--accent)"></div></div><div class="bnum">1</div></div></div>
+
+  <h2>Checked against your hand-curated reference (extended color light)</h2>
+  <p class="sub">Your hand-edited Base.xml for this device marks 25 questions "yes". The tool
+  sets 12 of them for you and leaves 13 for you to add — and turns on <b>0</b> that your
+  file doesn't. So it never claims something your reference didn't.</p>
+  <div class="card"><div class="refbar"><div class="refseg" style="width:48.0%;background:var(--c-auto)" title="Matched automatically: 12">12 matched</div><div class="refseg" style="width:52.0%;background:var(--c-manualkeep)" title="Left for you to set: 13">13 you set</div></div>
+    <div class="keygrid"><div class="keyitem"><span class="dot" style="background:var(--c-auto)"></span>
+    <div><b>12 matched automatically</b></div></div>
+    <div class="keyitem"><span class="dot" style="background:var(--c-manualkeep)"></span>
+    <div><b>13 left for you</b> — <span>optional advertising keys / IM-server flags (safe: all optional)</span></div></div></div>
+  </div>
+
+  <h2>Every item</h2>
+  <p class="sub">Filter by bucket; hover shows the condition and question.</p>
+  <div class="filters"><button class="fbtn" data-f="auto" style="--fc:var(--c-auto)"><b>26</b>Set by your inputs</button><button class="fbtn" data-f="imrole" style="--fc:var(--c-imrole)"><b>38</b>IM client / server</button><button class="fbtn" data-f="curated" style="--fc:var(--c-curated)"><b>11</b>You set — true in reference</button><button class="fbtn" data-f="manualkeep" style="--fc:var(--c-manualkeep)"><b>30</b>You set — product-specific</button><button class="fbtn" data-f="manualwire" style="--fc:var(--c-manualwire)"><b>27</b>You set — role/bridge (later)</button></div>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Item</th><th>Bucket</th><th>Conformance</th><th>Question</th></tr></thead>
+    <tbody><tr data-b="auto"><td class="mono">MCORE.BDX.Initiator</td><td><span class="tag t-auto">Inputs</span></td><td class="mono small">O</td><td class="muted">Is the DUT an Initiator of the BDX transfer?</td></tr>
+<tr data-b="auto"><td class="mono">MCORE.BDX.Receiver</td><td><span class="tag t-auto">Inputs</span></td><td class="mono small">O</td><td class="muted">Does the DUT support the BDX Receiver role?</td></tr>
+<tr data-b="auto"><td class="mono">MCORE.BDX.Responder</td><td><span class="tag t-auto">Inputs</span></td><td class="mono small">O</td><td class="muted">Is the DUT a Responder of the BDX transfer?</td></tr>
+<tr data-b="auto"><td class="mono">MCORE.BDX.Sender</td><td><span class="tag t-auto">Inputs</span></td><td class="mono small">O</td><td class="muted">Does the DUT support the BDX Sender role?</td></tr>
+<tr data-b="auto"><td class="mono">MCORE.BDX.SynchronousReceiver</td><td><span class="tag t-auto">Inputs</span></td><td class="mono small">O</td><td class="muted">Does the DUT support the BDX Receiver role in Synchronous mode?</td></tr>
+<tr data-b="auto"><td class="mono">MCORE.BDX.SynchronousSender</td><td><span class="tag t-auto">Inputs</span></td><td class="mono small">O</td><td class="muted">Does the DUT support the BDX Sender role in Synchronous mode?</td></tr>
+<tr data-b="auto"><td class="mono">MCORE.BRIDGE</td><td><span class="tag t-auto">Inputs</span></td><td class="mono small">O</td><td class="muted">Does the DUT implement a Bridge</td></tr>
+<tr data-b="auto"><td class="mono">MCORE.COM.BLE</td><td><span class="tag t-auto">Inputs</span></td><td class="mono small">O</td><td class="muted">Does the device support communication over Bluetooth Low Energy (BLE) ?</td></tr>
+<tr data-b="auto"><td class="mono">MCORE.COM.ETH</td><td><span class="tag t-auto">Inputs</span></td><td class="mono small">O</td><td class="muted">Does the device support communication over Ethernet ?</td></tr>
+<tr data-b="auto"><td class="mono">MCORE.COM.THR</td><td><span class="tag t-auto">Inputs</span></td><td class="mono small">O</td><td class="muted">Does the device support communication over Thread ?</td></tr>
+<tr data-b="auto"><td class="mono">MCORE.COM.WIFI</td><td><span class="tag t-auto">Inputs</span></td><td class="mono small">M if MCORE.COM.WIFI_2P4GHZ ; M if MCORE.COM.WIFI_5GHZ</td><td class="muted">Does the device support communication over Wi-Fi ?</td></tr>
+<tr data-b="auto"><td class="mono">MCORE.COM.WIFI_2P4GHZ</td><td><span class="tag t-auto">Inputs</span></td><td class="mono small">O</td><td class="muted">Does the device support communication over 2.4GHz Wi-Fi ?</td></tr>
+<tr data-b="auto"><td class="mono">MCORE.COM.WIFI_5GHZ</td><td><span class="tag t-auto">Inputs</span></td><td class="mono small">O</td><td class="muted">Does the device support communication over 5GHz Wi-Fi ?</td></tr>
+<tr data-b="auto"><td class="mono">MCORE.COM.WIRELESS</td><td><span class="tag t-auto">Inputs</span></td><td class="mono small">M if MCORE.COM.WIFI ; M if MCORE.COM.THR</td><td class="muted">Does the device support Wi-Fi or Thread interfaces communication ?</td></tr>
+<tr data-b="auto"><td class="mono">MCORE.DD.DISCOVERY_BLE</td><td><span class="tag t-auto">Inputs</span></td><td class="mono small">M if MCORE.ROLE.COMMISSIONER AND MCORE.COM.BLE</td><td class="muted">Does the commissioner support Discovery Capability over BLE?</td></tr>
+<tr data-b="auto"><td class="mono">MCORE.DD.DISCOVERY_IP</td><td><span class="tag t-auto">Inputs</span></td><td class="mono small">M if MCORE.ROLE.COMMISSIONER</td><td class="muted">Does the commissioner support Discovery Capability over IP Network?</td></tr>
+<tr data-b="auto"><td class="mono">MCORE.DD.MANUAL_PC</td><td><span class="tag t-auto">Inputs</span></td><td class="mono small">O</td><td class="muted">Does the commissionee device or device packaging have a Manual Pairing Code?</td></tr>
+<tr data-b="auto"><td class="mono">MCORE.DD.NFC</td><td><span class="tag t-auto">Inputs</span></td><td class="mono small">O</td><td class="muted">Does the commissionee device have a NFC tag containing the onboarding payload?</td></tr>
+<tr data-b="auto"><td class="mono">MCORE.DD.QR</td><td><span class="tag t-auto">Inputs</span></td><td class="mono small">M if MCORE.DD.CONCATENATED_QR_CODE ; O</td><td class="muted">Does the commissionee device or device packaging have a QR code based onboarding payload?</td></tr>
+<tr data-b="auto"><td class="mono">MCORE.DD.STANDARD_COMM_FLOW</td><td><span class="tag t-auto">Inputs</span></td><td class="mono small">M if MCORE.DD.11_MANUAL_PC</td><td class="muted">Does the DUT support commissioning via Standard Commissioning Flow?</td></tr>
+<tr data-b="auto"><td class="mono">MCORE.OTA.Provider</td><td><span class="tag t-auto">Inputs</span></td><td class="mono small">O</td><td class="muted">Does the DUT implement the OTA Provider Device Type?</td></tr>
+<tr data-b="auto"><td class="mono">MCORE.OTA.Requestor</td><td><span class="tag t-auto">Inputs</span></td><td class="mono small">O</td><td class="muted">Does the DUT implement the OTA Requestor Device Type?</td></tr>
+<tr data-b="auto"><td class="mono">MCORE.OTA.VendorSpecific</td><td><span class="tag t-auto">Inputs</span></td><td class="mono small">M if MCORE.ROLE.COMMISSIONEE AND NOT (MCORE.OTA.Requestor)</td><td class="muted">Does the DUT support Vendor specific OTA implementation?</td></tr>
+<tr data-b="auto"><td class="mono">MCORE.ROLE.COMMISSIONEE</td><td><span class="tag t-auto">Inputs</span></td><td class="mono small">O</td><td class="muted">Does the device implement a Commissionee ?</td></tr>
+<tr data-b="auto"><td class="mono">MCORE.ROLE.COMMISSIONER</td><td><span class="tag t-auto">Inputs</span></td><td class="mono small">O</td><td class="muted">Does the device implement a Commissioner ?</td></tr>
+<tr data-b="auto"><td class="mono">MCORE.ROLE.CONTROLLER</td><td><span class="tag t-auto">Inputs</span></td><td class="mono small">O</td><td class="muted">Does the device implement a Controller ?</td></tr>
+<tr data-b="imrole"><td class="mono">MCORE.IDM.C</td><td><span class="tag t-imrole">IM</span></td><td class="mono small">O</td><td class="muted">Is the device a Client</td></tr>
+<tr data-b="imrole"><td class="mono">MCORE.IDM.C.InvokeRequest</td><td><span class="tag t-imrole">IM</span></td><td class="mono small">O</td><td class="muted">Is the device a Client and Supports sending a Invoke Request Message</td></tr>
+<tr data-b="imrole"><td class="mono">MCORE.IDM.C.InvokeRequest.BatchCommands</td><td><span class="tag t-imrole">IM</span></td><td class="mono small">O</td><td class="muted">Is the device a Client and Supports sending multiple commands batched into a single Invoke Request Message</td></tr>
+<tr data-b="imrole"><td class="mono">MCORE.IDM.C.ReadEvent</td><td><span class="tag t-imrole">IM</span></td><td class="mono small">O</td><td class="muted">Is the device a Client and supports Reading an individual Event</td></tr>
+<tr data-b="imrole"><td class="mono">MCORE.IDM.C.ReadRequest</td><td><span class="tag t-imrole">IM</span></td><td class="mono small">O</td><td class="muted">Is the device a Client and Supports sending a Read Request Message</td></tr>
+<tr data-b="imrole"><td class="mono">MCORE.IDM.C.ReadRequest.Attribute.DataType_Bitmap</td><td><span class="tag t-imrole">IM</span></td><td class="mono small">O</td><td class="muted">Is the device a Client and supports Reading an attribute of DataType Bitmap</td></tr>
+<tr data-b="imrole"><td class="mono">MCORE.IDM.C.ReadRequest.Attribute.DataType_Bool</td><td><span class="tag t-imrole">IM</span></td><td class="mono small">O</td><td class="muted">Is the device a Client and supports Reading an attribute of DataType Bool</td></tr>
+<tr data-b="imrole"><td class="mono">MCORE.IDM.C.ReadRequest.Attribute.DataType_Enum</td><td><span class="tag t-imrole">IM</span></td><td class="mono small">O</td><td class="muted">Is the device a Client and supports Reading an attribute of DataType Enum</td></tr>
+<tr data-b="imrole"><td class="mono">MCORE.IDM.C.ReadRequest.Attribute.DataType_FloatingPoint</td><td><span class="tag t-imrole">IM</span></td><td class="mono small">O</td><td class="muted">Is the device a Client and supports Reading an attribute of DataType Floating Point</td></tr>
+<tr data-b="imrole"><td class="mono">MCORE.IDM.C.ReadRequest.Attribute.DataType_List</td><td><span class="tag t-imrole">IM</span></td><td class="mono small">O</td><td class="muted">Is the device a Client and supports Reading an attribute of DataType List</td></tr>
+<tr data-b="imrole"><td class="mono">MCORE.IDM.C.ReadRequest.Attribute.DataType_OctetString</td><td><span class="tag t-imrole">IM</span></td><td class="mono small">O</td><td class="muted">Is the device a Client and supports Reading an attribute of DataType Octet String</td></tr>
+<tr data-b="imrole"><td class="mono">MCORE.IDM.C.ReadRequest.Attribute.DataType_SignedInteger</td><td><span class="tag t-imrole">IM</span></td><td class="mono small">O</td><td class="muted">Is the device a Client and supports Reading an attribute of DataType Signed Integer</td></tr>
+<tr data-b="imrole"><td class="mono">MCORE.IDM.C.ReadRequest.Attribute.DataType_String</td><td><span class="tag t-imrole">IM</span></td><td class="mono small">O</td><td class="muted">Is the device a Client and supports Reading an attribute of DataType String</td></tr>
+<tr data-b="imrole"><td class="mono">MCORE.IDM.C.ReadRequest.Attribute.DataType_Struct</td><td><span class="tag t-imrole">IM</span></td><td class="mono small">O</td><td class="muted">Is the device a Client and supports Reading an attribute of DataType Struct</td></tr>
+<tr data-b="imrole"><td class="mono">MCORE.IDM.C.ReadRequest.Attribute.DataType_UnsignedInteger</td><td><span class="tag t-imrole">IM</span></td><td class="mono small">O</td><td class="muted">Is the device a Client and supports Reading an attribute of DataType Unsigned Integer</td></tr>
+<tr data-b="imrole"><td class="mono">MCORE.IDM.C.SubscribeEvent</td><td><span class="tag t-imrole">IM</span></td><td class="mono small">O</td><td class="muted">Is the device a Client and supports subscribing to an individual Event</td></tr>
+<tr data-b="imrole"><td class="mono">MCORE.IDM.C.SubscribeRequest</td><td><span class="tag t-imrole">IM</span></td><td class="mono small">O</td><td class="muted">Is the device a Client and Supports sending a Subscribe Request Message</td></tr>
+<tr data-b="imrole"><td class="mono">MCORE.IDM.C.SubscribeRequest.Attribute.DataType_Bool</td><td><span class="tag t-imrole">IM</span></td><td class="mono small">O</td><td class="muted">Is the device a Client and supports subscribing to an attribute of DataType Bool</td></tr>
+<tr data-b="imrole"><td class="mono">MCORE.IDM.C.SubscribeRequest.Attribute.DataType_FloatingPoint</td><td><span class="tag t-imrole">IM</span></td><td class="mono small">O</td><td class="muted">Is the device a Client and supports subscribing to an attribute of DataType FloatingPoint</td></tr>
+<tr data-b="imrole"><td class="mono">MCORE.IDM.C.SubscribeRequest.Attribute.DataType_Integer</td><td><span class="tag t-imrole">IM</span></td><td class="mono small">O</td><td class="muted">Is the device a Client and supports subscribing to an attribute of DataType Integer</td></tr>
+<tr data-b="imrole"><td class="mono">MCORE.IDM.C.SubscribeRequest.Attribute.DataType_List</td><td><span class="tag t-imrole">IM</span></td><td class="mono small">O</td><td class="muted">Is the device a Client and supports subscribing to an attribute of DataType List</td></tr>
+<tr data-b="imrole"><td class="mono">MCORE.IDM.C.SubscribeRequest.Attribute.DataType_String</td><td><span class="tag t-imrole">IM</span></td><td class="mono small">O</td><td class="muted">Is the device a Client and supports subscribing to an attribute of DataType String</td></tr>
+<tr data-b="imrole"><td class="mono">MCORE.IDM.C.SubscribeRequest.Attribute.DataType_UnsignedInteger</td><td><span class="tag t-imrole">IM</span></td><td class="mono small">O</td><td class="muted">Is the device a Client and supports subscribing to an attribute of DataType UnsignedInteger</td></tr>
+<tr data-b="imrole"><td class="mono">MCORE.IDM.C.SubscribeRequest.MultipleAttributes</td><td><span class="tag t-imrole">IM</span></td><td class="mono small">O</td><td class="muted">Is the device a client and supports subscribing to Multiple Attributes</td></tr>
+<tr data-b="imrole"><td class="mono">MCORE.IDM.C.WriteRequest</td><td><span class="tag t-imrole">IM</span></td><td class="mono small">O</td><td class="muted">Is the device a Client and Supports sending a Write Request Message</td></tr>
+<tr data-b="imrole"><td class="mono">MCORE.IDM.C.WriteRequest.Attribute.DataType_Bitmap</td><td><span class="tag t-imrole">IM</span></td><td class="mono small">O</td><td class="muted">Is the device a Client and supports Writing an attribute of DataType Bitmap</td></tr>
+<tr data-b="imrole"><td class="mono">MCORE.IDM.C.WriteRequest.Attribute.DataType_Bool</td><td><span class="tag t-imrole">IM</span></td><td class="mono small">O</td><td class="muted">Is the device a Client and supports Writing an attribute of DataType Bool</td></tr>
+<tr data-b="imrole"><td class="mono">MCORE.IDM.C.WriteRequest.Attribute.DataType_Enum</td><td><span class="tag t-imrole">IM</span></td><td class="mono small">O</td><td class="muted">Is the device a Client and supports Writing an attribute of DataType Enum</td></tr>
+<tr data-b="imrole"><td class="mono">MCORE.IDM.C.WriteRequest.Attribute.DataType_FloatingPoint</td><td><span class="tag t-imrole">IM</span></td><td class="mono small">O</td><td class="muted">Is the device a Client and supports Writing an attribute of DataType Floating Point</td></tr>
+<tr data-b="imrole"><td class="mono">MCORE.IDM.C.WriteRequest.Attribute.DataType_List</td><td><span class="tag t-imrole">IM</span></td><td class="mono small">O</td><td class="muted">Is the device a Client and supports Writing an attribute of DataType List</td></tr>
+<tr data-b="imrole"><td class="mono">MCORE.IDM.C.WriteRequest.Attribute.DataType_OctetString</td><td><span class="tag t-imrole">IM</span></td><td class="mono small">O</td><td class="muted">Is the device a Client and supports Writing an attribute of DataType Octet String</td></tr>
+<tr data-b="imrole"><td class="mono">MCORE.IDM.C.WriteRequest.Attribute.DataType_SignedInteger</td><td><span class="tag t-imrole">IM</span></td><td class="mono small">O</td><td class="muted">Is the device a Client and supports Writing an attribute of DataType Signed Integer</td></tr>
+<tr data-b="imrole"><td class="mono">MCORE.IDM.C.WriteRequest.Attribute.DataType_String</td><td><span class="tag t-imrole">IM</span></td><td class="mono small">O</td><td class="muted">Is the device a Client and supports Writing an attribute of DataType String</td></tr>
+<tr data-b="imrole"><td class="mono">MCORE.IDM.C.WriteRequest.Attribute.DataType_Struct</td><td><span class="tag t-imrole">IM</span></td><td class="mono small">O</td><td class="muted">Is the device a Client and supports Writing an attribute of DataType Struct</td></tr>
+<tr data-b="imrole"><td class="mono">MCORE.IDM.C.WriteRequest.Attribute.DataType_UnsignedInteger</td><td><span class="tag t-imrole">IM</span></td><td class="mono small">O</td><td class="muted">Is the device a Client and supports Writing an attribute of DataType Unsigned Integer</td></tr>
+<tr data-b="imrole"><td class="mono">MCORE.IDM.S</td><td><span class="tag t-imrole">IM</span></td><td class="mono small">O</td><td class="muted">Is the device a Server</td></tr>
+<tr data-b="imrole"><td class="mono">MCORE.IDM.S.LargeData</td><td><span class="tag t-imrole">IM</span></td><td class="mono small">O</td><td class="muted">Is the device a Server and capable of generating large data which is greater than 1 MTU(1280 bytes)</td></tr>
+<tr data-b="imrole"><td class="mono">MCORE.IDM.S.PersistentSubscription</td><td><span class="tag t-imrole">IM</span></td><td class="mono small">O</td><td class="muted">Is the device a Server and supports Persistent subscription</td></tr>
+<tr data-b="curated"><td class="mono">MCORE.DD.CHIP_DEV</td><td><span class="tag t-curated">Ref-true</span></td><td class="mono small">O</td><td class="muted">Does the commissionee device only function within a Matter network?</td></tr>
+<tr data-b="curated"><td class="mono">MCORE.DD.COMMISSIONING_SUBTYPE_V</td><td><span class="tag t-curated">Ref-true</span></td><td class="mono small">O</td><td class="muted">Does the commissionee device support advertising the Vendor ID Commissioning Subtype in Commissionable Node Discovery through DNS-SD advertisements?</td></tr>
+<tr data-b="curated"><td class="mono">MCORE.DD.TXT_KEY_VP</td><td><span class="tag t-curated">Ref-true</span></td><td class="mono small">O</td><td class="muted">Does the commissionee device support TXT Key &#x27;VP&#x27; (Vendor ID / Product ID) in it’s DNS-SD TXT Records for Commissionable Node Discovery?</td></tr>
+<tr data-b="curated"><td class="mono">MCORE.SC.SAI_COMM_DISCOVERY_KEY</td><td><span class="tag t-curated">Ref-true</span></td><td class="mono small">O</td><td class="muted">Does device support optional key SAI in commissionable node discovery mDNS?</td></tr>
+<tr data-b="curated"><td class="mono">MCORE.SC.SAI_OP_DISCOVERY_KEY</td><td><span class="tag t-curated">Ref-true</span></td><td class="mono small">O</td><td class="muted">Does device support optional key SAI in operational discovery mDNS?</td></tr>
+<tr data-b="curated"><td class="mono">MCORE.SC.SAT_OP_DISCOVERY_KEY</td><td><span class="tag t-curated">Ref-true</span></td><td class="mono small">O</td><td class="muted">Does device support optional key SAT in operational discovery mDNS?</td></tr>
+<tr data-b="curated"><td class="mono">MCORE.SC.SII_COMM_DISCOVERY_KEY</td><td><span class="tag t-curated">Ref-true</span></td><td class="mono small">O</td><td class="muted">Does device support optional key SII in commissionable node discovery mDNS?</td></tr>
+<tr data-b="curated"><td class="mono">MCORE.SC.SII_OP_DISCOVERY_KEY</td><td><span class="tag t-curated">Ref-true</span></td><td class="mono small">O</td><td class="muted">Does device support optional key SII in operational discovery mDNS?</td></tr>
+<tr data-b="curated"><td class="mono">MCORE.SC.T_KEY</td><td><span class="tag t-curated">Ref-true</span></td><td class="mono small">O</td><td class="muted">Does device support optional key T in operational discovery mDNS?</td></tr>
+<tr data-b="curated"><td class="mono">MCORE.SC.VENDOR_SUBTYPE</td><td><span class="tag t-curated">Ref-true</span></td><td class="mono small">O</td><td class="muted">Does device support optional subtype _V in commissionable node discovery mDNS?</td></tr>
+<tr data-b="curated"><td class="mono">MCORE.SC.VP_KEY</td><td><span class="tag t-curated">Ref-true</span></td><td class="mono small">O</td><td class="muted">Does device support optional key VP in commissionable node discovery mDNS?</td></tr>
+<tr data-b="manualkeep"><td class="mono">MCORE.BDX.BlockQueryWithSkip</td><td><span class="tag t-manualkeep">Manual</span></td><td class="mono small">O</td><td class="muted">Does the DUT support sending the BlockQueryWithSkip message?</td></tr>
+<tr data-b="manualkeep"><td class="mono">MCORE.BDX.Driver</td><td><span class="tag t-manualkeep">Manual</span></td><td class="mono small">O</td><td class="muted">Does the DUT control the rate of the BDX transfer ?</td></tr>
+<tr data-b="manualkeep"><td class="mono">MCORE.DD.COMMISSIONING_SUBTYPE_T</td><td><span class="tag t-manualkeep">Manual</span></td><td class="mono small">O</td><td class="muted">Does the commissionee device support advertising the Device Type Commissioning Subtype in Commissionable Node Discovery through DNS-SD advertisements?</td></tr>
+<tr data-b="manualkeep"><td class="mono">MCORE.DD.CUSTOM_COMM_FLOW</td><td><span class="tag t-manualkeep">Manual</span></td><td class="mono small">O</td><td class="muted">Does the DUT support Custom Commissioning Flow?</td></tr>
+<tr data-b="manualkeep"><td class="mono">MCORE.DD.ESF_TC_COMMISSIONER</td><td><span class="tag t-manualkeep">Manual</span></td><td class="mono small">O</td><td class="muted">Does the commissionee support Enhanced Setup Flow Terms and Conditions?</td></tr>
+<tr data-b="manualkeep"><td class="mono">MCORE.DD.NON_CONCURRENT_CONNECTION</td><td><span class="tag t-manualkeep">Manual</span></td><td class="mono small">O</td><td class="muted">Does the commissionee require Non-concurrent connection commissioning flow?</td></tr>
+<tr data-b="manualkeep"><td class="mono">MCORE.DD.NTL</td><td><span class="tag t-manualkeep">Manual</span></td><td class="mono small">O</td><td class="muted">Does the DUT support NFC Transport Layer for commissioning?</td></tr>
+<tr data-b="manualkeep"><td class="mono">MCORE.DD.PHYSICAL_TAMPERING</td><td><span class="tag t-manualkeep">Manual</span></td><td class="mono small">O</td><td class="muted">Is commissionee device subject to physical tampering (doorbell, camera, door lock, designed for outdoor usage)?</td></tr>
+<tr data-b="manualkeep"><td class="mono">MCORE.DD.TXT_KEY_DN</td><td><span class="tag t-manualkeep">Manual</span></td><td class="mono small">O</td><td class="muted">Does the commissionee device support TXT Key &#x27;DN&#x27; (Device Name) in it’s DNS-SD TXT Records for Commissionable Node Discovery?</td></tr>
+<tr data-b="manualkeep"><td class="mono">MCORE.DD.TXT_KEY_DT</td><td><span class="tag t-manualkeep">Manual</span></td><td class="mono small">O</td><td class="muted">Does the commissionee device support TXT Key &#x27;DT&#x27; (Device Type) in it’s DNS-SD TXT Records for Commissionable Node Discovery?</td></tr>
+<tr data-b="manualkeep"><td class="mono">MCORE.DD.TXT_KEY_PH</td><td><span class="tag t-manualkeep">Manual</span></td><td class="mono small">O</td><td class="muted">Does the commissionee device support TXT Key &#x27;PH&#x27; (Pairing Hint) in it’s DNS-SD TXT Records for Commissionable Node Discovery?</td></tr>
+<tr data-b="manualkeep"><td class="mono">MCORE.DD.TXT_KEY_PI</td><td><span class="tag t-manualkeep">Manual</span></td><td class="mono small">O</td><td class="muted">Does the commissionee device support TXT Key &#x27;PI&#x27; (Pairing Instruction) in it’s DNS-SD TXT Records for Commissionable Node Discovery?</td></tr>
+<tr data-b="manualkeep"><td class="mono">MCORE.DD.TXT_KEY_RI</td><td><span class="tag t-manualkeep">Manual</span></td><td class="mono small">O</td><td class="muted">Does the commissionee device support TXT Key &#x27;RI&#x27; (Rotating Identifier) in it’s DNS-SD TXT Records for Commissionable Node Discovery?</td></tr>
+<tr data-b="manualkeep"><td class="mono">MCORE.DD.UI</td><td><span class="tag t-manualkeep">Manual</span></td><td class="mono small">O</td><td class="muted">Does the DUT support user interface?</td></tr>
+<tr data-b="manualkeep"><td class="mono">MCORE.DD.USER_INTENT_COMM_FLOW</td><td><span class="tag t-manualkeep">Manual</span></td><td class="mono small">O</td><td class="muted">Does the DUT support User-Intent Commissioning Flow?</td></tr>
+<tr data-b="manualkeep"><td class="mono">MCORE.DLOG.S.TIMESINCEBOOT</td><td><span class="tag t-manualkeep">Manual</span></td><td class="mono small">O</td><td class="muted">Does the device support TimeSinceBoot field in the RetrieveLogsResponse Command of the Diagnostic Logs Cluster?</td></tr>
+<tr data-b="manualkeep"><td class="mono">MCORE.DLOG.S.UTCTIMESTAMP</td><td><span class="tag t-manualkeep">Manual</span></td><td class="mono small">O</td><td class="muted">Does the device support UTCTimeStamp field in the RetrieveLogsResponse Command of the Diagnostic Logs Cluster?</td></tr>
+<tr data-b="manualkeep"><td class="mono">MCORE.DT_SW_COMP</td><td><span class="tag t-manualkeep">Manual</span></td><td class="mono small">O</td><td class="muted">Is DUT Software Component?</td></tr>
+<tr data-b="manualkeep"><td class="mono">MCORE.G.MULTIENDPOINT</td><td><span class="tag t-manualkeep">Manual</span></td><td class="mono small">O</td><td class="muted">DUT(Server) support multiple endpoints with a Groups cluster</td></tr>
+<tr data-b="manualkeep"><td class="mono">MCORE.OTA.HTTPS</td><td><span class="tag t-manualkeep">Manual</span></td><td class="mono small">O</td><td class="muted">Does the DUT support the HTTPS Protocol for OTA image download?</td></tr>
+<tr data-b="manualkeep"><td class="mono">MCORE.OTA.RequestorConsent</td><td><span class="tag t-manualkeep">Manual</span></td><td class="mono small">O</td><td class="muted">Does the DUT support obtaining user consent for OTA application by virtue of built-in user interface capabilities?</td></tr>
+<tr data-b="manualkeep"><td class="mono">MCORE.OTA.Resume</td><td><span class="tag t-manualkeep">Manual</span></td><td class="mono small">O</td><td class="muted">Does the DUT support resumption of a transfer previously aborted?</td></tr>
+<tr data-b="manualkeep"><td class="mono">MCORE.OTA.Retry</td><td><span class="tag t-manualkeep">Manual</span></td><td class="mono small">O</td><td class="muted">Does the Requestor DUT support querying a different Provider in its OTA Provider List when it hits error conditions in invoking the QueryImage command?</td></tr>
+<tr data-b="manualkeep"><td class="mono">MCORE.SC.DEVTYPE_SUBTYPE</td><td><span class="tag t-manualkeep">Manual</span></td><td class="mono small">O</td><td class="muted">Does device support optional subtype _T in commissionable node discovery mDNS?</td></tr>
+<tr data-b="manualkeep"><td class="mono">MCORE.SC.DN_KEY</td><td><span class="tag t-manualkeep">Manual</span></td><td class="mono small">O</td><td class="muted">Does device support optional key DN in commissionable node discovery mDNS?</td></tr>
+<tr data-b="manualkeep"><td class="mono">MCORE.SC.DT_KEY</td><td><span class="tag t-manualkeep">Manual</span></td><td class="mono small">O</td><td class="muted">Does device support optional key DT in commissionable node discovery mDNS?</td></tr>
+<tr data-b="manualkeep"><td class="mono">MCORE.SC.PH_KEY</td><td><span class="tag t-manualkeep">Manual</span></td><td class="mono small">O</td><td class="muted">Does device support optional key PH in commissionable node discovery mDNS?</td></tr>
+<tr data-b="manualkeep"><td class="mono">MCORE.SC.PI_KEY</td><td><span class="tag t-manualkeep">Manual</span></td><td class="mono small">O</td><td class="muted">Does device support optional key PI in commissionable node discovery mDNS?</td></tr>
+<tr data-b="manualkeep"><td class="mono">MCORE.SC.RI_KEY</td><td><span class="tag t-manualkeep">Manual</span></td><td class="mono small">O</td><td class="muted">Does device support optional key RI in commissionable node discovery mDNS?</td></tr>
+<tr data-b="manualkeep"><td class="mono">MCORE.SC.SIT_ICD</td><td><span class="tag t-manualkeep">Manual</span></td><td class="mono small">O</td><td class="muted">Is the device a Short Idle Time ICD?</td></tr>
+<tr data-b="manualwire"><td class="mono">MCORE.ACL.Administrator</td><td><span class="tag t-manualwire">Manual*</span></td><td class="mono small">O</td><td class="muted">Does the DUT have Administer privilege over the Access Control of another node?</td></tr>
+<tr data-b="manualwire"><td class="mono">MCORE.BDX.AsynchronousReceiver</td><td><span class="tag t-manualwire">Manual*</span></td><td class="mono small">O</td><td class="muted">Does the DUT support the BDX Receiver role in Asynchronous mode?</td></tr>
+<tr data-b="manualwire"><td class="mono">MCORE.BDX.AsynchronousSender</td><td><span class="tag t-manualwire">Manual*</span></td><td class="mono small">O</td><td class="muted">Does the DUT support the BDX Sender role in Asynchronous mode?</td></tr>
+<tr data-b="manualwire"><td class="mono">MCORE.BRIDGE.AllowDeviceRename</td><td><span class="tag t-manualwire">Manual*</span></td><td class="mono small">O if MCORE.BRIDGE</td><td class="muted">Does the DUT have means to change the name of (at least some of) of its bridged devices, e.g. through a manufacturer-provided app</td></tr>
+<tr data-b="manualwire"><td class="mono">MCORE.BRIDGE.BatInfo</td><td><span class="tag t-manualwire">Manual*</span></td><td class="mono small">O if MCORE.BRIDGE</td><td class="muted">Does the DUT have information on battery level of (at least some of) of its bridged devices</td></tr>
+<tr data-b="manualwire"><td class="mono">MCORE.BRIDGE.OtherControl</td><td><span class="tag t-manualwire">Manual*</span></td><td class="mono small">O if MCORE.BRIDGE</td><td class="muted">Does the DUT have means to change the state of (at least some of) of its bridged devices, e.g. through a manufacturer-provided app</td></tr>
+<tr data-b="manualwire"><td class="mono">MCORE.BRIDGECLIENT</td><td><span class="tag t-manualwire">Manual*</span></td><td class="mono small">O</td><td class="muted">Does the DUT support a Bridge</td></tr>
+<tr data-b="manualwire"><td class="mono">MCORE.COM.PAF</td><td><span class="tag t-manualwire">Manual*</span></td><td class="mono small">M if MCORE.COM.WIFI &amp; MCORE.DD.DISCOVERY_PAF</td><td class="muted">Does the commissioner or the device support Commissioning over Wi-Fi PAF?</td></tr>
+<tr data-b="manualwire"><td class="mono">MCORE.DD.11_MANUAL_PC</td><td><span class="tag t-manualwire">Manual*</span></td><td class="mono small">O</td><td class="muted">Does the commissioner support accepting an 11-digit Manual Pairing Code for commissioning?</td></tr>
+<tr data-b="manualwire"><td class="mono">MCORE.DD.21_MANUAL_PC</td><td><span class="tag t-manualwire">Manual*</span></td><td class="mono small">O</td><td class="muted">Does the commissioner support accepting a 21-digit Manual Pairing Code for commissioning?</td></tr>
+<tr data-b="manualwire"><td class="mono">MCORE.DD.COMM_DISCOVERY</td><td><span class="tag t-manualwire">Manual*</span></td><td class="mono small">O</td><td class="muted">Does the DUT support Commissioner Discovery?</td></tr>
+<tr data-b="manualwire"><td class="mono">MCORE.DD.CONCATENATED_QR_CODE</td><td><span class="tag t-manualwire">Manual*</span></td><td class="mono small">O</td><td class="muted">Does the commissionee device’s Onboarding Payload contain concatenated QR codes?</td></tr>
+<tr data-b="manualwire"><td class="mono">MCORE.DD.CTRL_CONCATENATED_QR_CODE_1</td><td><span class="tag t-manualwire">Manual*</span></td><td class="mono small">O</td><td class="muted">Does the commissioner support scanning and processing concatenated QR codes?</td></tr>
+<tr data-b="manualwire"><td class="mono">MCORE.DD.CTRL_CONCATENATED_QR_CODE_2</td><td><span class="tag t-manualwire">Manual*</span></td><td class="mono small">O if NOT (MCORE.DD.CTRL_CONCATENATED_QR_CODE_1)</td><td class="muted">Does the Commissioner indicate to the user that devices must be commissioned individually using their separate QR codes or Manual Pairing Codes?</td></tr>
+<tr data-b="manualwire"><td class="mono">MCORE.DD.DISCOVERY_PAF</td><td><span class="tag t-manualwire">Manual*</span></td><td class="mono small">O</td><td class="muted">Does the commissioner or device support Discovery Capability over Wi-Fi PAF?</td></tr>
+<tr data-b="manualwire"><td class="mono">MCORE.DD.EXTENDED_DISCOVERY</td><td><span class="tag t-manualwire">Manual*</span></td><td class="mono small">O</td><td class="muted">Does the commissionee device support Extended Discovery through DNS-SD advertisements when device is not in commissioning mode?</td></tr>
+<tr data-b="manualwire"><td class="mono">MCORE.DD.MANUAL_PC_COMMISSIONING</td><td><span class="tag t-manualwire">Manual*</span></td><td class="mono small">O</td><td class="muted">Does the commissioner support accepting a Manual Pairing Code for commissioning?</td></tr>
+<tr data-b="manualwire"><td class="mono">MCORE.DD.QR_COMMISSIONING</td><td><span class="tag t-manualwire">Manual*</span></td><td class="mono small">O</td><td class="muted">Does the commissioner support accepting a QR code for commissioning?</td></tr>
+<tr data-b="manualwire"><td class="mono">MCORE.DD.SCAN_NFC</td><td><span class="tag t-manualwire">Manual*</span></td><td class="mono small">O</td><td class="muted">Does the commissioner support scanning NFC tags containing the onboarding payload?</td></tr>
+<tr data-b="manualwire"><td class="mono">MCORE.DD.SCAN_QR_CODE</td><td><span class="tag t-manualwire">Manual*</span></td><td class="mono small">O</td><td class="muted">Does the commissioner support scanning QR codes containing the onboarding payload?</td></tr>
+<tr data-b="manualwire"><td class="mono">MCORE.DEVLIST.UseBatInfo</td><td><span class="tag t-manualwire">Manual*</span></td><td class="mono small">O</td><td class="muted">Does the DUT support maintaining information on battery level of connected devices</td></tr>
+<tr data-b="manualwire"><td class="mono">MCORE.DEVLIST.UseDeviceName</td><td><span class="tag t-manualwire">Manual*</span></td><td class="mono small">O</td><td class="muted">Does the DUT support to maintain the names of connected devices</td></tr>
+<tr data-b="manualwire"><td class="mono">MCORE.DEVLIST.UseDeviceState</td><td><span class="tag t-manualwire">Manual*</span></td><td class="mono small">O</td><td class="muted">Does the DUT support to maintain the state of connected devices</td></tr>
+<tr data-b="manualwire"><td class="mono">MCORE.DEVLIST.UseDevices</td><td><span class="tag t-manualwire">Manual*</span></td><td class="mono small">O</td><td class="muted">Does the DUT support to maintain a list of connected devices</td></tr>
+<tr data-b="manualwire"><td class="mono">MCORE.FS</td><td><span class="tag t-manualwire">Manual*</span></td><td class="mono small">O</td><td class="muted">Does the DUT implement Fabric Synchronization</td></tr>
+<tr data-b="manualwire"><td class="mono">MCORE.SC.EXTENDED_DISCOVERY</td><td><span class="tag t-manualwire">Manual*</span></td><td class="mono small">O</td><td class="muted">Does device support Extended Discovery for Commissionable Node Discovery?</td></tr>
+<tr data-b="manualwire"><td class="mono">MCORE.SC.TCP</td><td><span class="tag t-manualwire">Manual*</span></td><td class="mono small">O</td><td class="muted">Does Device support TCP?</td></tr></tbody>
+  </table></div>
+
+  <footer>Attribution measured from the engine (toggling each input). Default-off policy: optional leaves
+  stay off unless an input/derivation/composition turns them on. PIXIT values live in the per-cluster
+  templates, not Base.xml, and are always manual.</footer>
+</div>
+<script>
+(function(){
+  var rows=[].slice.call(document.querySelectorAll('tbody tr'));
+  var btns=[].slice.call(document.querySelectorAll('.fbtn')); var active=null;
+  function apply(){rows.forEach(function(r){r.style.display=(!active||r.dataset.b===active)?'':'none';});}
+  btns.forEach(function(b){b.addEventListener('click',function(){
+    active=(active===b.dataset.f)?null:b.dataset.f;
+    btns.forEach(function(x){x.setAttribute('aria-pressed',String(x.dataset.f===active));});apply();});});
+})();
+</script>

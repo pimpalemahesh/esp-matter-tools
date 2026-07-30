@@ -1,0 +1,153 @@
+<!-- Copyright 2025 Espressif Systems (Shanghai) PTE LTD
+    Licensed under the Apache License, Version 2.0 (the "License");
+    you may not use this file except in compliance with the License.
+    You may obtain a copy of the License at
+
+        http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
+-->
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#E60012">
+  <title>Matter PICS Workbench | Espressif</title>
+  <link rel="icon" type="image/svg+xml" href="static/espressif-logo.svg">
+  <link rel="apple-touch-icon" href="static/espressif-logo.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="static/css/style.css">
+  <script>
+    (function () {
+      var saved = localStorage.getItem('esp-matter-tools-theme');
+      if (!saved) saved = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+      document.documentElement.setAttribute('data-theme', saved);
+    })();
+  </script>
+</head>
+
+<body>
+
+  <div id="initOverlay">
+    <div class="spinner"></div>
+    <div class="init-text" id="initStatus">Loading Python runtime...</div>
+  </div>
+
+  <div class="container">
+    <header class="header">
+      <button class="theme-toggle" id="themeToggle" type="button" aria-label="Toggle theme"
+        title="Switch to dark mode">🌙</button>
+      <h1>Matter PICS Workbench</h1>
+      <p class="header-subtitle">Describe your device once. The tool answers every PICS question it can from
+        that, and flags the few only you can answer. Review, adjust, and export.</p>
+    </header>
+
+    <!-- Device profile -->
+    <section class="card profile-card">
+      <div class="card-title">Device profile</div>
+      <div class="profile-grid">
+        <div class="control-group grow">
+          <label for="deviceType">Application device type <span class="req">required</span></label>
+          <select id="deviceType"></select>
+        </div>
+        <div class="control-group">
+          <label>Node-level device types</label>
+          <div class="chips" id="nodeTypes">
+            <button class="opt" data-v="OTA Requestor" aria-pressed="true">OTA Requestor</button>
+            <button class="opt" data-v="OTA Provider">OTA Provider</button>
+            <button class="opt" data-v="Aggregator">Aggregator</button>
+          </div>
+        </div>
+        <div class="control-group">
+          <label>Transport</label>
+          <div class="chips" id="transport">
+            <button class="opt" data-v="wifi_2g" aria-pressed="true">wifi_2g</button>
+            <button class="opt" data-v="wifi_5g">wifi_5g</button>
+            <button class="opt" data-v="thread">thread</button>
+            <button class="opt" data-v="ethernet">ethernet</button>
+          </div>
+        </div>
+        <div class="control-group">
+          <label>BLE commissioning</label>
+          <div class="chips" id="ble">
+            <button class="opt seg-one" data-v="on" aria-pressed="true">on</button>
+            <button class="opt seg-one" data-v="off">off</button>
+          </div>
+        </div>
+        <div class="control-group">
+          <label>Onboarding</label>
+          <div class="chips" id="onboarding">
+            <button class="opt" data-v="qr" aria-pressed="true">qr</button>
+            <button class="opt" data-v="manual_pairing_code" aria-pressed="true">manual_pairing_code</button>
+            <button class="opt" data-v="nfc">nfc</button>
+          </div>
+        </div>
+        <div class="control-group">
+          <label>ICD (intermittently connected)</label>
+          <div class="chips" id="icd">
+            <button class="opt seg-one" data-v="none" aria-pressed="true">no</button>
+            <button class="opt seg-one" data-v="sit" title="Short Idle Time ICD">SIT</button>
+            <button class="opt seg-one" data-v="lit" title="Long Idle Time ICD">LIT</button>
+          </div>
+        </div>
+        <div class="control-group">
+          <label>Role</label>
+          <div class="chips" id="role">
+            <button class="opt seg-one" data-v="commissionee" aria-pressed="true">commissionee</button>
+            <button class="opt seg-one" data-v="commissioner">commissioner</button>
+            <button class="opt seg-one" data-v="controller">controller</button>
+          </div>
+          <div class="derived">IM client/server, OTA &amp; bridge are <b>derived</b> from the device types
+            above — not asked.</div>
+        </div>
+      </div>
+      <div class="profile-actions">
+        <button class="btn" id="generateBtn" disabled>Generate PICS</button>
+        <button class="btn ghost" id="exportBtn" disabled title="Download filled PICS XML as a zip">Export PICS ↓</button>
+        <button class="btn ghost" id="resetBtn" title="Clear saved answers and start over">Reset</button>
+        <span class="im-role" id="imRole"></span>
+      </div>
+      <div class="derived">Your answers are saved in this browser and restored on reload.</div>
+    </section>
+
+    <!-- Results -->
+    <div id="resultArea">
+      <div class="empty-state">Choose a device type and click <strong>Generate PICS</strong>.</div>
+    </div>
+
+    <footer class="footer">
+      <div class="footer-logo">
+        <img src="static/espressif-logo.svg" alt="Espressif Systems" width="28" height="28">
+        <span>Espressif Systems</span>
+      </div>
+      <div class="footer-links">
+        <a href="https://github.com/espressif/esp-matter-tools/tree/main/pics_tool" target="_blank"
+          rel="noopener noreferrer">🛠 GitHub repository</a>
+        <a href="https://github.com/espressif/esp-matter-tools/issues/new" target="_blank"
+          rel="noopener noreferrer">🐛 Report an issue</a>
+      </div>
+      <p class="footer-copy">Runs fully in your browser (Pyodide) — no device, no data leaves the page.
+        Copyright © 2025 Espressif Systems</p>
+    </footer>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"
+    integrity="sha384-+mbV2IY1Zk/X1p/nWllGySJSUN8uMs+gUAN10Or95UBH0fpj6GfKgPmgC5EXieXG"
+    crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/pyodide/v0.27.5/full/pyodide.js"
+    integrity="sha384-rm4QcPMX69sqmX2kWiJa3BF02sgdJkVyATWkw5NHAxBUAvmLXhToWZYaP2wCcyEe"
+    crossorigin="anonymous"></script>
+  <script src="static/js/app.js"></script>
+
+</body>
+
+</html>

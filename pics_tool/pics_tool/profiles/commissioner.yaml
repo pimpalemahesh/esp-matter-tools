@@ -1,0 +1,21 @@
+# Copyright 2025 Espressif Systems (Shanghai) PTE LTD
+#
+# Per-role MCORE default profile for a Commissioner (a device that commissions
+# other nodes). It is an IM client, so client-side capabilities are allowed.
+
+role: commissioner
+
+seeds:
+  - MCORE.ROLE.COMMISSIONER
+
+deny:
+  - MCORE.ROLE.CONTROLLER
+
+feature_area_gates:
+  bridge:
+    - MCORE.BRIDGE
+    - MCORE.BRIDGE.*
+  ota_provider:
+    - MCORE.OTA.Provider
+  icd:
+    - MCORE.SC.SIT_ICD

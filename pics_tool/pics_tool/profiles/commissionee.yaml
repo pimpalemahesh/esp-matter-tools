@@ -1,0 +1,39 @@
+# Copyright 2025 Espressif Systems (Shanghai) PTE LTD
+#
+# Per-role MCORE default profile for a Commissionee (a typical Matter device).
+# Policy: "maximum options" via deny-by-role (design decision D14) -- enable all
+# role-appropriate Base.xml leaf capabilities except those listed here.
+
+role: commissionee
+
+# Atoms always enabled for this role.
+seeds:
+  - MCORE.ROLE.COMMISSIONEE
+
+# Glob patterns of Base leaves NOT auto-enabled for this role (role-contradictory:
+# commissioner/controller-side and IM-client capabilities a device does not have).
+deny:
+  - MCORE.ROLE.COMMISSIONER
+  - MCORE.ROLE.CONTROLLER
+  - MCORE.IDM.C
+  - MCORE.IDM.C.*
+  - MCORE.DD.SCAN_*
+  - MCORE.DD.QR_COMMISSIONING
+  - MCORE.DD.MANUAL_PC_COMMISSIONING
+  - MCORE.DD.21_MANUAL_PC
+  - MCORE.DD.COMM_DISCOVERY
+  - MCORE.DD.CTRL_*
+  - MCORE.ACL.Administrator
+  - MCORE.BRIDGECLIENT
+  - MCORE.DEVLIST.*
+  - MCORE.FS
+
+# Leaves enabled only when the corresponding profile fact is on.
+feature_area_gates:
+  bridge:
+    - MCORE.BRIDGE
+    - MCORE.BRIDGE.*
+  ota_provider:
+    - MCORE.OTA.Provider
+  icd:
+    - MCORE.SC.SIT_ICD

@@ -1,0 +1,17 @@
+# Generated Pyodide bundle (rebuilt by build_tool.sh / build_web.py and in CI)
+ui/web_bundle/
+
+# Python
+__pycache__/
+*.pyc
+*.egg-info/
+build/
+dist/
+venv/
+pics_out*/
+
+# Local reference material (CSA template releases, hand-curated PICS)
+archieve/
+
+# OS noise
+.DS_Store
