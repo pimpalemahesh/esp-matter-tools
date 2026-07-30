@@ -438,14 +438,15 @@ async function exportPICS() {
     // Always export the profile snapshot that produced the visible payload —
     // never the current form, which the user may have changed since generating.
     const profileJson = JSON.stringify(payload.profile);
-    const enabled = enabledCodes();
     const problems = JSON.parse(
-      webapp.validate_selection_json(profileJson, JSON.stringify(enabled)));
-    if (problems.length) {
-      const fix = await confirmProblems(problems);
+      webapp.validate_selection_json(profileJson, JSON.stringify(enabledByTab())));
+    const errors = problems.filter((p) => p.severity !== "warning");
+    const warns = problems.filter((p) => p.severity === "warning");
+    if (errors.length) {
+      const fix = await confirmProblems(errors, warns);
       if (fix === null) return; // cancelled
       if (fix) {
-        problems.forEach((p) => { answers[p.code] = "yes"; touched.add(p.code); });
+        errors.forEach((p) => { answers[p.code] = "yes"; touched.add(p.code); });
         render();
         saveSession();
       }
@@ -471,10 +472,16 @@ async function exportPICS() {
 
 // Modal listing spec-consistency problems. Resolves true = enable & continue,
 // false = export as-is, null = cancel.
-function confirmProblems(problems) {
+function confirmProblems(problems, warns = []) {
   return new Promise((resolve) => {
     const overlay = document.createElement("div");
     overlay.className = "modal-overlay";
+    const warnHtml = warns.length ? `
+        <details class="expected"><summary>${warns.length} expected validator
+          notice${warns.length > 1 ? "s" : ""} (no action needed)</summary>
+          <ul>${warns.map((p) =>
+            `<li><span class="code">${esc(p.code)}</span><br><small>${esc(p.why)}</small></li>`).join("")}</ul>
+        </details>` : "";
     overlay.innerHTML = `
       <div class="modal" role="alertdialog" aria-label="Spec consistency check">
         <h3>The spec requires ${problems.length} more item${problems.length > 1 ? "s" : ""}</h3>
@@ -482,6 +489,7 @@ function confirmProblems(problems) {
         <ul>${problems.slice(0, 12).map((p) =>
           `<li><span class="code">${esc(p.code)}</span> — ${esc(p.question)}<br><small>${esc(p.why)}</small></li>`).join("")}
         ${problems.length > 12 ? `<li>… and ${problems.length - 12} more</li>` : ""}</ul>
+        ${warnHtml}
         <div class="modal-actions">
           <button class="btn" data-act="fix">Enable them &amp; export</button>
           <button class="btn ghost" data-act="asis">Export as-is</button>

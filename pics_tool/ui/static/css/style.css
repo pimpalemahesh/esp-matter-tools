@@ -384,3 +384,8 @@ tr.childrow td.qcell { padding-left: 40px; }
 tr.childrow td.qcell::before {
   content: '↳'; margin-right: 7px; color: var(--text-dim); font-size: .85em;
 }
+
+/* expected-notices section inside the validation modal */
+.modal details.expected { margin: 0 0 16px; }
+.modal details.expected summary { cursor: pointer; color: var(--text-dim); font-size: .85rem; }
+.modal details.expected ul { margin-top: 8px; }

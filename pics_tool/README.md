@@ -96,6 +96,9 @@ Expect a handful of *warnings*, which are by design:
   color/finish, ACE app-endpoint ids): these are test-bed/product values that
   cannot be generated. The export includes a `PIXIT_CHECKLIST.md` listing every
   applicable PIXIT — fill them in the CSA tool before running the Test Harness.
+  PIXITs whose condition is false for the endpoint (e.g. `PIXIT.OO.*` in a
+  client-only On/Off file, Thread PIXITs on a Wi-Fi device) are exported as
+  `support=n/a`, so the validator treats them as not applicable.
 - **`MCORE.DD.STANDARD_COMM_FLOW`** on a commissionee: Base.xml only defines
   "M if `MCORE.DD.11_MANUAL_PC`" (a commissioner-side item) with no plain `O`
   status, so claiming the standard flow on a commissionee trips a "selected but

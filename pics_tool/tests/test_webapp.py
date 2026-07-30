@@ -160,9 +160,12 @@ def test_validate_surfaces_the_ota_choice_instead_of_guessing():
     p = webapp.generate_payload(PROFILE)
     enabled = [it["code"] for it in p["items"] if it["answer"] == "yes"]
     problems = webapp.validate_selection(PROFILE, enabled)
-    assert [pr["code"] for pr in problems] == ["MCORE.OTA.VendorSpecific"]
-    # claiming vendor-specific OTA (or an OTA requestor) makes the set clean
-    assert webapp.validate_selection(PROFILE, enabled + ["MCORE.OTA.VendorSpecific"]) == []
+    errors = [pr["code"] for pr in problems if pr["severity"] == "error"]
+    assert errors == ["MCORE.OTA.VendorSpecific"]
+    # claiming vendor-specific OTA (or an OTA requestor) leaves no ERRORS
+    # (warnings like STANDARD_COMM_FLOW are expected notices, never blocking)
+    left = webapp.validate_selection(PROFILE, enabled + ["MCORE.OTA.VendorSpecific"])
+    assert [p for p in left if p["severity"] == "error"] == []
 
 
 def test_validate_accounts_for_user_enabled_features():
@@ -173,8 +176,9 @@ def test_validate_accounts_for_user_enabled_features():
     full.append("MCORE.OTA.VendorSpecific")  # resolve the OTA choice (see above)
     dependents = webapp.validate_selection(
         PROFILE, [c for c in full if c == "OO.S.F01" or not c.startswith("OO.S.F")])
-    # dropping nothing: full set validates clean
-    assert webapp.validate_selection(PROFILE, full) == []
+    # dropping nothing: full set validates with no ERRORS
+    assert [p for p in webapp.validate_selection(PROFILE, full)
+            if p["severity"] == "error"] == []
     assert isinstance(dependents, list)
 
 
@@ -228,7 +232,7 @@ def test_items_split_into_decided_and_manual_groups():
     base = [it for it in p["items"] if it["tab"] == "base"]
     assert len(base) == 132  # each and every Base.xml item is present
     manual_base = [it for it in base if it["group"] == "manual"]
-    assert len(manual_base) == 68
+    assert len(manual_base) == 70
     assert all(it["answer"] == "no" for it in manual_base)
     assert any(it["code"] == "MCORE.DD.PHYSICAL_TAMPERING" for it in manual_base)
 
@@ -451,3 +455,63 @@ def test_export_roundtrip_fidelity():
     for f, sup in parsed.items():
         tname = f.split("/", 1)[1]
         assert set(sup) == templates[tname], f"{f} does not match its template"
+
+
+# --- full pre-export validation (CSA-parity sweep) ------------------------------
+
+
+def _errors(problems):
+    return {p["code"] for p in problems if p["severity"] == "error"}
+
+
+def test_validate_catches_template_cond_cascade_from_attribute_claim():
+    """Claiming an optional attribute can make another item mandatory via the
+    TEMPLATE cond (BINFO.S.A0011 Reachable -> BINFO.S.E03 ReachableChanged);
+    the sweep must catch it even though no engine path derives it."""
+    p = webapp.generate_payload(PROFILE)
+    by_tab = {}
+    for it in p["items"]:
+        if it["answer"] == "yes":
+            by_tab.setdefault(it["tab"], []).append(it["code"])
+    by_tab["0"].append("BINFO.S.A0011")
+    problems = webapp.validate_selection(PROFILE, by_tab)
+    assert "BINFO.S.E03" in _errors(problems)
+
+
+def test_validate_cascades_to_fixpoint():
+    """Enabling a Wi-Fi band cascades: COM.WIFI becomes mandatory, and once it
+    is, COM.WIRELESS does too — one validation reports the whole closure."""
+    problems = webapp.validate_selection(PROFILE, ["MCORE.COM.WIFI_2P4GHZ"])
+    errs = _errors(problems)
+    assert "MCORE.COM.WIFI" in errs
+    assert "MCORE.COM.WIRELESS" in errs
+
+
+def test_known_template_quirks_are_warnings_not_errors():
+    p = webapp.generate_payload(PROFILE)
+    enabled = [it["code"] for it in p["items"] if it["answer"] == "yes"]
+    problems = webapp.validate_selection(PROFILE, enabled + ["MCORE.OTA.VendorSpecific"])
+    scf = [pr for pr in problems if pr["code"] == "MCORE.DD.STANDARD_COMM_FLOW"]
+    assert scf and scf[0]["severity"] == "warning"
+    assert "deliberately" in scf[0]["why"]
+
+
+def test_idm_capabilities_not_blanket_claimed():
+    """IM role derivation gives only what the spec forces: the role atoms and
+    (for a device with mandated client Tx commands) InvokeRequest. Granular
+    client capabilities (write Bool, batch, read...) and optional server
+    capabilities (LargeData, PersistentSubscription) are the vendor's call."""
+    p = webapp.generate_payload(dict(PROFILE, device_type="Dimmer Switch"))
+    by = {it["code"]: it for it in p["items"] if it["tab"] == "base"}
+    assert by["MCORE.IDM.C"]["answer"] == "yes"
+    assert by["MCORE.IDM.C.InvokeRequest"]["answer"] == "yes"  # mandated Tx
+    for c in ("MCORE.IDM.C.WriteRequest.Attribute.DataType_Bool",
+              "MCORE.IDM.C.ReadRequest", "MCORE.IDM.C.InvokeRequest.BatchCommands",
+              "MCORE.IDM.S.LargeData", "MCORE.IDM.S.PersistentSubscription"):
+        assert by[c]["group"] == "manual" and by[c]["answer"] == "no", c
+
+    # server-only device: client side is an input-backed decided No
+    p2 = webapp.generate_payload(PROFILE)
+    by2 = {it["code"]: it for it in p2["items"] if it["tab"] == "base"}
+    assert by2["MCORE.IDM.C.WriteRequest.Attribute.DataType_Bool"]["group"] == "decided"
+    assert by2["MCORE.IDM.C.WriteRequest.Attribute.DataType_Bool"]["answer"] == "no"

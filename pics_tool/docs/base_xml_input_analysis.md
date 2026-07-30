@@ -80,8 +80,8 @@ Plus the deferred flags `is_bridge` / `is_icd` (feature-area gates).
 
 | Category | Items | Meaning |
 |---|---:|---|
-| Tool-decided (input seeds, cond fixpoint, IM role, role deny lists) | 65 | transport/role/onboarding atoms and derivations, IDM client/server, role-contradictory items (commissioner-side questions are a defendable No for a commissionee) |
-| Manual selection (no derivation path *from the current inputs*) | 67 | product facts (TCP, PAF, tamper resistance, DLOG fields, TXT/mDNS keys, commissioning-flow variants) plus node-composition facts the phase-1 UI does not ask (bridge, OTA roles and sub-caps, device lists, BDX, ICD) |
+| Tool-decided (input seeds, cond fixpoint, IM role atoms, role deny lists) | 62 | transport/role/onboarding atoms and derivations, IDM client/server, role-contradictory items (commissioner-side questions are a defendable No for a commissionee) |
+| Manual selection (no derivation path *from the current inputs*) | 70 | product facts (TCP, PAF, tamper resistance, DLOG fields, TXT/mDNS keys, commissioning-flow variants) plus node-composition facts the phase-1 UI does not ask (bridge, OTA roles and sub-caps, device lists, BDX, ICD) |
 | **Total** | **132** | |
 
 Numbers above are for a web (phase-1) profile with no node composition

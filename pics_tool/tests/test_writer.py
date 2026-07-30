@@ -80,4 +80,31 @@ def test_pixit_checklist_written(tmp_path):
     text = checklist.read_text(encoding="utf-8")
     assert "PIXIT.CNET.WIFI_1ST_ACCESSPOINT_SSID" in text
     assert "endpoint0" in text
-    assert summary.pixits >= 9  # CNET alone carries 9 PIXITs
+    # only APPLICABLE PIXITs are listed: Wi-Fi claimed (F00) -> the 5 Wi-Fi/
+    # endpoint values need entry; Thread/Ethernet ones are n/a, not chores
+    assert summary.pixits == 5
+    assert "PIXIT.CNET.THREAD_1ST_OPERATIONALDATASET" not in text
+
+
+def test_inapplicable_pixits_exported_as_na(tmp_path):
+    """A PIXIT whose cond is false for the endpoint must export as support=n/a
+    (matching the CSA reference PICS); leaving the template's 0x00 reads as a
+    provided value and trips the validator's dependency check."""
+    import re
+    from pics_tool.generate.writer import write_pics
+
+    # client-only On/Off: OO.S false -> both OO PIXITs inapplicable
+    write_pics("1.6", {1: {"OO.C", "OO.C.C00.Tx"}}, tmp_path)
+    xml = (tmp_path / "endpoint1" / "On-Off Cluster Test Plan.xml").read_text()
+    for num in ("PIXIT.OO.ENDPOINT", "PIXIT.OO.MaxCommunicationTurnaround"):
+        m = re.search(rf"<itemNumber>{re.escape(num)}</itemNumber>.*?<support>([^<]*)</support>",
+                      xml, re.S)
+        assert m and m.group(1) == "n/a", num
+
+    # server On/Off: applicable -> 0x00 preserved (awaiting a manual value)
+    out2 = tmp_path / "srv"
+    write_pics("1.6", {1: {"OO.S", "OO.S.A0000"}}, out2)
+    xml2 = (out2 / "endpoint1" / "On-Off Cluster Test Plan.xml").read_text()
+    m = re.search(r"<itemNumber>PIXIT\.OO\.ENDPOINT</itemNumber>.*?<support>([^<]*)</support>",
+                  xml2, re.S)
+    assert m and m.group(1) == "0x00"

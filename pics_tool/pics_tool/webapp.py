@@ -382,6 +382,10 @@ def generate_payload(profile_dict: dict, claims=None) -> dict:
     mcore_on = compute_mcore_pics(profile, version, cluster_ids) & set(order)
     derived_im = is_im_client(model, [profile.device_type, *profile.node_device_types])
     im_client = derived_im if profile.im_client is None else profile.im_client
+    # Does the composition MANDATE sending commands (client Tx)? If so -- and
+    # only then -- IDM.C.InvokeRequest is spec-derivable, not a guess.
+    mandated_client_tx = any(re.search(r"\.C\.C[0-9a-fA-F]{2}\.Tx$", c)
+                             for ep in baseline for c in ep.pics)
     role_profile = load_role_profile(profile.role)
     facts = node_facts_from_clusters(cluster_ids)
 
@@ -410,9 +414,21 @@ def generate_payload(profile_dict: dict, claims=None) -> dict:
                 return "review"  # only the undeclared node composition decides it
             return "off"
         if bucket == "imrole":
-            if n.startswith("MCORE.IDM.S"):
+            if n == "MCORE.IDM.S":
                 return "on"                       # DUT hosts clusters -> IM server
-            return "on" if im_client else "off"   # IM client only if derived
+            if n.startswith("MCORE.IDM.S."):
+                # LargeData / PersistentSubscription: product facts (the
+                # hand-curated reference answers them differently) -> manual.
+                return "review"
+            if not im_client:
+                return "off"                      # input-backed: IM role control
+            if n == "MCORE.IDM.C":
+                return "on"                       # the claimed/derived role atom
+            if n == "MCORE.IDM.C.InvokeRequest" and mandated_client_tx:
+                return "on"  # mandated client Tx commands ARE Invoke requests
+            # per-message-type / per-datatype client capabilities (write Bool,
+            # batch commands, subscribe events, ...): only the vendor knows.
+            return "review"
         if role_denied(n, role_profile):
             # Contradicted by the chosen role: the tool CAN decide this --
             # e.g. commissioner-side scanning/CTRL questions are a defendable
@@ -630,57 +646,123 @@ def export_pics_files(profile_dict: dict, enabled_codes) -> dict:
     return files
 
 
-def validate_selection(profile_dict: dict, enabled_codes) -> list[dict]:
-    """Spec-consistency check of the user's final Yes set before export.
+# Items we deliberately claim/leave despite a known CSA template gap. They
+# surface as WARNINGS with an explanation, never as blocking errors.
+_KNOWN_TEMPLATE_QUIRKS = {
+    "MCORE.DD.STANDARD_COMM_FLOW":
+        "claimed deliberately: the template only defines 'M if 11_MANUAL_PC' "
+        "(commissioner-side) with no plain O status; DD test selection keys "
+        "off this item. The CSA validator shows the same notice.",
+}
 
-    Returns the list of codes that the spec makes MANDATORY given what the user
-    claims (profile + enabled features + enabled items) but that are answered
-    "no". Empty list == consistent. Each problem: {code, question, why}.
+
+def _effective_status(statuses, resolve):
+    """First status whose cond holds (no cond = always). None if none apply."""
+    for status_text, cond in statuses:
+        if not cond:
+            return status_text
+        try:
+            if boolexpr.evaluate(boolexpr.parse(cond), resolve):
+                return status_text
+        except boolexpr.ExpressionSyntaxError:
+            continue
+    return None
+
+
+def validate_selection(profile_dict: dict, enabled_codes) -> list[dict]:
+    """Full spec-consistency validation of the final Yes set before export.
+
+    Mirrors the CSA PICS validator's dependency rules over everything that
+    will be exported, with a cascade closure so one round of fixes yields a
+    stable set. Each problem: {code, question, why, severity} where severity
+    is "error" (spec violation) or "warning" (expected/benign notice).
+
+    ``enabled_codes`` is preferably {tab: [codes]} (per-endpoint scoping, as
+    the UI shows them); a flat list is accepted and validated in one scope.
     """
     version = profile_dict.get("spec_version", "1.6")
     profile = DeviceProfile.from_dict(profile_dict)
-    enabled = set(enabled_codes)
+    by_tab = enabled_codes if isinstance(enabled_codes, dict) else None
+    flat = set(c for codes in by_tab.values() for c in codes) if by_tab \
+        else set(enabled_codes)
     text = _item_text(version)
+    known = known_item_numbers(version)
     problems: list[dict] = []
+    flagged: set[str] = set()
 
-    def add(code: str, why: str) -> None:
+    def add(code: str, why: str, severity: str = "error") -> None:
+        if code in flagged:
+            return
+        flagged.add(code)
         problems.append({"code": code,
                          "question": text.get(code, ("", ""))[0] or code,
-                         "why": why})
+                         "why": why, "severity": severity})
 
-    # Cluster side: re-run the engine with the user's enabled features as seeds;
-    # everything it yields is mandatory for the claimed device, so any of it
-    # answered "no" is a conformance hole.
-    extra_seeds = _feature_seeds_from_codes(version, enabled)
+    # 1) Engine side: re-run with the user's claims; everything the engine
+    #    yields is mandatory for the claimed device.
+    extra_seeds = _feature_seeds_from_codes(version, flat)
     endpoints = generate_cluster_pics(_model(version), profile,
                                       extra_feature_seeds=extra_seeds)
-    known = known_item_numbers(version)
     for ep in sorted(endpoints, key=lambda e: e.endpoint):
-        for code in sorted((ep.pics & known) - enabled):
+        for code in sorted((ep.pics & known) - flat):
             add(code, f"mandatory on endpoint {ep.endpoint} for this device profile")
 
-    # Gateway claims: an enabled X.S / X.C makes the claimed side's mandatory
-    # elements mandatory too.
-    flagged = {pr["code"] for pr in problems}
-    for gateway, claim_codes in _gateway_claims(version, profile, enabled).items():
-        for code in sorted(claim_codes - enabled - flagged):
+    # 2) Gateway claims: a claimed X.S / X.C mandates its side's elements.
+    for gateway, claim_codes in _gateway_claims(version, profile, flat).items():
+        for code in sorted(claim_codes - flat):
             add(code, f"mandatory because you claimed {gateway}")
 
-    # MCORE side: any Base.xml item whose cond evaluates to Mandatory against
-    # the user's enabled set must itself be enabled.
-    resolve = lambda atom: atom in enabled  # noqa: E731
-    for item in parse_pics_items(base_template_path(version)):
-        if item.number in enabled:
-            continue
-        for status_text, cond in item.statuses:
-            if status_text != "M" or not cond:
+    # 3) Template sweep (what the CSA validator checks): per exported scope,
+    #    evaluate every item's effective status. Runs to a fixpoint so newly
+    #    mandatory items cascade (enabling A may make B mandatory).
+    from .generate.template_io import list_templates
+
+    parsed = {p.name: parse_pics_items(p) for p in list_templates(version)}
+
+    if by_tab:
+        base_set = set(by_tab.get("base", []))
+        scopes = []
+        for t, codes in by_tab.items():
+            if t == "base":
                 continue
-            try:
-                if boolexpr.evaluate(boolexpr.parse(cond), resolve):
-                    add(item.number, f"required because: {cond}")
-                    break
-            except boolexpr.ExpressionSyntaxError:
-                continue
+            scopes.append((t, set(codes) | base_set))
+        if not any(t == "0" for t, _ in scopes) and base_set:
+            scopes.append(("0", set(base_set)))
+    else:
+        scopes = [("all", set(flat))]
+
+    for scope_name, scope_enabled in scopes:
+        scope_templates = [name for name, items in parsed.items()
+                           if any(it.number in scope_enabled for it in items)]
+        working = set(scope_enabled)
+        changed = True
+        while changed:
+            changed = False
+            resolve = lambda a: a in working  # noqa: E731
+            for name in scope_templates:
+                for it in parsed[name]:
+                    if it.number in working:
+                        continue
+                    if _effective_status(it.statuses, resolve) == "M":
+                        cond_text = " ; ".join(c for _, c in it.statuses if c) or "unconditional"
+                        add(it.number, f"required because: {cond_text}")
+                        working.add(it.number)
+                        changed = True
+        # prohibited / inapplicable checks on what the user actually enabled
+        resolve = lambda a: a in working  # noqa: E731
+        for name in scope_templates:
+            for it in parsed[name]:
+                if it.number not in scope_enabled:
+                    continue
+                eff = _effective_status(it.statuses, resolve)
+                if eff == "X":
+                    add(it.number, "PROHIBITED by the spec for this configuration")
+                elif eff is None:
+                    quirk = _KNOWN_TEMPLATE_QUIRKS.get(it.number)
+                    add(it.number,
+                        quirk or "enabled, but no status condition applies to "
+                                 "this configuration (the validator will note it)",
+                        severity="warning")
     return problems
 
 

@@ -26,6 +26,8 @@ import xml.etree.ElementTree as ET
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from esp_matter_datamodel import boolexpr
+
 from .template_io import list_templates
 
 logger = logging.getLogger(__name__)
@@ -38,12 +40,16 @@ class WriteSummary:
     pixits: int = 0
 
 
-def _pixits_of(src: Path) -> list[tuple[str, str]]:
-    """(itemNumber, question text) of every PIXIT in a template."""
+def _pixits_of(src: Path, enabled: set[str]) -> list[tuple[str, str]]:
+    """(itemNumber, question text) of every APPLICABLE PIXIT in a template.
+
+    Inapplicable ones (cond false for this endpoint) are exported as "n/a" and
+    need no manual value, so they stay off the checklist.
+    """
     out = []
     for px in ET.parse(str(src)).getroot().iter("pixitItem"):
         num = (px.findtext("itemNumber") or "").strip()
-        if num:
+        if num and _pixit_applicable(px, enabled):
             out.append((num, " ".join((px.findtext("feature") or "").split())))
     return out
 
@@ -73,6 +79,23 @@ def _pixit_checklist(per_endpoint: dict[int, list[tuple[str, list[tuple[str, str
     return "\n".join(lines) + "\n"
 
 
+def _pixit_applicable(px: ET.Element, enabled: set[str]) -> bool:
+    """A PIXIT applies when any of its status conds holds for the enabled set."""
+    statuses = px.findall("status")
+    if not statuses:
+        return True
+    for s in statuses:
+        cond = (s.attrib.get("cond") or "").strip()
+        if not cond:
+            return True
+        try:
+            if boolexpr.evaluate(boolexpr.parse(cond), lambda a: a in enabled):
+                return True
+        except boolexpr.ExpressionSyntaxError:
+            return True  # unresolvable: safer to keep it as a value to fill
+    return False
+
+
 def _fill_tree(src: Path, enabled: set[str]) -> tuple[ET.ElementTree, str, int]:
     parser = ET.XMLParser(target=ET.TreeBuilder(insert_comments=True))
     tree = ET.parse(str(src), parser)
@@ -86,6 +109,14 @@ def _fill_tree(src: Path, enabled: set[str]) -> tuple[ET.ElementTree, str, int]:
         if number.text.strip() in enabled:
             support.text = "true"
             count += 1
+    # PIXITs whose condition is false for this endpoint are NOT APPLICABLE:
+    # export them as "n/a" (matching the hand-curated CSA reference); leaving
+    # the template's 0x00 reads as "value provided" and trips the validator's
+    # dependency check (e.g. PIXIT.OO.ENDPOINT on a client-only On/Off file).
+    for px in root.iter("pixitItem"):
+        support = px.find("support")
+        if support is not None and not _pixit_applicable(px, enabled):
+            support.text = "n/a"
     return tree, root.tag, count
 
 
@@ -140,7 +171,7 @@ def write_pics(version: str, endpoints_enabled: dict[int, set[str]],
                 f.write("\n")
             summary.files.append(str(dst))
             summary.supported += count
-            pixits = _pixits_of(src)
+            pixits = _pixits_of(src, enabled)
             if pixits:
                 pixits_by_ep.setdefault(endpoint, []).append((src.name, pixits))
                 summary.pixits += len(pixits)
