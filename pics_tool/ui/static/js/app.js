@@ -43,15 +43,22 @@ function wireChips(groupId, single) {
 }
 
 function readProfile() {
-  const im = selected("imrole")[0] || "auto";
+  const ota = selected("ota");
+  const nodeTypes = [];
+  if (ota.includes("requestor")) nodeTypes.push("OTA Requestor");
+  if (ota.includes("provider")) nodeTypes.push("OTA Provider");
   return {
     spec_version: $("specVersion").value,
     device_type: $("deviceType").value,
+    node_device_types: nodeTypes,
+    vendor_specific_ota: ota.includes("vendor"),
     transport: selected("transport"),
-    ble_commissioning: selected("ble")[0] === "on",
+    ble_commissioning: selected("commdisc").includes("ble"),
+    wifi_paf: selected("commdisc").includes("wifi_paf"),
+    nfc_commissioning: selected("commdisc").includes("nfc"),
     onboarding: selected("onboarding"),
     role: selected("role")[0] || "commissionee",
-    im_client: im === "auto" ? null : im === "client",
+    // IM role is always derived automatically (device type + claims)
   };
 }
 
@@ -67,11 +74,23 @@ function applyProfileToForm(p) {
   if (!p) return;
   if (p.device_type) $("deviceType").value = p.device_type;
   setSelected("transport", p.transport || []);
-  setSelected("ble", [p.ble_commissioning === false ? "off" : "on"]);
-  setSelected("onboarding", p.onboarding || []);
+  const disc = [];
+  if (p.ble_commissioning !== false) disc.push("ble");
+  if (p.wifi_paf) disc.push("wifi_paf");
+  if (p.nfc_commissioning) disc.push("nfc");
+  setSelected("commdisc", disc);
+  const ota = [];
+  (p.node_device_types || []).forEach((n) => {
+    if (n === "OTA Requestor") ota.push("requestor");
+    if (n === "OTA Provider") ota.push("provider");
+  });
+  if (p.vendor_specific_ota) ota.push("vendor");
+  setSelected("ota", ota);
+  // sessions saved during the brief 11/21 split map back to the single chip
+  const ob = (p.onboarding || []).map((o) =>
+    o.startsWith("manual_pairing_code") ? "manual_pairing_code" : o);
+  setSelected("onboarding", [...new Set(ob)]);
   setSelected("role", [p.role || "commissionee"]);
-  setSelected("imrole", [p.im_client === true ? "client"
-    : p.im_client === false ? "server" : "auto"]);
 }
 
 // A profile the engine would reject never reaches the engine: say what's wrong.
@@ -81,6 +100,8 @@ function validateProfile(p) {
   if (!p.transport.length) errs.push("Pick at least one transport.");
   if (p.role === "commissionee" && !p.onboarding.length)
     errs.push("A commissionee needs at least one onboarding method (QR / manual pairing code / NFC).");
+  if (p.wifi_paf && !p.transport.some((t) => t.startsWith("wifi")))
+    errs.push("Wi-Fi PAF commissioning requires a Wi-Fi transport.");
   return errs;
 }
 
@@ -205,11 +226,6 @@ function render() {
   const tabHtml = payload.tabs.map((t) =>
     `<button class="tab" data-tab="${esc(t.id)}" aria-pressed="${t.id === tab}">${esc(t.label)}<span class="tn">${perTab[t.id] || 0}</span></button>`).join("");
 
-  const derived = payload.im_client_derived ? "IM client + server" : "IM server only";
-  $("imRole").innerHTML = payload.im_client_overridden
-    ? `You overrode the derived value (<b>${esc(derived)}</b>) with <b>${esc(payload.im_role)}</b>.`
-    : `Derived from the device type: <b>${esc(payload.im_role)}</b>.`;
-
   $("resultArea").innerHTML = `
     <div class="card-title"><span class="stepno">2</span> Review the answers, then export</div>
     <div class="tiles">
@@ -219,14 +235,14 @@ function render() {
     </div>
     <div class="toolbar">
       <div class="tabs">${tabHtml}</div>
-      <div class="filters" id="grpSwitch">
-        <button class="chipf" data-g="decided" aria-pressed="${grp === "decided"}"><span class="sw" style="background:var(--on)"></span>Selected by the tool <span id="gc-decided"></span></button>
-        <button class="chipf" data-g="manual" aria-pressed="${grp === "manual"}"><span class="sw" style="background:var(--review)"></span>Manual selection <span id="gc-manual"></span></button>
-      </div>
       <label class="detailtoggle"><input type="checkbox" id="showDetails"> Technical details</label>
       <input class="search" id="q" placeholder="Search questions…" aria-label="Search questions">
     </div>
-    <div class="tablewrap"><table id="tbl">
+    <div class="viewswitch" id="grpSwitch">
+      <button class="chipf" data-g="decided" aria-pressed="${grp === "decided"}"><span class="sw" style="background:var(--on)"></span>Answered by the tool <span id="gc-decided"></span></button>
+      <button class="chipf" data-g="manual" aria-pressed="${grp === "manual"}"><span class="sw" style="background:var(--review)"></span>Optional Items <span id="gc-manual"></span></button>
+    </div>
+    <div class="tablewrap attached"><table id="tbl">
       <thead><tr><th>Question</th><th class="answercol">Answer</th></tr></thead>
       <tbody id="tb"></tbody>
     </table></div>
@@ -389,7 +405,7 @@ function applyFilter() {
   }));
   hint.innerHTML = others.length
     ? "Nothing matches here — matches elsewhere: " + others.map(({ t, g, n }) =>
-        `<button class="linklike" data-goto="${esc(t.id)}" data-g="${g}">${esc(t.label)} › ${g === "manual" ? "Manual selection" : "Selected by the tool"} (${n})</button>`).join(" · ")
+        `<button class="linklike" data-goto="${esc(t.id)}" data-g="${g}">${esc(t.label)} › ${g === "manual" ? "Optional Items" : "Answered by the tool"} (${n})</button>`).join(" · ")
     : "Nothing matches.";
   hint.hidden = false;
   hint.querySelectorAll("[data-goto]").forEach((b) =>
@@ -530,11 +546,11 @@ function resetAll() {
 // ---- wire form + boot ----
 wireChips("transport", false);
 wireChips("onboarding", false);
-wireChips("ble", true);
+wireChips("commdisc", false);
+wireChips("ota", false);
 wireChips("role", true);
-wireChips("imrole", true);
 // results update automatically on any form change — no Generate button
-["transport", "onboarding", "ble", "role", "imrole"].forEach((id) =>
+["transport", "onboarding", "commdisc", "ota", "role"].forEach((id) =>
   $(id).addEventListener("click", (e) => { if (e.target.closest(".opt")) scheduleGenerate(); }));
 $("deviceType").addEventListener("change", scheduleGenerate);
 $("exportBtn").addEventListener("click", exportPICS);

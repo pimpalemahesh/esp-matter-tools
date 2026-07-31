@@ -65,17 +65,25 @@ def test_undecidable_product_facts_are_manual_not_decided():
     never be presented as tool-decided."""
     p = webapp.generate_payload(PROFILE)
     by_code = {it["code"]: it for it in p["items"] if it["tab"] == "base"}
-    # product facts with no derivation path, AND node-composition facts the
-    # phase-1 UI cannot express (bridge, OTA, device lists, ICD) -> manual
+    # product facts with no derivation path, AND composition facts the phase-1
+    # UI still cannot express (bridge, device lists, ICD) -> manual
     for code in ("MCORE.DLOG.S.UTCTIMESTAMP", "MCORE.DLOG.S.TIMESINCEBOOT",
-                 "MCORE.SC.TCP", "MCORE.COM.PAF", "MCORE.DD.PHYSICAL_TAMPERING",
+                 "MCORE.SC.TCP", "MCORE.DD.PHYSICAL_TAMPERING",
                  "MCORE.BRIDGE", "MCORE.BRIDGECLIENT", "MCORE.DEVLIST.UseDevices",
-                 "MCORE.OTA.Requestor", "MCORE.OTA.Resume", "MCORE.SC.SIT_ICD",
-                 "MCORE.OTA.VendorSpecific", "MCORE.BDX.Receiver"):
+                 "MCORE.SC.SIT_ICD"):
         assert by_code[code]["group"] == "manual", f"{code} wrongly tool-decided"
         assert by_code[code]["answer"] == "no"  # conservative default until claimed
-    # ...while genuinely derivable facts stay tool-decided
-    for code in ("MCORE.COM.WIFI_2P4GHZ", "MCORE.ROLE.COMMISSIONEE"):
+    # OTA is an explicit input now: no selection = input-backed decided answers,
+    # with VendorSpecific derived Yes by Base.xml's own rule (commissionee
+    # without an OTA Requestor must be updatable somehow)
+    assert by_code["MCORE.OTA.Requestor"]["group"] == "decided"
+    assert by_code["MCORE.OTA.Requestor"]["answer"] == "no"
+    assert by_code["MCORE.OTA.VendorSpecific"]["group"] == "decided"
+    assert by_code["MCORE.OTA.VendorSpecific"]["answer"] == "yes"
+    assert by_code["MCORE.BDX.Receiver"]["answer"] == "no"
+    # ...while genuinely derivable facts stay tool-decided (COM.PAF became
+    # derivable once wifi_paf was promoted to a profile input)
+    for code in ("MCORE.COM.WIFI_2P4GHZ", "MCORE.ROLE.COMMISSIONEE", "MCORE.COM.PAF"):
         assert by_code[code]["group"] == "decided", f"{code} should be derivable"
     # role-contradictory (commissioner-side) items ARE decidable for a commissionee
     for code in ("MCORE.DD.CTRL_CONCATENATED_QR_CODE_1", "MCORE.DD.11_MANUAL_PC"):
@@ -152,20 +160,15 @@ def test_validate_flags_mcore_cond_violation():
     assert any(pr["code"] == "MCORE.COM.WIFI" for pr in problems)
 
 
-def test_validate_surfaces_the_ota_choice_instead_of_guessing():
-    """The tool never guesses OTA facts, so the default export legitimately
-    trips Base.xml's own rule: a commissionee claiming no OTA Requestor must
-    support vendor-specific OTA. The gate surfaces exactly that one decision;
-    answering either side of it (requestor or vendor-specific) resolves it."""
+def test_default_export_is_error_free():
+    """With OTA as an explicit input, Base.xml's updatability rule is resolved
+    at generation time (VendorSpecific derives Yes when no OTA Requestor is
+    selected), so a default export validates with zero errors."""
     p = webapp.generate_payload(PROFILE)
-    enabled = [it["code"] for it in p["items"] if it["answer"] == "yes"]
-    problems = webapp.validate_selection(PROFILE, enabled)
-    errors = [pr["code"] for pr in problems if pr["severity"] == "error"]
-    assert errors == ["MCORE.OTA.VendorSpecific"]
-    # claiming vendor-specific OTA (or an OTA requestor) leaves no ERRORS
-    # (warnings like STANDARD_COMM_FLOW are expected notices, never blocking)
-    left = webapp.validate_selection(PROFILE, enabled + ["MCORE.OTA.VendorSpecific"])
-    assert [p for p in left if p["severity"] == "error"] == []
+    yes = {it["code"] for it in p["items"] if it["answer"] == "yes"}
+    assert "MCORE.OTA.VendorSpecific" in yes  # derived, not guessed
+    problems = webapp.validate_selection(PROFILE, sorted(yes))
+    assert [pr for pr in problems if pr["severity"] == "error"] == []
 
 
 def test_validate_accounts_for_user_enabled_features():
@@ -232,7 +235,7 @@ def test_items_split_into_decided_and_manual_groups():
     base = [it for it in p["items"] if it["tab"] == "base"]
     assert len(base) == 132  # each and every Base.xml item is present
     manual_base = [it for it in base if it["group"] == "manual"]
-    assert len(manual_base) == 70
+    assert len(manual_base) == 54
     assert all(it["answer"] == "no" for it in manual_base)
     assert any(it["code"] == "MCORE.DD.PHYSICAL_TAMPERING" for it in manual_base)
 
@@ -515,3 +518,98 @@ def test_idm_capabilities_not_blanket_claimed():
     by2 = {it["code"]: it for it in p2["items"] if it["tab"] == "base"}
     assert by2["MCORE.IDM.C.WriteRequest.Attribute.DataType_Bool"]["group"] == "decided"
     assert by2["MCORE.IDM.C.WriteRequest.Attribute.DataType_Bool"]["answer"] == "no"
+
+
+def test_client_claim_flows_into_im_role():
+    """Claiming an optional client side (OO.C) makes the device an IM client:
+    the IM role follows the claim, IDM.C + InvokeRequest fill in as manual-Yes
+    (user-driven, not tool-decided), the granular capabilities open up as
+    manual questions, and unclaiming reverts everything."""
+    p = webapp.generate_payload(PROFILE, claims=["OO.C"])
+    assert p["im_client"] is True
+    by = {it["code"]: it for it in p["items"]}
+    for c in ("MCORE.IDM.C", "MCORE.IDM.C.InvokeRequest"):
+        assert by[c]["group"] == "manual" and by[c]["answer"] == "yes", c
+    assert by["MCORE.IDM.C.ReadRequest"]["group"] == "manual"
+    assert by["MCORE.IDM.C.ReadRequest"]["answer"] == "no"
+
+    # validation backs it up if the claim set is inconsistent
+    errs = {pr["code"] for pr in webapp.validate_selection(PROFILE, ["OO.C", "OO.C.C00.Tx"])
+            if pr["severity"] == "error"}
+    assert {"MCORE.IDM.C", "MCORE.IDM.C.InvokeRequest"} <= errs
+
+    # no claim -> server only, client side decided No
+    p2 = webapp.generate_payload(PROFILE)
+    assert p2["im_client"] is False
+
+
+def test_wifi_paf_input_decides_both_paf_items():
+    """wifi_paf input: Yes seeds DD.DISCOVERY_PAF and COM.PAF derives via the
+    cond fixpoint (with Wi-Fi); No is an input-backed decided No. Without a
+    Wi-Fi transport, COM.PAF stays off even when PAF discovery is claimed."""
+    p = webapp.generate_payload(dict(PROFILE, wifi_paf=True))
+    by = {it["code"]: it for it in p["items"] if it["tab"] == "base"}
+    assert by["MCORE.DD.DISCOVERY_PAF"]["group"] == "decided"
+    assert by["MCORE.DD.DISCOVERY_PAF"]["answer"] == "yes"
+    assert by["MCORE.COM.PAF"]["group"] == "decided"
+    assert by["MCORE.COM.PAF"]["answer"] == "yes"
+
+    p2 = webapp.generate_payload(PROFILE)  # default: wifi_paf false
+    by2 = {it["code"]: it for it in p2["items"] if it["tab"] == "base"}
+    assert by2["MCORE.DD.DISCOVERY_PAF"]["group"] == "decided"
+    assert by2["MCORE.DD.DISCOVERY_PAF"]["answer"] == "no"
+    assert by2["MCORE.COM.PAF"]["answer"] == "no"
+
+    p3 = webapp.generate_payload(dict(PROFILE, transport=["thread"], wifi_paf=True))
+    by3 = {it["code"]: it for it in p3["items"] if it["tab"] == "base"}
+    assert by3["MCORE.COM.PAF"]["answer"] == "no"  # PAF needs Wi-Fi
+
+
+def test_nfc_commissioning_input_decides_ntl():
+    """NFC Transport Layer commissioning is its own discovery input: it decides
+    MCORE.DD.NTL both ways, independent of the passive onboarding NFC tag."""
+    p = webapp.generate_payload(dict(PROFILE, nfc_commissioning=True))
+    by = {it["code"]: it for it in p["items"] if it["tab"] == "base"}
+    assert by["MCORE.DD.NTL"]["group"] == "decided"
+    assert by["MCORE.DD.NTL"]["answer"] == "yes"
+    assert by["MCORE.DD.NFC"]["answer"] == "no"  # tag input untouched
+
+    p2 = webapp.generate_payload(dict(PROFILE, onboarding=["nfc"]))
+    by2 = {it["code"]: it for it in p2["items"] if it["tab"] == "base"}
+    assert by2["MCORE.DD.NFC"]["answer"] == "yes"   # tag claimed
+    assert by2["MCORE.DD.NTL"]["group"] == "decided"
+    assert by2["MCORE.DD.NTL"]["answer"] == "no"    # transport NOT implied by tag
+
+
+def test_manual_pairing_code_length_decides_commissioning_flow():
+    """Spec 5.1.4: an 11-digit manual code implies Standard Commissioning Flow;
+    a 21-digit code (VID/PID embedded) implies a NON-standard flow and must not
+    claim STANDARD_COMM_FLOW."""
+    p11 = webapp.generate_payload(dict(PROFILE, onboarding=["manual_pairing_code_11"]))
+    by11 = {it["code"]: it for it in p11["items"] if it["tab"] == "base"}
+    assert by11["MCORE.DD.MANUAL_PC"]["answer"] == "yes"
+    assert by11["MCORE.DD.STANDARD_COMM_FLOW"]["answer"] == "yes"
+
+    p21 = webapp.generate_payload(dict(PROFILE, onboarding=["manual_pairing_code_21"]))
+    by21 = {it["code"]: it for it in p21["items"] if it["tab"] == "base"}
+    assert by21["MCORE.DD.MANUAL_PC"]["answer"] == "yes"
+    assert by21["MCORE.DD.STANDARD_COMM_FLOW"]["answer"] == "no"
+    # which non-standard flow is a product fact -> manual
+    assert by21["MCORE.DD.CUSTOM_COMM_FLOW"]["group"] == "manual"
+
+
+def test_ota_input_covers_all_combinations():
+    """OTA input: requestor / provider / vendor-specific, any combination."""
+    base = dict(PROFILE, onboarding=["qr"])
+    p = webapp.generate_payload(dict(base, node_device_types=["OTA Requestor"],
+                                     vendor_specific_ota=True))
+    by = {it["code"]: it for it in p["items"] if it["tab"] == "base"}
+    assert by["MCORE.OTA.Requestor"]["answer"] == "yes"
+    assert by["MCORE.OTA.VendorSpecific"]["answer"] == "yes"  # both is valid
+    assert by["MCORE.BDX.Receiver"]["answer"] == "yes"
+    assert by["MCORE.OTA.Resume"]["group"] == "manual"  # requestor sub-cap: ask
+
+    p2 = webapp.generate_payload(dict(base, node_device_types=["OTA Provider"]))
+    by2 = {it["code"]: it for it in p2["items"] if it["tab"] == "base"}
+    assert by2["MCORE.OTA.Provider"]["answer"] == "yes"
+    assert by2["MCORE.BDX.Sender"]["answer"] == "yes"

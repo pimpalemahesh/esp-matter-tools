@@ -30,14 +30,18 @@ logger = logging.getLogger(__name__)
 
 VALID_TRANSPORTS = {"wifi_2g", "wifi_5g", "thread", "ethernet"}
 VALID_ROLES = {"commissionee", "commissioner", "controller"}
-VALID_ONBOARDING = {"qr", "manual_pairing_code", "nfc"}
+# manual_pairing_code (legacy) == manual_pairing_code_11: an 11-digit code
+# implies Standard Commissioning Flow; a 21-digit code (VID/PID embedded)
+# implies a NON-standard flow, so it must not claim STANDARD_COMM_FLOW.
+VALID_ONBOARDING = {"qr", "manual_pairing_code", "manual_pairing_code_11",
+                    "manual_pairing_code_21", "nfc"}
 VALID_POWER = {"mains", "battery"}
 
 # Recognized profile keys (everything else goes to .extra).
 _KNOWN_KEYS = {
     "spec_version", "device_type", "transport", "role", "ble_commissioning",
     "onboarding", "node_device_types", "is_icd", "icd_mode", "power_source",
-    "im_client",
+    "im_client", "wifi_paf", "nfc_commissioning", "vendor_specific_ota",
 }
 
 
@@ -58,6 +62,19 @@ class DeviceProfile:
     # bridge node-level PICS are DERIVED from the clusters these pull in, rather
     # than asked as separate flags.
     node_device_types: list[str] = field(default_factory=list)
+    # Commissioning discovery over Wi-Fi PAF (Public Action Frames) -- an
+    # alternative to BLE for Wi-Fi devices. A commissioning capability, NOT a
+    # network transport. Seeds MCORE.DD.DISCOVERY_PAF; MCORE.COM.PAF then
+    # derives via Base.xml's cond when a Wi-Fi transport is selected.
+    wifi_paf: bool = False
+    # Commissioning over the NFC Transport Layer (Matter 1.5+): the commissioning
+    # session itself runs over NFC. Distinct from an onboarding NFC *tag*
+    # (a passive payload carrier, seeded via onboarding=[nfc]).
+    nfc_commissioning: bool = False
+    # The device supports a vendor-specific OTA mechanism (own cloud/app).
+    # Note Base.xml also DERIVES this as mandatory for a commissionee with no
+    # OTA Requestor -- every certifiable device must be updatable somehow.
+    vendor_specific_ota: bool = False
     # Interaction Model role override: None = derive from the device type's
     # mandatory client clusters; True/False = the user states the device does /
     # does not act as an IM client (initiates reads/writes/invokes to others).

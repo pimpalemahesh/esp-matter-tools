@@ -47,12 +47,16 @@ def main(verbose: bool) -> None:
 @click.option("--role", help="Override role: commissionee/commissioner/controller.")
 @click.option("--node-device-type", "node_device_types", multiple=True,
               help="Extra node-level device type (repeatable), e.g. 'OTA Requestor', 'Aggregator'.")
+@click.option("--wifi-paf", "wifi_paf", is_flag=True, default=None,
+              help="Device supports commissioning discovery over Wi-Fi PAF.")
+@click.option("--vendor-ota", "vendor_specific_ota", is_flag=True, default=None,
+              help="Device supports a vendor-specific OTA mechanism.")
 @click.option("--model", "model_path", type=click.Path(exists=True),
               help="Data-model JSON to use instead of the packaged one for the version.")
 @click.option("-o", "--output", default="pics_out", show_default=True,
               help="Output directory.")
 def gen_pics(profile_path, spec_version, device_type, transport, role,
-             node_device_types, model_path, output):
+             node_device_types, wifi_paf, vendor_specific_ota, model_path, output):
     """Generate per-endpoint PICS XML for a device profile."""
     profile = load_profile(
         profile_path,
@@ -61,6 +65,8 @@ def gen_pics(profile_path, spec_version, device_type, transport, role,
         transport=list(transport) or None,
         role=role,
         node_device_types=list(node_device_types) or None,
+        wifi_paf=wifi_paf,
+        vendor_specific_ota=vendor_specific_ota,
     )
 
     model = loader.load(model_path) if model_path else loader.load_version(profile.spec_version)

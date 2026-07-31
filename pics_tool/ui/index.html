@@ -47,8 +47,6 @@
       <button class="theme-toggle" id="themeToggle" type="button" aria-label="Toggle theme"
         title="Switch to dark mode">🌙</button>
       <h1>Matter PICS Workbench</h1>
-      <p class="header-subtitle">Describe your device once. The tool answers every PICS question it can from
-        that, and flags the few only you can answer. Review, adjust, and export.</p>
     </header>
 
     <!-- Device profile -->
@@ -85,24 +83,34 @@
           </div>
         </div>
         <div class="control-group">
-          <label>BLE commissioning
-            <span class="helptip" tabindex="0" aria-label="What is BLE commissioning?">?
-              <span class="helptext">Whether the device can be commissioned over Bluetooth LE
-                (the usual method for Wi-Fi and Thread products). Ethernet-only devices typically
-                commission over the network instead.</span>
+          <label>Commissioning discovery
+            <span class="helptip" tabindex="0" aria-label="What is commissioning discovery?">?
+              <span class="helptext">How a commissioner finds and talks to the device during
+                commissioning. <b>BLE</b> is the usual method for Wi-Fi and Thread products.
+                <b>Wi-Fi PAF</b> (Public Action Frames, Matter 1.4+) is an alternative for Wi-Fi
+                products — a commissioning capability, not a network transport; selecting it
+                claims MCORE.DD.DISCOVERY_PAF and MCORE.COM.PAF follows automatically with a
+                Wi-Fi transport. <b>NFC</b> (Matter 1.5+) runs the commissioning session over the
+                NFC Transport Layer (MCORE.DD.NTL) — different from a passive NFC onboarding
+                tag, which is an onboarding-material option below. Ethernet-only devices
+                typically select none of these and commission over the network.</span>
             </span>
           </label>
-          <div class="chips" id="ble">
-            <button class="opt seg-one" data-v="on" aria-pressed="true">Yes</button>
-            <button class="opt seg-one" data-v="off">No</button>
+          <div class="chips" id="commdisc">
+            <button class="opt" data-v="ble" aria-pressed="true">BLE</button>
+            <button class="opt" data-v="wifi_paf">Wi-Fi PAF</button>
+            <button class="opt" data-v="nfc">NFC</button>
           </div>
         </div>
         <div class="control-group">
           <label>Onboarding material
             <span class="helptip" tabindex="0" aria-label="What is onboarding?">?
               <span class="helptext">How a user gets the setup payload into a commissioner:
-                a printed/displayed QR code, an 11-digit manual pairing code, or an NFC tag.
-                Select everything that ships with the product.</span>
+                a printed/displayed QR code, a manual pairing code (11-digit assumed — the
+                standard case, which implies the Standard Commissioning Flow), or an NFC tag.
+                Select everything that ships with the product. For a 21-digit code device
+                (non-standard flow, spec 5.1.4), use <code>manual_pairing_code_21</code> in a
+                profile file.</span>
             </span>
           </label>
           <div class="chips" id="onboarding">
@@ -112,39 +120,40 @@
           </div>
         </div>
         <div class="control-group">
-          <label>Device role
-            <span class="helptip" tabindex="0" aria-label="What is the device role?">?
-              <span class="helptext"><b>Commissionee</b>: a device that gets added to a Matter
-                network (light, plug, sensor — the common case). <b>Commissioner</b>: adds other
-                devices to the network (hub, phone app). <b>Controller</b>: administers devices
-                after commissioning. This gates all commissioner-/controller-side questions.</span>
+          <label>OTA update
+            <span class="helptip" tabindex="0" aria-label="How does the device update?">?
+              <span class="helptext">How the device receives firmware updates.
+                <b>OTA Requestor</b>: standard Matter OTA (the device implements the OTA
+                Requestor device type — typical ESP32 Matter product); this also derives the
+                BDX transfer roles. <b>OTA Provider</b>: the device serves images to others
+                (hubs). <b>Vendor-specific</b>: your own update path (cloud/app). Select all
+                that apply. If you select none, the spec itself mandates vendor-specific OTA
+                for a commissionee — every certifiable device must be updatable — and the tool
+                sets it accordingly.</span>
             </span>
           </label>
-          <div class="chips" id="role">
-            <button class="opt seg-one" data-v="commissionee" aria-pressed="true">Commissionee</button>
-            <button class="opt seg-one" data-v="commissioner">Commissioner</button>
-            <button class="opt seg-one" data-v="controller">Controller</button>
+          <div class="chips" id="ota">
+            <button class="opt" data-v="requestor">OTA Requestor</button>
+            <button class="opt" data-v="provider">OTA Provider</button>
+            <button class="opt" data-v="vendor">Vendor-specific</button>
           </div>
         </div>
         <div class="control-group">
-          <label>IM role
-            <span class="helptip" tabindex="0" aria-label="What is the IM role?">?
-              <span class="helptext">The Interaction Model (IM) role says how the device talks Matter.
-                <b>Server only</b>: it only answers requests from others (typical light, sensor, plug).
-                <b>Client + server</b>: it also <i>initiates</i> reads/writes/commands toward other
-                nodes (a switch controlling a light, a controller, a device reading other devices).
-                It drives the MCORE.IDM.C.* items in the Base PICS.
-                <b>auto</b> derives it from whether the chosen device type requires any client
-                clusters — override it only if your firmware adds client behavior the device type
-                does not require.</span>
+          <label>Device role
+            <span class="helptip" tabindex="0" aria-label="What is the device role?">?
+              <span class="helptext"><b>End Device</b>: a device that gets added to a Matter
+                network (light, plug, sensor — the common case). <b>Commissioner</b>: adds other
+                devices to the network (hub, phone app). <b>Controller</b>: administers devices
+                after commissioning. This gates all commissioner-/controller-side questions.
+                The Interaction Model role (server / client + server) is derived automatically
+                from the device type and your claims.</span>
             </span>
           </label>
-          <div class="chips" id="imrole">
-            <button class="opt seg-one" data-v="auto" aria-pressed="true">auto (derived)</button>
-            <button class="opt seg-one" data-v="server">server only</button>
-            <button class="opt seg-one" data-v="client">client + server</button>
+          <div class="chips" id="role">
+            <button class="opt seg-one" data-v="commissionee" aria-pressed="true">End Device</button>
+            <button class="opt seg-one" data-v="commissioner">Commissioner</button>
+            <button class="opt seg-one" data-v="controller">Controller</button>
           </div>
-          <div class="derived" id="imRole"></div>
         </div>
       </div>
       <div class="profile-actions">

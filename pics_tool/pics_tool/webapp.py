@@ -107,6 +107,10 @@ def _probe(version: str, **kw) -> set[str]:
          "onboarding": list(kw.get("onboarding", ("qr", "manual_pairing_code")))}
     if "ble" in kw:
         d["ble_commissioning"] = kw["ble"]
+    if "paf" in kw:
+        d["wifi_paf"] = kw["paf"]
+    if "ntl" in kw:
+        d["nfc_commissioning"] = kw["ntl"]
     items = set(_mcore_meta(version)[0])
     return compute_mcore_pics(DeviceProfile.from_dict(d), version,
                               set(kw.get("clusters", frozenset()))) & items
@@ -126,8 +130,12 @@ def _classify(version: str):
     dims = {
         "transport": [dict(transports=(t,)) for t in ("wifi_2g", "wifi_5g", "thread", "ethernet")],
         "ble_commissioning": [dict(ble=True), dict(ble=False)],
+        "wifi_paf": [dict(paf=True), dict(paf=False)],
+        "nfc_commissioning": [dict(ntl=True), dict(ntl=False)],
         "role": [dict(role=r) for r in ("commissionee", "commissioner", "controller")],
-        "onboarding": [dict(onboarding=x) for x in ((), ("qr",), ("manual_pairing_code",), ("nfc",))],
+        "onboarding": [dict(onboarding=x) for x in
+                       ((), ("qr",), ("manual_pairing_code",),
+                        ("manual_pairing_code_21",), ("nfc",))],
         "device_types": [dict(clusters=c) for c in (frozenset(), frozenset({"0x002a"}),
                          frozenset({"0x0029"}), frozenset({"0x0039", "0x0751"}))],
     }
@@ -372,47 +380,57 @@ def generate_payload(profile_dict: dict, claims=None) -> dict:
     gateway_claims = _gateway_claims(version, profile, claims)
 
     # Real pipeline: clusters first, then MCORE seeded by the enabled cluster set.
-    # TWO runs on purpose: the baseline (profile only) defines "Selected by the
-    # tool"; whatever the user's claims add on top stays in Manual selection --
+    # TWO runs on purpose: the baseline (profile only) defines "Answered by the
+    # tool"; whatever the user's claims add on top stays in Optional Items --
     # pre-filled Yes where the spec mandates it, but it is THEIR selection.
     baseline = generate_cluster_pics(model, profile)
     endpoints = generate_cluster_pics(model, profile, extra_feature_seeds=extra_seeds)
     baseline_pics = {ep.endpoint: ep.pics for ep in baseline}
     cluster_ids = all_enabled_cluster_ids(endpoints)
     mcore_on = compute_mcore_pics(profile, version, cluster_ids) & set(order)
-    derived_im = is_im_client(model, [profile.device_type, *profile.node_device_types])
+    derived_im_types = is_im_client(model, [profile.device_type, *profile.node_device_types])
+    # A claimed client gateway (X.C = Yes) IS client behavior: the IM role must
+    # follow the claim, or the export would send commands while declaring
+    # "IM server only" -- an inconsistent PICS.
+    claimed_client = any(_GATEWAY_RE.match(c) and c.endswith(".C")
+                         for c in (claims or []))
+    derived_im = derived_im_types or claimed_client
     im_client = derived_im if profile.im_client is None else profile.im_client
-    # Does the composition MANDATE sending commands (client Tx)? If so -- and
-    # only then -- IDM.C.InvokeRequest is spec-derivable, not a guess.
-    mandated_client_tx = any(re.search(r"\.C\.C[0-9a-fA-F]{2}\.Tx$", c)
-                             for ep in baseline for c in ep.pics)
+    # Client role driven purely by the user's claims -> its IDM consequences
+    # belong in Manual selection (pre-filled Yes), not "Selected by the tool".
+    im_from_claims = (im_client and not derived_im_types
+                      and profile.im_client is None)
+    # Does the device send commands (client Tx)? Mandated by the device type,
+    # or a spec consequence of a claimed client side -- either way,
+    # IDM.C.InvokeRequest is derivable, not a guess.
+    has_client_tx = (any(re.search(r"\.C\.C[0-9a-fA-F]{2}\.Tx$", c)
+                         for ep in baseline for c in ep.pics)
+                     or any(re.search(r"\.C\.C[0-9a-fA-F]{2}\.Tx$", c)
+                            for codes in gateway_claims.values() for c in codes))
     role_profile = load_role_profile(profile.role)
     facts = node_facts_from_clusters(cluster_ids)
 
-    # Node composition (OTA requestor/provider, bridge) is asked via
-    # node_device_types. When the profile does not declare it (phase-1 web UI
-    # does not ask), items decided ONLY by that input are unknowable -- and
+    # OTA is now an explicit input (requestor / provider / vendor-specific),
+    # so the whole OTA/BDX area is input-decided -- including Base.xml's own
+    # derivation that a commissionee WITHOUT an OTA Requestor must support
+    # vendor-specific OTA. Bridge remains unasked in phase 1: unless the
+    # composition declares an Aggregator, its items are unknowable -- and
     # "no information" is never a "No".
-    node_declared = bool(profile.node_device_types)
+    bridge_declared = any("aggregator" in n.lower()
+                          for n in profile.node_device_types)
     gate_active = {"bridge": facts.has_bridge,
                    "ota_requestor": facts.has_ota_requestor,
                    "ota_provider": facts.has_ota_provider,
                    "icd": profile.is_icd}
-    # Namespaces that describe the node composition. With no declaration, NO
-    # item in them may be tool-decided -- not even through a Base.xml cond
-    # whose premise is the unknown itself (OTA.VendorSpecific is "M if
-    # commissionee AND NOT OTA.Requestor": a derivation built on a guess).
-    _NODE_NS = ("MCORE.OTA.", "MCORE.BDX.", "MCORE.BRIDGE", "MCORE.DEVLIST.")
+    gate_declared = {"bridge": bridge_declared, "ota_requestor": True,
+                     "ota_provider": True, "icd": False}
+    _BRIDGE_NS = ("MCORE.BRIDGE", "MCORE.DEVLIST.")
 
     def state(n: str, bucket: str) -> str:
-        if not node_declared and n.startswith(_NODE_NS):
+        if not bridge_declared and n.startswith(_BRIDGE_NS):
             return "review"
         if bucket == "auto":
-            if n in mcore_on:
-                return "on"
-            if not node_declared and set(decided_dims.get(n, ())) == {"device_types"}:
-                return "review"  # only the undeclared node composition decides it
-            return "off"
+            return "on" if n in mcore_on else "off"
         if bucket == "imrole":
             if n == "MCORE.IDM.S":
                 return "on"                       # DUT hosts clusters -> IM server
@@ -423,9 +441,11 @@ def generate_payload(profile_dict: dict, claims=None) -> dict:
             if not im_client:
                 return "off"                      # input-backed: IM role control
             if n == "MCORE.IDM.C":
-                return "on"                       # the claimed/derived role atom
-            if n == "MCORE.IDM.C.InvokeRequest" and mandated_client_tx:
-                return "on"  # mandated client Tx commands ARE Invoke requests
+                # "claimed": Yes, but in Manual selection -- the role follows
+                # the user's client-cluster claim, not the device type.
+                return "claimed" if im_from_claims else "on"
+            if n == "MCORE.IDM.C.InvokeRequest" and has_client_tx:
+                return "claimed" if im_from_claims else "on"
             # per-message-type / per-datatype client capabilities (write Bool,
             # batch commands, subscribe events, ...): only the vendor knows.
             return "review"
@@ -438,8 +458,7 @@ def generate_payload(profile_dict: dict, claims=None) -> dict:
         if area and not gate_active[area]:
             # The feature area is off. That is a decision only when the user
             # actually declared the governing input; otherwise it is unknown.
-            declared = node_declared if area != "icd" else False
-            return "off" if declared else "review"
+            return "off" if gate_declared[area] else "review"
         # manual: a real product fact no input can derive (TCP, PAF, tamper
         # resistance, DLOG fields, ...). Never presented as tool-decided.
         return "review"
@@ -457,8 +476,8 @@ def generate_payload(profile_dict: dict, claims=None) -> dict:
         # undecided question, not just the node-level ones.
         # "parent" is the gateway/feature this item reveals under.
         return {"tab": tab, "code": code, "question": q_of(code),
-                "answer": "yes" if st == "on" else "no", "group": group,
-                "cluster": cluster, "parent": parent,
+                "answer": "yes" if st in ("on", "claimed") else "no",
+                "group": group, "cluster": cluster, "parent": parent,
                 "needs_you": group == "manual", "conformance": conf_of(code)}
 
     # Three distinct sections, shown as separate tabs: the node-level Base.xml
@@ -475,10 +494,11 @@ def generate_payload(profile_dict: dict, claims=None) -> dict:
     # with no template item (e.g. OTAR.S.* -- the OTA test plan runs off
     # MCORE.OTA/BDX instead) have no question and cannot be exported.
     known = known_item_numbers(version)
-    items = [row(n, "base", state(n, bucket_of[n]),
-                 "manual" if state(n, bucket_of[n]) == "review" else "decided",
-                 _mcore_area(n))
-             for n in order]
+    items = []
+    for n in order:
+        st = state(n, bucket_of[n])
+        group = "manual" if st in ("review", "claimed") else "decided"
+        items.append(row(n, "base", st, group, _mcore_area(n)))
     tabs = [{"id": "base", "label": "Base PICS (MCORE)"}]
     for ep in sorted(endpoints, key=lambda e: e.endpoint):
         tab = str(ep.endpoint)
@@ -711,6 +731,21 @@ def validate_selection(profile_dict: dict, enabled_codes) -> list[dict]:
     for gateway, claim_codes in _gateway_claims(version, profile, flat).items():
         for code in sorted(claim_codes - flat):
             add(code, f"mandatory because you claimed {gateway}")
+
+    # 2b) IM-role consistency: a device that claims any client cluster side or
+    # sends client commands IS an IM client -- MCORE.IDM.C (and InvokeRequest,
+    # when commands are sent) must be claimed with it.
+    client_evidence = sorted(c for c in flat
+                             if not c.startswith("MCORE.")
+                             and (c.split(".")[1:2] == ["C"]))
+    if client_evidence:
+        if "MCORE.IDM.C" not in flat:
+            add("MCORE.IDM.C",
+                f"the device initiates IM requests (you claimed {client_evidence[0]})")
+        if (any(re.search(r"\.C\.C[0-9a-fA-F]{2}\.Tx$", c) for c in client_evidence)
+                and "MCORE.IDM.C.InvokeRequest" not in flat):
+            add("MCORE.IDM.C.InvokeRequest",
+                "the device sends client commands (Tx), which are Invoke requests")
 
     # 3) Template sweep (what the CSA validator checks): per exported scope,
     #    evaluate every item's effective status. Runs to a fixpoint so newly

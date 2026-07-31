@@ -389,3 +389,21 @@ tr.childrow td.qcell::before {
 .modal details.expected { margin: 0 0 16px; }
 .modal details.expected summary { cursor: pointer; color: var(--text-dim); font-size: .85rem; }
 .modal details.expected ul { margin-top: 8px; }
+
+/* the two table views: full-width segmented tabs attached to the table */
+.viewswitch {
+  display: flex;
+  border: 1px solid var(--border); border-bottom: none;
+  border-radius: 13px 13px 0 0; overflow: hidden;
+  background: var(--surface-alt); box-shadow: var(--shadow);
+}
+.viewswitch .chipf {
+  flex: 1; justify-content: center; padding: 12px 14px;
+  font-size: .87rem; border-radius: 0;
+}
+.viewswitch .chipf + .chipf { border-left: 1px solid var(--border); }
+.viewswitch .chipf[aria-pressed="true"] {
+  background: var(--surface); font-weight: 600; color: var(--text);
+  box-shadow: inset 0 -2px 0 var(--accent);
+}
+.tablewrap.attached { border-radius: 0 0 13px 13px; border-top: none; }

@@ -38,12 +38,17 @@ from .template_io import PicsItem, base_template_path, parse_pics_items
 
 logger = logging.getLogger(__name__)
 
-# Onboarding methods a commissionee provides. QR / manual pairing code imply the
-# Standard Commissioning Flow. (DD.11_MANUAL_PC is a *commissioner*-side item and
-# is intentionally not seeded here.)
+# Onboarding methods a commissionee provides. An 11-digit manual pairing code
+# implies the Standard Commissioning Flow; a 21-digit code (VID/PID embedded,
+# spec 5.1.4) implies a NON-standard flow, so it seeds only MANUAL_PC -- which
+# non-standard flow (user-intent / custom) stays a manual question.
+# (DD.11_MANUAL_PC / DD.21_MANUAL_PC are *commissioner*-side items and are
+# intentionally not seeded here.)
 _ONBOARDING_SEEDS = {
     "qr": ["MCORE.DD.QR", "MCORE.DD.STANDARD_COMM_FLOW"],
     "manual_pairing_code": ["MCORE.DD.MANUAL_PC", "MCORE.DD.STANDARD_COMM_FLOW"],
+    "manual_pairing_code_11": ["MCORE.DD.MANUAL_PC", "MCORE.DD.STANDARD_COMM_FLOW"],
+    "manual_pairing_code_21": ["MCORE.DD.MANUAL_PC"],
     "nfc": ["MCORE.DD.NFC"],
 }
 
@@ -123,6 +128,13 @@ def profile_seeds(profile: DeviceProfile, facts: NodeFacts,
         seeds.update(transport_map.get("transports", {}).get(t, {}).get("mcore_atoms", []))
     if profile.ble_commissioning:
         seeds.add("MCORE.COM.BLE")
+    if profile.wifi_paf:
+        # COM.PAF then derives via "M if COM.WIFI & DD.DISCOVERY_PAF"
+        seeds.add("MCORE.DD.DISCOVERY_PAF")
+    if profile.nfc_commissioning:
+        seeds.add("MCORE.DD.NTL")
+    if profile.vendor_specific_ota:
+        seeds.add("MCORE.OTA.VendorSpecific")
     for o in profile.onboarding:
         seeds.update(_ONBOARDING_SEEDS.get(o, []))
     # OTA / bridge are DERIVED from the enabled cluster set, not asked.

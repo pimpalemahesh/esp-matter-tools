@@ -112,7 +112,8 @@ These vary per product and blanket-enabling risks over-claiming:
 |---|---|---|
 | `BDX.*` (10) | Only relevant if the device does OTA / bulk transfer | Derive from `ota` (requestor ⇒ Receiver/Driver/…) instead of default-ON |
 | `OTA.HTTPS / RequestorConsent / Resume / Retry` (4) | OTA requestor sub-features | Gate on `ota=requestor` + ask |
-| `DD.CONCATENATED_QR_CODE`, `DD.DISCOVERY_PAF` (2) | **Seed-like**: default-ON forces `DD.QR` / `COM.PAF` mandatory | **Promote to inputs** (onboarding detail / `wifi_paf`) |
+| `DD.CONCATENATED_QR_CODE` (1) | **Seed-like**: default-ON forces `DD.QR` mandatory | Promote to an input (onboarding detail) |
+| `DD.DISCOVERY_PAF` (1) | Seed for `COM.PAF` | **Done:** `wifi_paf` profile input (UI toggle next to BLE) decides both PAF items |
 | `DD.CUSTOM_COMM_FLOW / USER_INTENT_COMM_FLOW / NON_CONCURRENT_CONNECTION` (3) | Commissioning flow varies | Add `commissioning_flow` input |
 | `DD.NTL / UI / PHYSICAL_TAMPERING / CHIP_DEV / EXTENDED_DISCOVERY / ESF_TC_COMMISSIONER` (6) | Product/UX capabilities | Manual review (per-product) |
 | `SC.TCP`, `SC.EXTENDED_DISCOVERY` (2) | Transport/discovery capabilities | Add `tcp` / `extended_discovery` inputs |
