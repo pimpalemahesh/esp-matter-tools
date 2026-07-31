@@ -43,15 +43,15 @@ function wireChips(groupId, single) {
 }
 
 function readProfile() {
-  const ota = selected("ota");
-  const nodeTypes = [];
-  if (ota.includes("requestor")) nodeTypes.push("OTA Requestor");
-  if (ota.includes("provider")) nodeTypes.push("OTA Provider");
+  // OTA is an either/or per Base.xml: no OTA Requestor => vendor-specific
+  // OTA is mandatory for a commissionee (OTA Provider is profile/CLI-only in
+  // phase 1).
+  const ota = selected("ota")[0] || "vendor";
   return {
     spec_version: $("specVersion").value,
     device_type: $("deviceType").value,
-    node_device_types: nodeTypes,
-    vendor_specific_ota: ota.includes("vendor"),
+    node_device_types: ota === "requestor" ? ["OTA Requestor"] : [],
+    vendor_specific_ota: ota === "vendor",
     transport: selected("transport"),
     ble_commissioning: selected("commdisc").includes("ble"),
     wifi_paf: selected("commdisc").includes("wifi_paf"),
@@ -79,16 +79,13 @@ function applyProfileToForm(p) {
   if (p.wifi_paf) disc.push("wifi_paf");
   if (p.nfc_commissioning) disc.push("nfc");
   setSelected("commdisc", disc);
-  const ota = [];
-  (p.node_device_types || []).forEach((n) => {
-    if (n === "OTA Requestor") ota.push("requestor");
-    if (n === "OTA Provider") ota.push("provider");
-  });
-  if (p.vendor_specific_ota) ota.push("vendor");
-  setSelected("ota", ota);
-  // sessions saved during the brief 11/21 split map back to the single chip
+  setSelected("ota", [(p.node_device_types || []).includes("OTA Requestor")
+    ? "requestor" : "vendor"]);
+  // sessions saved during the brief 11/21 split map back to the single chip;
+  // the manual-pairing-code chip is locked ON (every device ships one)
   const ob = (p.onboarding || []).map((o) =>
     o.startsWith("manual_pairing_code") ? "manual_pairing_code" : o);
+  ob.push("manual_pairing_code");
   setSelected("onboarding", [...new Set(ob)]);
   setSelected("role", [p.role || "commissionee"]);
 }
@@ -196,7 +193,7 @@ function runGenerate(profile, keepAnswers, keepTouched) {
   const prevAnswers = keepAnswers || answers;
   const prevTouched = new Set(keepTouched || [...touched]);
   const claims = Object.keys(prevAnswers).filter((c) =>
-    (FEATURE_RE.test(c) || GATEWAY_RE.test(c))
+    (FEATURE_RE.test(c) || GATEWAY_RE.test(c) || c.startsWith("MCORE."))
     && prevAnswers[c] === "yes" && prevTouched.has(c));
 
   payload = JSON.parse(webapp.generate_payload_json(
@@ -224,22 +221,30 @@ function render() {
   payload.items.forEach((it) => { perTab[it.tab] = (perTab[it.tab] || 0) + 1; });
   if (!payload.tabs.some((t) => t.id === tab)) tab = payload.tabs[0].id;
   const tabHtml = payload.tabs.map((t) =>
-    `<button class="tab" data-tab="${esc(t.id)}" aria-pressed="${t.id === tab}">${esc(t.label)}<span class="tn">${perTab[t.id] || 0}</span></button>`).join("");
+    `<button class="tab" data-tab="${esc(t.id)}" aria-pressed="${t.id === tab}">
+       <span class="tt">${esc(t.label)}<span class="tn">${perTab[t.id] || 0}</span></span>
+       <span class="tc">${esc(t.caption || "")}</span>
+     </button>`).join("");
 
   $("resultArea").innerHTML = `
-    <div class="card-title"><span class="stepno">2</span> Review the answers, then export</div>
-    <div class="tiles">
-      <div class="tile on"><div class="big" id="t-yes">0</div><div class="lbl">supported (Yes)</div></div>
-      <div class="tile off"><div class="big" id="t-no">0</div><div class="lbl">not supported (No)</div></div>
-      <div class="tile mine"><div class="big" id="t-mine">0</div><div class="lbl">changed by you</div></div>
+    <div class="reviewhead">
+      <div class="card-title"><span class="stepno">2</span> Review the answers, then export</div>
+      <div class="reviewtools">
+        <label class="detailtoggle"><input type="checkbox" id="showDetails"> Show details</label>
+        <div class="searchwrap">
+          <input class="search" id="q" placeholder="Search questions or PICS codes"
+            aria-label="Search questions or PICS codes">
+        </div>
+      </div>
     </div>
-    <div class="toolbar">
-      <div class="tabs">${tabHtml}</div>
-      <label class="detailtoggle"><input type="checkbox" id="showDetails"> Technical details</label>
-      <input class="search" id="q" placeholder="Search questions…" aria-label="Search questions">
+    <div class="statbar">
+      <span class="stat on"><b id="t-yes">0</b> supported</span>
+      <span class="stat off"><b id="t-no">0</b> not supported</span>
+      <span class="stat mine"><b id="t-mine">0</b> changed by you</span>
     </div>
+    <div class="tabs big">${tabHtml}</div>
     <div class="viewswitch" id="grpSwitch">
-      <button class="chipf" data-g="decided" aria-pressed="${grp === "decided"}"><span class="sw" style="background:var(--on)"></span>Answered by the tool <span id="gc-decided"></span></button>
+      <button class="chipf" data-g="decided" aria-pressed="${grp === "decided"}"><span class="sw" style="background:var(--on)"></span>Mandatory Items <span id="gc-decided"></span></button>
       <button class="chipf" data-g="manual" aria-pressed="${grp === "manual"}"><span class="sw" style="background:var(--review)"></span>Optional Items <span id="gc-manual"></span></button>
     </div>
     <div class="tablewrap attached"><table id="tbl">
@@ -285,7 +290,8 @@ function render() {
         const badge = side
           ? `<span class="sidebadge ${side}">${side === "server" ? "Server" : "Client"}</span>` : "";
         rowsHtml.push(`<tr data-i="${i}" data-tab="${esc(it.tab)}" data-group="${esc(it.group)}"
-            data-key="${esc(key)}" style="--clc:${color}" class="${it.parent ? "childrow" : ""}"
+            data-key="${esc(key)}" style="--clc:${color}"
+            class="${it.parent ? "childrow" : ""} ${isChanged(it) ? "changed" : ""}"
             data-code="${esc(it.code).toLowerCase()}" data-q="${esc((it.question || it.code)).toLowerCase()}">
           <td class="qcell">
             <div class="qtext">${esc(it.question || it.code)}${badge}</div>
@@ -332,7 +338,7 @@ function wireResults() {
       touched.add(code);
       btns.forEach((x) => x.classList.toggle("act", x === b));
       const tr = yn.closest("tr");
-      tr.classList.toggle("changed", answers[code] !== payload.items[+tr.dataset.i].answer);
+      tr.classList.toggle("changed", isChanged(payload.items[+tr.dataset.i]));
       // Un-claiming a parent (gateway X.C -> No, or a feature -> No) withdraws
       // everything revealed under it: drop manual overrides on its children so
       // nothing hidden leaks into the export.
@@ -347,8 +353,8 @@ function wireResults() {
       }
       recount();
       saveSession();
-      // claims (features, gateways) have spec consequences -> re-derive
-      if (FEATURE_RE.test(code) || GATEWAY_RE.test(code)) scheduleGenerate();
+      // claims (features, gateways, Base atoms) have spec consequences -> re-derive
+      if (FEATURE_RE.test(code) || GATEWAY_RE.test(code) || code.startsWith("MCORE.")) scheduleGenerate();
       else applyFilter();
     }));
   });
@@ -405,7 +411,7 @@ function applyFilter() {
   }));
   hint.innerHTML = others.length
     ? "Nothing matches here — matches elsewhere: " + others.map(({ t, g, n }) =>
-        `<button class="linklike" data-goto="${esc(t.id)}" data-g="${g}">${esc(t.label)} › ${g === "manual" ? "Optional Items" : "Answered by the tool"} (${n})</button>`).join(" · ")
+        `<button class="linklike" data-goto="${esc(t.id)}" data-g="${g}">${esc(t.label)} › ${g === "manual" ? "Optional Items" : "Mandatory Items"} (${n})</button>`).join(" · ")
     : "Nothing matches.";
   hint.hidden = false;
   hint.querySelectorAll("[data-goto]").forEach((b) =>
@@ -422,12 +428,20 @@ function switchTo(tabId, group) {
   applyFilter();
 }
 
+// "Changed by you" = differs from the PROFILE-ONLY baseline. Manual items
+// baseline to No, so any manual Yes -- clicked directly or derived from your
+// claim -- is yours, even after a regeneration bakes the claim into payload.
+function isChanged(it) {
+  return it.group === "manual" ? answers[it.code] === "yes"
+                               : answers[it.code] !== it.answer;
+}
+
 // Whole-device counts (all endpoints): what the exported PICS will actually say.
 function recount() {
   let yes = 0, no = 0, mine = 0;
   payload.items.forEach((it) => {
     if (answers[it.code] === "yes") yes++; else no++;
-    if (answers[it.code] !== it.answer) mine++;
+    if (isChanged(it)) mine++;
   });
   const set = (id, v) => { const e = $(id); if (e) e.textContent = v; };
   set("t-yes", yes); set("t-no", no); set("t-mine", mine);
@@ -547,7 +561,7 @@ function resetAll() {
 wireChips("transport", false);
 wireChips("onboarding", false);
 wireChips("commdisc", false);
-wireChips("ota", false);
+wireChips("ota", true);
 wireChips("role", true);
 // results update automatically on any form change — no Generate button
 ["transport", "onboarding", "commdisc", "ota", "role"].forEach((id) =>

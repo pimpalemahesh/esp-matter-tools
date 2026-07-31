@@ -186,19 +186,23 @@ def _denied(number: str, profile: DeviceProfile, facts: NodeFacts,
 
 
 def compute_mcore_pics(profile: DeviceProfile, version: str,
-                       cluster_ids: set[str] | None = None) -> set[str]:
+                       cluster_ids: set[str] | None = None,
+                       extra_seeds: set[str] | None = None) -> set[str]:
+    """``extra_seeds``: user-claimed Base atoms; the cond fixpoint then derives
+    everything a claim makes mandatory (DD.CONCATENATED_QR_CODE -> DD.QR)."""
     items = parse_pics_items(base_template_path(version))
     role_profile = load_role_profile(profile.role)
     facts = node_facts_from_clusters(cluster_ids or set())
-    return _compute(items, profile, facts, role_profile)
+    return _compute(items, profile, facts, role_profile, extra_seeds)
 
 
 def _compute(items: list[PicsItem], profile: DeviceProfile, facts: NodeFacts,
-             role_profile: dict) -> set[str]:
+             role_profile: dict, extra_seeds: set[str] | None = None) -> set[str]:
     enabled: set[str] = set()
     enabled |= profile_seeds(profile, facts)
     enabled |= set(role_profile.get("seeds", []))
     enabled |= bdx_from_facts(facts)  # BDX roles derived from OTA clusters
+    enabled |= set(extra_seeds or ())  # user-claimed Base atoms
 
     # Step 1: only unconditionally-mandatory items are enabled here. Optional leaf
     # capabilities are NOT blanket-enabled ("maximum options" is dropped): they are

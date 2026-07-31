@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Builds the Pyodide bundle the PICS Workbench web app needs, and optionally
+# Builds the Pyodide bundle the PICS Generator web app needs, and optionally
 # serves it. Unlike dm_diff_tool this needs no connectedhomeip clone -- the data
 # model JSON and PICS templates already live in the repo, so the bundle is just
 # the two Python packages zipped together.
@@ -30,7 +30,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 usage() {
   cat <<'EOF'
-Builds the Pyodide bundle for the PICS Workbench, and optionally serves it.
+Builds the Pyodide bundle for the PICS Generator, and optionally serves it.
 
 Usage:
   ./build_tool.sh                 # build ui/web_bundle/pics_bundle.zip

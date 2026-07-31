@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Local static server for the PICS Workbench that disables caching.
+"""Local static server for the PICS Generator that disables caching.
 
 Plain ``python3 -m http.server`` lets the browser cache app.js/style.css/the
 bundle, so edits appear only after a hard refresh. This server sends no-store

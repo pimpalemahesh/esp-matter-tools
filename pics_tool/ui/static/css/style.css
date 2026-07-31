@@ -129,14 +129,19 @@ select:hover { border-color: var(--accent); }
 .chips { display: flex; flex-wrap: wrap; gap: 7px; }
 .opt {
   cursor: pointer; border: 1px solid var(--border-strong); background: var(--surface); color: var(--text-dim);
-  border-radius: 8px; padding: 6px 12px; font-size: .84rem; transition: border-color .12s, background .12s;
+  border-radius: 8px; padding: 6px 12px; font-size: .84rem; font-weight: 500;
+  transition: border-color .12s, background .12s;
 }
 .opt:hover { border-color: var(--accent); color: var(--text); }
 .opt[aria-pressed="true"] {
   background: var(--accent-soft); color: var(--accent-dim); border-color: var(--accent);
-  font-weight: 600;
 }
-.opt[aria-pressed="true"]::before { content: '✓ '; font-weight: 700; }
+/* the check mark always occupies space so toggling never changes the button
+   width (which reflowed whole rows); it just fades in */
+.opt::before { content: '✓ '; font-weight: 700; opacity: 0; }
+.opt[aria-pressed="true"]::before { opacity: 1; }
+.opt:disabled { cursor: default; opacity: .75; }
+.opt:disabled:hover { border-color: var(--accent); }
 
 .derived {
   font-size: .78rem; color: var(--text-dim); margin-top: 8px;
@@ -407,3 +412,65 @@ tr.childrow td.qcell::before {
   box-shadow: inset 0 -2px 0 var(--accent);
 }
 .tablewrap.attached { border-radius: 0 0 13px 13px; border-top: none; }
+
+/* ---------- form sections (scales as inputs grow) ---------- */
+.form-sections {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 4px 28px;
+}
+.form-section { display: flex; flex-direction: column; gap: 16px; padding: 4px 0 12px; }
+.form-section + .form-section { border-left: 1px dashed var(--border); padding-left: 28px; margin-left: -14px; }
+.section-title {
+  font-size: .7rem; font-weight: 700; text-transform: uppercase; letter-spacing: .09em;
+  color: var(--accent-dim); padding-bottom: 2px; border-bottom: 1px solid var(--border);
+}
+@media (max-width: 900px) {
+  .form-section + .form-section { border-left: none; padding-left: 0; margin-left: 0; }
+}
+
+/* ---------- review header: title left, tools right ---------- */
+.reviewhead {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 14px; flex-wrap: wrap; margin-bottom: 12px;
+}
+.reviewhead .card-title { margin-bottom: 0; }
+.reviewtools { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.searchwrap { position: relative; }
+.searchwrap::before {
+  content: ''; position: absolute; left: 11px; top: 50%; transform: translateY(-50%);
+  width: 14px; height: 14px; pointer-events: none; opacity: .55;
+  background: no-repeat center / contain
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2366707d' stroke-width='2.4'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='m20 20-3.5-3.5'/%3E%3C/svg%3E");
+}
+.searchwrap .search { margin-left: 0; padding-left: 33px; min-width: 280px; }
+
+/* ---------- compact stat strip ---------- */
+.statbar {
+  display: flex; gap: 22px; flex-wrap: wrap; align-items: center;
+  padding: 10px 16px; margin-bottom: 12px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 11px; box-shadow: var(--shadow);
+  font-size: .84rem; color: var(--text-dim);
+}
+.statbar .stat b { font-size: 1.05rem; font-variant-numeric: tabular-nums; margin-right: 5px; }
+.statbar .stat.on b { color: var(--on); }
+.statbar .stat.off b { color: var(--off); }
+.statbar .stat.mine b { color: var(--input); }
+
+/* ---------- prominent two-line endpoint tabs ---------- */
+.tabs.big { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+.tabs.big .tab {
+  flex: 1; min-width: 170px; text-align: left;
+  display: flex; flex-direction: column; gap: 2px;
+  padding: 11px 16px; border-radius: 11px;
+  background: var(--surface); border: 1px solid var(--border-strong);
+}
+.tabs.big .tab .tt { font-weight: 600; font-size: .95rem; color: var(--text); }
+.tabs.big .tab .tc { font-size: .74rem; color: var(--text-dim); }
+.tabs.big .tab[aria-pressed="true"] {
+  background: var(--accent-soft); border-color: var(--accent);
+  box-shadow: inset 0 -3px 0 var(--accent);
+}
+html[data-theme="dark"] .tabs.big .tab[aria-pressed="true"] .tt { color: var(--text); }
+.tabs.big .tab[aria-pressed="true"] .tt { color: var(--accent-dim); }
+.tabs.big .tab[aria-pressed="true"] .tn { background: color-mix(in srgb, var(--accent) 18%, transparent); color: inherit; }

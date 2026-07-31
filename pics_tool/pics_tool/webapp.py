@@ -72,6 +72,12 @@ def _mcore_meta(version: str):
     return order, feat, conds
 
 
+# Spelled-out conformance statuses for the detail view: a bare "O" in a
+# monospace font reads as a zero.
+_STATUS_WORDS = {"M": "Mandatory", "O": "Optional", "X": "Prohibited",
+                 "P": "Provisional", "D": "Deprecated"}
+
+
 @lru_cache(maxsize=4)
 def _item_text(version: str):
     """{code: (question, conformance)} across Base.xml + every cluster template.
@@ -81,6 +87,10 @@ def _item_text(version: str):
     a person actually answers, so it -- not the PICS code -- leads the UI.
     """
     from .generate.template_io import list_templates
+
+    def word(s):
+        txt = (s.text or "").strip()
+        return _STATUS_WORDS.get(txt, txt)
 
     out: dict[str, tuple[str, str]] = {}
     for path in list_templates(version):
@@ -92,8 +102,8 @@ def _item_text(version: str):
             question = " ".join((pi.findtext("feature") or "").split())
             question = question.replace("_?", "?").replace(" _", "").strip()
             conf = " ; ".join(
-                f"{(s.text or '').strip()} if {(s.attrib.get('cond', '') or '').strip()}"
-                if (s.attrib.get("cond", "") or "").strip() else (s.text or "").strip()
+                f"{word(s)} if {(s.attrib.get('cond', '') or '').strip()}"
+                if (s.attrib.get("cond", "") or "").strip() else word(s)
                 for s in pi.findall("status"))
             out[code] = (question, conf)
     return out
@@ -388,6 +398,16 @@ def generate_payload(profile_dict: dict, claims=None) -> dict:
     baseline_pics = {ep.endpoint: ep.pics for ep in baseline}
     cluster_ids = all_enabled_cluster_ids(endpoints)
     mcore_on = compute_mcore_pics(profile, version, cluster_ids) & set(order)
+    # User-claimed Base atoms re-enter the cond fixpoint, exactly like feature
+    # and gateway claims: claiming DD.CONCATENATED_QR_CODE makes DD.QR
+    # mandatory AT GENERATION TIME, not only in the export validator. The delta
+    # over the claim-free run stays in Optional Items (it is the user's claim).
+    mcore_claim_atoms = {c for c in (claims or []) if c.startswith("MCORE.")}
+    mcore_claimed: set = set()
+    if mcore_claim_atoms:
+        mcore_full = compute_mcore_pics(profile, version, cluster_ids,
+                                        extra_seeds=mcore_claim_atoms) & set(order)
+        mcore_claimed = mcore_full - mcore_on
     derived_im_types = is_im_client(model, [profile.device_type, *profile.node_device_types])
     # A claimed client gateway (X.C = Yes) IS client behavior: the IM role must
     # follow the claim, or the export would send commands while declaring
@@ -430,7 +450,17 @@ def generate_payload(profile_dict: dict, claims=None) -> dict:
         if not bridge_declared and n.startswith(_BRIDGE_NS):
             return "review"
         if bucket == "auto":
-            return "on" if n in mcore_on else "off"
+            if n in mcore_on:
+                return "on"
+            if n in mcore_claimed:
+                return "claimed"
+            if n.startswith("MCORE.BDX."):
+                # BDX has consumers beyond OTA (e.g. Diagnostic Logs transfers
+                # over BDX, where the DUT can even be the Sender). The OTA
+                # input derives BDX roles it NEEDS; it cannot rule the rest
+                # out -- those stay Optional Items, never a decided No.
+                return "review"
+            return "off"
         if bucket == "imrole":
             if n == "MCORE.IDM.S":
                 return "on"                       # DUT hosts clusters -> IM server
@@ -449,6 +479,8 @@ def generate_payload(profile_dict: dict, claims=None) -> dict:
             # per-message-type / per-datatype client capabilities (write Bool,
             # batch commands, subscribe events, ...): only the vendor knows.
             return "review"
+        if n in mcore_claimed:
+            return "claimed"
         if role_denied(n, role_profile):
             # Contradicted by the chosen role: the tool CAN decide this --
             # e.g. commissioner-side scanning/CTRL questions are a defendable
@@ -499,12 +531,15 @@ def generate_payload(profile_dict: dict, claims=None) -> dict:
         st = state(n, bucket_of[n])
         group = "manual" if st in ("review", "claimed") else "decided"
         items.append(row(n, "base", st, group, _mcore_area(n)))
-    tabs = [{"id": "base", "label": "Base PICS (MCORE)"}]
+    tabs = [{"id": "base", "label": "Base PICS", "caption": "Node-wide (MCORE)"}]
     for ep in sorted(endpoints, key=lambda e: e.endpoint):
         tab = str(ep.endpoint)
-        label = (f"Root Node (endpoint {ep.endpoint})" if ep.endpoint == 0
-                 else f"{ep.device_type_name} (endpoint {ep.endpoint})")
-        tabs.append({"id": tab, "label": label})
+        if ep.endpoint == 0:
+            tabs.append({"id": tab, "label": "Root Node",
+                         "caption": "Endpoint 0 clusters"})
+        else:
+            tabs.append({"id": tab, "label": ep.device_type_name,
+                         "caption": f"Endpoint {ep.endpoint} clusters"})
         # "Selected by the tool" = the claim-free baseline run. Everything the
         # user's claims add (feature codes, gateway sides + their spec-mandated
         # elements) is pre-filled Yes but stays in Manual selection.

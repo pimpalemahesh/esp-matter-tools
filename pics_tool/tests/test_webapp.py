@@ -235,7 +235,7 @@ def test_items_split_into_decided_and_manual_groups():
     base = [it for it in p["items"] if it["tab"] == "base"]
     assert len(base) == 132  # each and every Base.xml item is present
     manual_base = [it for it in base if it["group"] == "manual"]
-    assert len(manual_base) == 54
+    assert len(manual_base) == 60
     assert all(it["answer"] == "no" for it in manual_base)
     assert any(it["code"] == "MCORE.DD.PHYSICAL_TAMPERING" for it in manual_base)
 
@@ -613,3 +613,40 @@ def test_ota_input_covers_all_combinations():
     by2 = {it["code"]: it for it in p2["items"] if it["tab"] == "base"}
     assert by2["MCORE.OTA.Provider"]["answer"] == "yes"
     assert by2["MCORE.BDX.Sender"]["answer"] == "yes"
+
+
+def test_mcore_claims_reenter_the_cond_fixpoint():
+    """Claiming a Base atom derives its dependents at GENERATION time (not only
+    in the export validator): DD.CONCATENATED_QR_CODE mandates DD.QR."""
+    # onboarding=nfc only, so DD.QR is not seeded by the profile
+    profile = dict(PROFILE, onboarding=["nfc"])
+    base = webapp.generate_payload(profile)
+    by0 = {it["code"]: it for it in base["items"] if it["tab"] == "base"}
+    assert by0["MCORE.DD.QR"]["answer"] == "no"
+
+    p = webapp.generate_payload(profile, claims=["MCORE.DD.CONCATENATED_QR_CODE"])
+    by = {it["code"]: it for it in p["items"] if it["tab"] == "base"}
+    assert by["MCORE.DD.CONCATENATED_QR_CODE"]["answer"] == "yes"
+    assert by["MCORE.DD.QR"]["answer"] == "yes"          # derived from the claim
+    assert by["MCORE.DD.QR"]["group"] == "manual"        # ...and stays YOURS
+
+
+def test_bdx_not_ruled_out_by_vendor_ota():
+    """The OTA input derives the BDX roles Matter OTA needs, but cannot rule
+    the others out -- BDX also serves Diagnostic Logs (DUT may even be the
+    Sender). Without Matter OTA, every BDX item is an Optional Item, not a
+    decided No; with Matter OTA, the receiver trio is decided-Yes and the rest
+    stay optional."""
+    vendor = webapp.generate_payload(dict(PROFILE, vendor_specific_ota=True))
+    byv = {it["code"]: it for it in vendor["items"] if it["tab"] == "base"}
+    for c in ("MCORE.BDX.Receiver", "MCORE.BDX.Sender", "MCORE.BDX.Initiator",
+              "MCORE.BDX.Responder", "MCORE.BDX.AsynchronousReceiver",
+              "MCORE.BDX.Driver"):
+        assert byv[c]["group"] == "manual" and byv[c]["answer"] == "no", c
+
+    req = webapp.generate_payload(dict(PROFILE, node_device_types=["OTA Requestor"]))
+    byr = {it["code"]: it for it in req["items"] if it["tab"] == "base"}
+    for c in ("MCORE.BDX.Receiver", "MCORE.BDX.Initiator", "MCORE.BDX.SynchronousReceiver"):
+        assert byr[c]["group"] == "decided" and byr[c]["answer"] == "yes", c
+    for c in ("MCORE.BDX.Sender", "MCORE.BDX.Responder"):  # sender side: DLOG may need it
+        assert byr[c]["group"] == "manual" and byr[c]["answer"] == "no", c
