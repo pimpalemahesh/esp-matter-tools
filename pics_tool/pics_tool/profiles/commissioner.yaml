@@ -1,4 +1,4 @@
-# Copyright 2025 Espressif Systems (Shanghai) PTE LTD
+# Copyright 2026 Espressif Systems (Shanghai) PTE LTD
 #
 # Per-role MCORE default profile for a Commissioner (a device that commissions
 # other nodes). It is an IM client, so client-side capabilities are allowed.

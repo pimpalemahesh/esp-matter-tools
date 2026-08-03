@@ -1,4 +1,4 @@
-# Copyright 2025 Espressif Systems (Shanghai) PTE LTD
+# Copyright 2026 Espressif Systems (Shanghai) PTE LTD
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -531,7 +531,7 @@ def generate_payload(profile_dict: dict, claims=None) -> dict:
         st = state(n, bucket_of[n])
         group = "manual" if st in ("review", "claimed") else "decided"
         items.append(row(n, "base", st, group, _mcore_area(n)))
-    tabs = [{"id": "base", "label": "Base PICS", "caption": "Node-wide (MCORE)"}]
+    tabs = [{"id": "base", "label": "Base PICS", "caption": "Node-Wide"}]
     for ep in sorted(endpoints, key=lambda e: e.endpoint):
         tab = str(ep.endpoint)
         if ep.endpoint == 0:

@@ -1,4 +1,4 @@
-// Copyright 2025 Espressif Systems (Shanghai) PTE LTD
+// Copyright 2026 Espressif Systems (Shanghai) PTE LTD
 // Licensed under the Apache License, Version 2.0. See LICENSE.
 
 // ---- state ----

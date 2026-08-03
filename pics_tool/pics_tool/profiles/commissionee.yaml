@@ -1,4 +1,4 @@
-# Copyright 2025 Espressif Systems (Shanghai) PTE LTD
+# Copyright 2026 Espressif Systems (Shanghai) PTE LTD
 #
 # Per-role MCORE default profile for a Commissionee (a typical Matter device).
 # Policy: "maximum options" via deny-by-role (design decision D14) -- enable all
