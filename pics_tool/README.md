@@ -5,8 +5,11 @@ Statement) files. Given a spec version, an application device type, and a small
 device profile, it produces per-endpoint PICS XML with the appropriate items
 enabled — **no live device required**.
 
-It is a consumer of the shared [`esp-matter-datamodel`](../esp-matter-datamodel)
-standard; it owns all PICS-specific logic while that package stays PICS-neutral.
+It is built on the [`esp-matter-datamodel`](./esp-matter-datamodel) package —
+a PICS-neutral, versioned representation of the Matter data model. That package
+is vendored inside this tool (`pics_tool/esp-matter-datamodel/`) for now but kept
+self-contained, so it can be split back out into its own tool later; pics_tool
+owns all PICS-specific logic.
 
 ## How it works
 
@@ -34,7 +37,7 @@ standard; it owns all PICS-specific logic while that package stays PICS-neutral.
 ## Setup
 
 Nothing is pip-installed — like `dm_diff_tool`, the tool runs straight from the
-repo checkout (`esp_matter_datamodel` is picked up from the sibling
+repo checkout (`esp_matter_datamodel` is picked up from the bundled
 `esp-matter-datamodel/` directory automatically). Only the third-party
 dependencies are needed:
 

@@ -30,11 +30,12 @@ import zipfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent           # .../pics_tool
-REPO = ROOT.parent                                # .../esp-matter-tools
 
-# (source package directory, arcname root inside the zip)
+# (source package directory, arcname root inside the zip). esp_matter_datamodel
+# is vendored inside pics_tool (pics_tool/esp-matter-datamodel) but stays a
+# standalone package so it can be decoupled later.
 PACKAGES = [
-    (REPO / "esp-matter-datamodel" / "esp_matter_datamodel", "esp_matter_datamodel"),
+    (ROOT / "esp-matter-datamodel" / "esp_matter_datamodel", "esp_matter_datamodel"),
     (ROOT / "pics_tool", "pics_tool"),
 ]
 # Only ship what the engine needs at runtime.
@@ -63,7 +64,7 @@ def build() -> None:
                     zf.write(path, f"{arc_root}/{path.relative_to(src_dir)}")
                     n += 1
     size_kb = OUT_ZIP.stat().st_size // 1024
-    print(f"Bundled {n} files -> {OUT_ZIP.relative_to(REPO)} ({size_kb} KB)")
+    print(f"Bundled {n} files -> {OUT_ZIP.relative_to(ROOT)} ({size_kb} KB)")
 
 
 if __name__ == "__main__":

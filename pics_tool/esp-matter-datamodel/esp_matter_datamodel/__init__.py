@@ -11,15 +11,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""esp-matter-datamodel: a tool-neutral, versioned Matter data model as JSON.
 
-"""Make the in-repo packages importable for pytest without any pip install."""
+The XML-to-JSON layer shared across esp-matter-tools. It defines the standard
+schema, the (single) spec-XML parser, and a validating loader. It contains no
+PICS (or any other tool) concepts.
+"""
 
-import sys
-from pathlib import Path
+from .model.elements import SCHEMA_VERSION, DataModel
 
-_HERE = Path(__file__).resolve().parent
-# esp_matter_datamodel now lives inside pics_tool (pics_tool/esp-matter-datamodel);
-# kept as a self-contained package so it can be split back out into its own tool.
-for _path in (_HERE, _HERE / "esp-matter-datamodel"):
-    if str(_path) not in sys.path:
-        sys.path.insert(0, str(_path))
+__all__ = ["DataModel", "SCHEMA_VERSION"]

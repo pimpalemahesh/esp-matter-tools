@@ -24,7 +24,11 @@ Run it straight from the repo checkout, same as dm_diff_tool:
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
+_HERE = Path(__file__).resolve().parent
+# pics_tool package + its vendored esp_matter_datamodel (kept standalone so it
+# can be split back out into its own tool later).
+for _path in (_HERE, _HERE / "esp-matter-datamodel"):
+    sys.path.insert(0, str(_path))
 
 from pics_tool.cli.main import main
 

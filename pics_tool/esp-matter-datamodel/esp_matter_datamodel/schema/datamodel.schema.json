@@ -1,0 +1,210 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://espressif.github.io/esp-matter-tools/datamodel.schema.json",
+  "title": "Matter Data Model JSON",
+  "description": "Tool-neutral, versioned representation of the Matter data model derived from the connectedhomeip spec XMLs. Extensible-core: additional sections (access, quality, constraints, data types) may be added in later minor schema versions without breaking consumers.",
+  "type": "object",
+  "required": ["schema_version", "spec_version", "clusters", "device_types"],
+  "additionalProperties": true,
+  "properties": {
+    "schema_version": {"type": "string", "description": "SemVer of THIS schema. Minor bumps are additive/backward-compatible."},
+    "spec_version": {"type": "string", "description": "Matter spec version, e.g. \"1.6\"."},
+    "provenance": {
+      "type": "object",
+      "description": "Where this JSON came from (for reproducibility/debugging).",
+      "additionalProperties": true,
+      "properties": {
+        "spec_sha": {"type": "string"},
+        "scraper_version": {"type": "string"},
+        "generated_from": {"type": "string"}
+      }
+    },
+    "clusters": {
+      "type": "object",
+      "description": "Map of cluster id (\"0xXXXX\") -> cluster.",
+      "propertyNames": {"$ref": "#/$defs/hexId"},
+      "additionalProperties": {"$ref": "#/$defs/cluster"}
+    },
+    "device_types": {
+      "type": "object",
+      "description": "Map of device-type id (\"0xXXXX\") -> device type.",
+      "propertyNames": {"$ref": "#/$defs/hexId"},
+      "additionalProperties": {"$ref": "#/$defs/deviceType"}
+    },
+    "base_device_type": {
+      "description": "The Base Device Type (clusters present on every endpoint). It has no device-type id; consumers merge its clusters into each endpoint's device type.",
+      "$ref": "#/$defs/deviceType"
+    }
+  },
+  "$defs": {
+    "hexId": {"type": "string", "pattern": "^0[xX][0-9A-Fa-f]+$"},
+
+    "cluster": {
+      "type": "object",
+      "required": ["id", "name", "revision"],
+      "additionalProperties": true,
+      "properties": {
+        "id": {"$ref": "#/$defs/hexId"},
+        "name": {"type": "string"},
+        "pics": {"type": "string"},
+        "revision": {"type": "integer"},
+        "features": {"type": "object", "additionalProperties": {"$ref": "#/$defs/feature"}},
+        "attributes": {"type": "object", "additionalProperties": {"$ref": "#/$defs/element"}},
+        "accepted_commands": {"type": "object", "additionalProperties": {"$ref": "#/$defs/element"}},
+        "generated_commands": {"type": "object", "additionalProperties": {"$ref": "#/$defs/element"}},
+        "events": {"type": "object", "additionalProperties": {"$ref": "#/$defs/event"}}
+      }
+    },
+
+    "feature": {
+      "type": "object",
+      "required": ["bit", "mask", "code", "name", "conformance"],
+      "additionalProperties": true,
+      "properties": {
+        "bit": {"type": "integer", "minimum": 0},
+        "mask": {"type": "integer", "minimum": 1},
+        "code": {"type": "string"},
+        "name": {"type": "string"},
+        "conformance": {"$ref": "#/$defs/conformance"}
+      }
+    },
+
+    "element": {
+      "type": "object",
+      "required": ["id", "name", "conformance"],
+      "additionalProperties": true,
+      "properties": {
+        "id": {"$ref": "#/$defs/hexId"},
+        "name": {"type": "string"},
+        "conformance": {"$ref": "#/$defs/conformance"}
+      }
+    },
+
+    "event": {
+      "type": "object",
+      "required": ["id", "name", "conformance"],
+      "additionalProperties": true,
+      "properties": {
+        "id": {"$ref": "#/$defs/hexId"},
+        "name": {"type": "string"},
+        "priority": {"type": "string"},
+        "conformance": {"$ref": "#/$defs/conformance"}
+      }
+    },
+
+    "deviceType": {
+      "type": "object",
+      "required": ["id", "name", "revision"],
+      "additionalProperties": true,
+      "properties": {
+        "id": {"$ref": "#/$defs/hexId"},
+        "name": {"type": "string"},
+        "revision": {"type": "integer"},
+        "server_clusters": {"type": "object", "additionalProperties": {"$ref": "#/$defs/clusterRequirement"}},
+        "client_clusters": {"type": "object", "additionalProperties": {"$ref": "#/$defs/clusterRequirement"}}
+      }
+    },
+
+    "clusterRequirement": {
+      "type": "object",
+      "required": ["id", "name", "conformance"],
+      "additionalProperties": true,
+      "properties": {
+        "id": {"$ref": "#/$defs/hexId"},
+        "name": {"type": "string"},
+        "conformance": {"$ref": "#/$defs/conformance"},
+        "feature_overrides": {"type": "object", "additionalProperties": {"$ref": "#/$defs/override"}},
+        "attribute_overrides": {"type": "object", "additionalProperties": {"$ref": "#/$defs/override"}},
+        "command_overrides": {"type": "object", "additionalProperties": {"$ref": "#/$defs/override"}}
+      }
+    },
+
+    "override": {
+      "type": "object",
+      "required": ["conformance"],
+      "additionalProperties": true,
+      "properties": {"conformance": {"$ref": "#/$defs/conformance"}}
+    },
+
+    "conformance": {
+      "type": "object",
+      "required": ["type"],
+      "additionalProperties": false,
+      "properties": {
+        "type": {"enum": ["mandatory", "optional", "provisional", "disallowed", "deprecated", "otherwise"]},
+        "condition": {"$ref": "#/$defs/condition"},
+        "items": {"type": "array", "items": {"$ref": "#/$defs/conformance"}},
+        "choice": {
+          "type": "object",
+          "required": ["marker", "more"],
+          "additionalProperties": false,
+          "properties": {"marker": {"type": "string"}, "more": {"type": "boolean"}}
+        }
+      }
+    },
+
+    "condition": {
+      "type": "object",
+      "required": ["op"],
+      "oneOf": [
+        {
+          "properties": {
+            "op": {"enum": ["and", "or"]},
+            "args": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/condition"}}
+          },
+          "required": ["op", "args"],
+          "additionalProperties": false
+        },
+        {
+          "properties": {"op": {"const": "not"}, "arg": {"$ref": "#/$defs/condition"}},
+          "required": ["op", "arg"],
+          "additionalProperties": false
+        },
+        {
+          "properties": {"op": {"const": "feature"}, "code": {"type": "string"}, "bit": {"type": "integer"}},
+          "required": ["op", "code", "bit"],
+          "additionalProperties": false
+        },
+        {
+          "properties": {"op": {"const": "attribute"}, "name": {"type": "string"}, "id": {"$ref": "#/$defs/hexId"}},
+          "required": ["op", "name", "id"],
+          "additionalProperties": false
+        },
+        {
+          "properties": {"op": {"const": "command"}, "name": {"type": "string"}, "id": {"$ref": "#/$defs/hexId"}},
+          "required": ["op", "name", "id"],
+          "additionalProperties": false
+        },
+        {
+          "properties": {"op": {"const": "condition"}, "name": {"type": "string"}},
+          "required": ["op", "name"],
+          "additionalProperties": false
+        },
+        {
+          "properties": {
+            "op": {"const": "compare"},
+            "cmp": {"enum": ["gt", "ge", "lt", "le", "eq", "ne"]},
+            "args": {"type": "array", "minItems": 2, "maxItems": 2, "items": {"$ref": "#/$defs/operand"}}
+          },
+          "required": ["op", "cmp", "args"],
+          "additionalProperties": false
+        },
+        {
+          "properties": {"op": {"const": "unsupported"}, "detail": {"type": "string"}},
+          "required": ["op"],
+          "additionalProperties": false
+        }
+      ]
+    },
+
+    "operand": {
+      "type": "object",
+      "required": ["op"],
+      "oneOf": [
+        {"properties": {"op": {"const": "revision"}}, "required": ["op"], "additionalProperties": false},
+        {"properties": {"op": {"const": "literal"}, "value": {}}, "required": ["op", "value"], "additionalProperties": false},
+        {"properties": {"op": {"const": "opaque"}, "detail": {"type": "string"}}, "required": ["op"], "additionalProperties": false}
+      ]
+    }
+  }
+}

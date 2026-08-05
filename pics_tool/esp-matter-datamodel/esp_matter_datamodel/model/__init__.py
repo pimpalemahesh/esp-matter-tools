@@ -11,15 +11,4 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-"""Make the in-repo packages importable for pytest without any pip install."""
-
-import sys
-from pathlib import Path
-
-_HERE = Path(__file__).resolve().parent
-# esp_matter_datamodel now lives inside pics_tool (pics_tool/esp-matter-datamodel);
-# kept as a self-contained package so it can be split back out into its own tool.
-for _path in (_HERE, _HERE / "esp-matter-datamodel"):
-    if str(_path) not in sys.path:
-        sys.path.insert(0, str(_path))
+"""Typed data-model dataclasses and the pure conformance evaluator."""
