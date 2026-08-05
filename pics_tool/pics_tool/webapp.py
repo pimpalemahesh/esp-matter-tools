@@ -434,22 +434,29 @@ def _humanize_cond(cond: str, model, prefix_map: dict) -> str:
 
 
 def _why(code: str, group: str, conf: str, model, prefix_map: dict) -> str:
-    """A plain-language reason an item is/ isn't required, for the row + dialog."""
-    if code.startswith("MCORE."):
-        return "Optional node capability — enable if your product supports it." \
-            if group == "manual" else "Required for node operation."
-    if group == "manual":
-        return "Optional — enable it if your product implements it."
+    """A plain-language reason for a CLUSTER item -- ONLY when it adds information.
+
+    Returns "" for the generic cases (plain optional, or unconditionally
+    mandatory): those just restate the Optional/Mandatory group the row already
+    sits under, so repeating them on every row is noise. A reason is returned
+    only when the item is mandatory *because of a feature/condition* the user
+    enabled (e.g. "Required when Color Control (server) and XY"), which is the
+    part a reader can't infer from the grouping. (MCORE items get their own
+    input-tied reason via mcore_why.)
+    """
+    if code.startswith("MCORE.") or group == "manual":
+        return ""
     if " if " in conf:
         cond = conf.split(" if ", 1)[1].split(" ; ")[0]
         human = _humanize_cond(cond, model, prefix_map)
-        # a bare cluster-role condition reads better as "for the X cluster"
+        # a bare cluster-role condition ("X.S") == "this cluster is present":
+        # not informative beyond the Mandatory grouping, so no reason shown.
         parts = code.split(".")
         cl = model.clusters.get(prefix_map.get(parts[0])) if len(parts) > 1 else None
         if cl and human == f"{cl.name} ({'server' if parts[1] == 'S' else 'client'})":
-            return f"Required for the {cl.name} cluster."
+            return ""
         return f"Required when {human}."
-    return "Required by this device type."
+    return ""  # unconditionally mandatory: redundant with the Mandatory grouping
 
 
 def generate_payload(profile_dict: dict, claims=None) -> dict:
@@ -591,18 +598,20 @@ def generate_payload(profile_dict: dict, claims=None) -> dict:
     def conf_of(code: str) -> str:
         return text.get(code, ("", ""))[1] or "-"
 
-    def row(code, tab, st, group, cluster, parent=None):
+    def row(code, tab, st, group, cluster, parent=None, why=None):
         # "needs_you" == the item is in the manual group: the tool could not
         # derive it, so it is the user's call. This holds uniformly for Base
         # product-facts AND optional cluster elements (default No, claim if you
         # implement them) -- so the "need your input" count reflects every
         # undecided question, not just the node-level ones.
         # "parent" is the gateway/feature this item reveals under.
+        # "why" is a caller-supplied plain-language reason (MCORE items pass one);
+        # cluster items fall back to the conformance-derived _why().
         return {"tab": tab, "code": code, "question": q_of(code),
                 "answer": "yes" if st in ("on", "claimed") else "no",
                 "group": group, "cluster": cluster, "parent": parent,
                 "needs_you": group == "manual", "conformance": conf_of(code),
-                "why": _why(code, group, conf_of(code), model, prefix_map)}
+                "why": why if why is not None else _why(code, group, conf_of(code), model, prefix_map)}
 
     # Three distinct sections, shown as separate tabs: the node-level Base.xml
     # (MCORE) questions, the Root Node cluster PICS on endpoint 0 (Basic Info,
@@ -617,12 +626,46 @@ def generate_payload(profile_dict: dict, claims=None) -> dict:
     # Only codes that exist in the templates are claimable: data-model codes
     # with no template item (e.g. OTAR.S.* -- the OTA test plan runs off
     # MCORE.OTA/BDX instead) have no question and cannot be exported.
+    # Plain-language reason for a node-level (MCORE) item, tied to the input
+    # that actually drives it (decided_dims), so "why is this Yes/No?" is
+    # answerable without knowing PICS internals.
+    _DIM_LABEL = {"transport": "network transport", "role": "device role",
+                  "onboarding": "onboarding", "ble_commissioning": "BLE commissioning",
+                  "wifi_paf": "Wi-Fi PAF commissioning", "nfc_commissioning": "NFC commissioning",
+                  "device_types": "device type"}
+    _ROLE_PHRASE = {"commissionee": "an End Device", "commissioner": "a Commissioner",
+                    "controller": "a Controller"}
+
+    def _dims_phrase(n: str) -> str:
+        labels = [_DIM_LABEL.get(d, d) for d in decided_dims.get(n, [])]
+        if not labels:
+            return ""
+        if len(labels) == 1:
+            return f"your {labels[0]} selection"
+        return "your " + ", ".join(labels[:-1]) + f" and {labels[-1]} selections"
+
+    def mcore_why(n: str, st: str) -> str:
+        if st == "claimed":
+            return "Yes — you turned this on."
+        if st == "review":
+            return "Only you can answer this — it's a product-specific detail about your device."
+        dims = _dims_phrase(n)
+        if st == "on":
+            return f"Yes — determined by {dims}." if dims else "Mandatory for every Matter device."
+        # decided No
+        if role_denied(n, role_profile):
+            return f"No — not applicable for {_ROLE_PHRASE.get(profile.role, profile.role)}."
+        area = gated_area(n, role_profile)
+        if area and not gate_active.get(area):
+            return f"No — the {area.replace('_', ' ')} feature is not enabled."
+        return f"No — determined by {dims}." if dims else "No — not required for this device."
+
     known = known_item_numbers(version)
     items = []
     for n in order:
         st = state(n, bucket_of[n])
         group = "manual" if st in ("review", "claimed") else "decided"
-        items.append(row(n, "base", st, group, _mcore_area(n)))
+        items.append(row(n, "base", st, group, _mcore_area(n), why=mcore_why(n, st)))
     tabs = [{"id": "base", "label": "Base PICS", "caption": "Node-Wide"}]
     for ep in sorted(endpoints, key=lambda e: e.endpoint):
         tab = str(ep.endpoint)

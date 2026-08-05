@@ -19,12 +19,15 @@ transports:
     conditions: [Wi-Fi, IP]
     cluster_features:
       "0x0031": [WI]        # Network Commissioning: WiFiNetworkInterface
-    mcore_atoms: [MCORE.COM.WIFI_2P4GHZ]
+    # 1.5+ split Wi-Fi into band atoms (WIFI_2P4GHZ/5GHZ) with COM.WIFI derived;
+    # 1.4/1.4.1 have only the single COM.WIFI leaf. Seed both so the "supports
+    # Wi-Fi" atom is enabled on every spec version (unknown atoms are ignored).
+    mcore_atoms: [MCORE.COM.WIFI_2P4GHZ, MCORE.COM.WIFI]
   wifi_5g:
     conditions: [Wi-Fi, IP]
     cluster_features:
       "0x0031": [WI]
-    mcore_atoms: [MCORE.COM.WIFI_5GHZ]
+    mcore_atoms: [MCORE.COM.WIFI_5GHZ, MCORE.COM.WIFI]
   thread:
     conditions: [Thread, IP]
     cluster_features:

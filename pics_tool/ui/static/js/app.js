@@ -15,6 +15,7 @@ let touched = new Set();      // "tab|code" the human explicitly answered
 let searchQ = "";             // current search text (survives tab re-render)
 let deviceTypeNames = [];     // device-type names for the current spec version
 let dirty = false;            // form edited since the last Generate (results stale)
+let collapsed = new Set();    // cluster keys ("tab|group|cluster") folded shut in the review
 const BASE = new URL(".", window.location.href).href;
 // distinct accent per cluster group (dot + row edge), stable per session
 const CLUSTER_PALETTE = ["#2f6fed", "#0ea5a4", "#8b5cf6", "#d97706", "#16a34a",
@@ -369,8 +370,6 @@ function render() {
   if (!payload.tabs.some((t) => t.id === tab)) tab = payload.tabs[0].id;
   markStep("review");
 
-  const dts = (payload.profile.endpoints || [])
-    .map((ep) => (ep.device_types || [])[0]).filter(Boolean);
   const rail = payload.tabs.map((t) =>
     `<button data-tab="${esc(t.id)}" aria-current="${t.id === tab}">
        <span class="epi">${esc(t.id === "base" ? "N" : t.id)}</span>
@@ -379,12 +378,6 @@ function render() {
      </button>`).join("");
 
   $("resultArea").innerHTML = `
-    <div class="rv-summary">
-      <span class="sg"><span class="k">Device</span> <b>${dts.map(esc).join("</b> + <b>") || "—"}</b></span>
-      <span class="sg"><span class="k">Transport</span> ${(payload.profile.transport || []).map(esc).join(", ") || "—"}</span>
-      <span class="sg"><span class="k">Role</span> ${esc(payload.profile.role || "")}</span>
-      <button class="btn ghost edit" id="editInputs">Edit inputs</button>
-    </div>
     <div class="rv-stats">
       <div class="rv-stat on"><span class="v" id="t-yes">0</span><span class="l">Supported (Yes)</span></div>
       <div class="rv-stat"><span class="v" id="t-no">0</span><span class="l">Not supported (No)</span></div>
@@ -405,7 +398,7 @@ function render() {
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
             <input id="q" type="text" placeholder="Search questions or PICS codes" aria-label="Search">
           </div>
-          <label class="rv-detail-t"><input type="checkbox" id="showDetails"> Show PICS codes</label>
+          <label class="rv-detail-t"><input type="checkbox" id="showDetails"> Show details</label>
         </div>
         <div id="tb"></div>
         <div id="noMatchHint" class="rv-hint" hidden></div>
@@ -446,7 +439,9 @@ function renderRows() {
       const rows = byCl.get(cl);
       const key = `${tab}|${g}|${cl}`;
       const color = colorOf(cl);
-      html.push(`<div class="rv-clhead" data-key="${esc(key)}">
+      html.push(`<div class="rv-clhead ${collapsed.has(key) ? "collapsed" : ""}" data-key="${esc(key)}"
+        role="button" tabindex="0" aria-expanded="${!collapsed.has(key)}">
+        <span class="rv-caret" aria-hidden="true">▾</span>
         <span class="rv-cldot" style="background:${color}"></span>${esc(cl)}<span class="cc">${rows.length}</span></div>`);
       rows.forEach(({ it, i }) => {
         const a = answers[keyOf(it)];
@@ -458,7 +453,7 @@ function renderRows() {
             data-code="${esc(it.code).toLowerCase()}" data-q="${esc((it.question || it.code)).toLowerCase()}">
           <div class="rv-qmain">
             <div class="rv-qtext">${esc(it.question || it.code)}${badge}</div>
-            <div class="rv-why">${esc(it.why || "")}</div>
+            ${it.why ? `<div class="rv-why">${esc(it.why)}</div>` : ""}
             <div class="rv-meta"><span class="code">${esc(it.code)}</span><span>${esc(it.conformance)}</span></div>
           </div>
           <div class="rv-yn" data-k="${esc(keyOf(it))}" data-code="${esc(it.code)}">
@@ -494,8 +489,6 @@ function wireShell() {
       applyFilter();
     }));
   $("showDetails").addEventListener("change", (e) => $("panel").classList.toggle("show-details", e.target.checked));
-  const edit = $("editInputs");
-  if (edit) edit.addEventListener("click", () => showView("describe"));
   const clear = $("clearBtn");
   if (clear) clear.addEventListener("click", resetAll);
   const toExport = $("toExport");
@@ -504,6 +497,18 @@ function wireShell() {
 
 // wire the Yes/No toggles for the currently rendered rows
 function wireRows() {
+  // collapse / expand a cluster group
+  const toggleCluster = (h) => {
+    const key = h.dataset.key;
+    if (collapsed.has(key)) collapsed.delete(key); else collapsed.add(key);
+    applyFilter();
+  };
+  $("tb").querySelectorAll(".rv-clhead").forEach((h) => {
+    h.addEventListener("click", () => toggleCluster(h));
+    h.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggleCluster(h); }
+    });
+  });
   $("tb").querySelectorAll(".rv-yn").forEach((yn) => {
     const k = yn.dataset.k;             // "tab|code"
     const code = yn.dataset.code;       // bare code (for claim regex / child match)
@@ -553,17 +558,23 @@ function applyFilter() {
     if (matches(it)) scopeHits[`${it.tab}|${it.group}`] = (scopeHits[`${it.tab}|${it.group}`] || 0) + 1;
   });
 
-  const clusterVisible = {};
+  // A search overrides collapse so matches are never hidden behind a folded cluster.
+  const isCollapsed = (key) => collapsed.has(key) && !q;
+  const clusterMatch = {};   // rows matching filter (regardless of collapse)
   let visible = 0;
   $("tb").querySelectorAll(".rv-qrow").forEach((row) => {
     const it = payload.items[+row.dataset.i];
-    const show = it.group === grp && matches(it);
-    if (show) { visible++; clusterVisible[row.dataset.key] = (clusterVisible[row.dataset.key] || 0) + 1; }
-    row.style.display = show ? "" : "none";
+    const m = it.group === grp && matches(it);
+    const key = row.dataset.key;
+    if (m) { visible++; clusterMatch[key] = (clusterMatch[key] || 0) + 1; }
+    row.style.display = (m && !isCollapsed(key)) ? "" : "none";
   });
   $("tb").querySelectorAll(".rv-clhead").forEach((h) => {
-    const n = clusterVisible[h.dataset.key] || 0;
-    h.style.display = n ? "" : "none";
+    const key = h.dataset.key;
+    const n = clusterMatch[key] || 0;
+    h.style.display = n ? "" : "none";                 // header stays visible when folded
+    h.classList.toggle("collapsed", isCollapsed(key));
+    h.setAttribute("aria-expanded", String(!isCollapsed(key)));
     const cc = h.querySelector(".cc");
     if (cc) cc.textContent = n;
   });
