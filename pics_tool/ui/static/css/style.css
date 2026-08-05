@@ -474,3 +474,32 @@ tr.childrow td.qcell::before {
 html[data-theme="dark"] .tabs.big .tab[aria-pressed="true"] .tt { color: var(--text); }
 .tabs.big .tab[aria-pressed="true"] .tt { color: var(--accent-dim); }
 .tabs.big .tab[aria-pressed="true"] .tn { background: color-mix(in srgb, var(--accent) 18%, transparent); color: inherit; }
+
+/* ---- application endpoint rows (multi-endpoint form) ---- */
+.endpoint-list { display: flex; flex-direction: column; gap: 8px; }
+.endpoint-row { display: flex; align-items: center; gap: 8px; }
+.endpoint-row .ep-num {
+  flex: 0 0 auto; min-width: 30px; font-size: 12px; font-weight: 600;
+  color: var(--muted); text-align: right;
+}
+.endpoint-row .ep-devtype { flex: 1 1 auto; min-width: 0; }
+.endpoint-row .ep-remove {
+  flex: 0 0 auto; border: 1px solid var(--border); background: var(--surface);
+  color: var(--muted); border-radius: 8px; width: 30px; height: 30px;
+  cursor: pointer; line-height: 1; font-size: 13px;
+}
+.endpoint-row .ep-remove:hover:not(:disabled) {
+  color: var(--danger, #dc2626);
+  border-color: color-mix(in srgb, var(--danger, #dc2626) 40%, var(--border));
+}
+.endpoint-row .ep-remove:disabled { opacity: .4; cursor: not-allowed; }
+.btn.add-ep { margin-top: 8px; padding: 6px 12px; font-size: 13px; }
+
+/* ---- Generate action bar (explicit two-step flow) ---- */
+.profile-actions .actions-right { margin-left: auto; display: flex; gap: 10px; }
+.gen-status { font-size: .82rem; color: var(--muted); }
+.gen-status.warn { color: var(--review, #d97706); }
+.gen-status.ok { color: var(--on, #16a34a); font-weight: 600; }
+@media (max-width: 640px) {
+  .profile-actions .actions-right { margin-left: 0; width: 100%; }
+}

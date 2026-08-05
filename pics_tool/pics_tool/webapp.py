@@ -37,11 +37,14 @@ from functools import lru_cache
 
 from esp_matter_datamodel import boolexpr, loader
 
-from .generate.cluster_engine import all_enabled_cluster_ids, generate_cluster_pics
+from .generate import claims
+from .generate.cluster_engine import (active_conditions, all_enabled_cluster_ids,
+                                      generate_cluster_pics, load_transport_map)
 from .generate.mcore_engine import (compute_mcore_pics, gated_area,
                                     load_role_profile, node_facts_from_clusters,
                                     role_denied)
 from .generate.profile import DeviceProfile
+from .generate.selection import Selection
 from .generate.template_io import (base_template_path, known_item_numbers,
                                    parse_pics_items)
 
@@ -220,16 +223,16 @@ def list_device_types(version: str = "1.6") -> list[str]:
     return sorted({dt.name for dt in _model(version).device_types.values()})
 
 
-_FEATURE_CODE_RE = re.compile(r"^(?P<pics>[A-Z0-9_]+)\.S\.F(?P<bit>[0-9a-fA-F]{2})$")
-# Gateway (cluster-side) items: "OO.C", "ACL.S" -- claiming one is a fact from
-# which the spec derives the side's mandatory elements (gateway model, option b).
-_GATEWAY_RE = re.compile(r"^(?P<pics>[A-Z0-9_]+)\.(?P<side>[SC])$")
+# Claim regexes/split live in the shared claims layer so the CLI derives optional
+# selections identically. Gateway (cluster-side) items: "OO.C", "ACL.S".
+_FEATURE_CODE_RE = claims.FEATURE_CODE_RE
+_GATEWAY_RE = claims.GATEWAY_RE
 
 
 @lru_cache(maxsize=4)
 def _pics_to_cluster(version: str) -> dict[str, str]:
     """{PICS prefix: cluster id} for every cluster in the data model."""
-    return {c.pics: cid for cid, c in _model(version).clusters.items() if c.pics}
+    return claims.pics_to_cluster(_model(version))
 
 
 @lru_cache(maxsize=4)
@@ -315,57 +318,74 @@ def _mcore_area(code: str) -> str:
 
 
 def _feature_seeds_from_codes(version: str, codes) -> dict[str, set[str]]:
-    """Turn user-enabled feature PICS codes into engine feature seeds.
-
-    ``OO.S.F01`` -> {"0x0006": {"DF"}}. Unknown prefixes/bits are ignored (they
-    cannot seed anything the engine knows about).
-    """
-    model = _model(version)
-    prefix_map = _pics_to_cluster(version)
-    seeds: dict[str, set[str]] = {}
-    for code in codes:
-        m = _FEATURE_CODE_RE.match(code)
-        if not m:
-            continue
-        cid = prefix_map.get(m.group("pics"))
-        if cid is None:
-            continue
-        bit = int(m.group("bit"), 16)
-        for f in model.clusters[cid].features.values():
-            if f.bit == bit and f.code:
-                seeds.setdefault(cid, set()).add(f.code)
-    return seeds
+    """Optional feature codes -> engine feature seeds (shared claims layer)."""
+    return claims.feature_seeds_from_codes(_model(version), codes or [])
 
 
-def _gateway_claims(version: str, profile: DeviceProfile, claims) -> dict[str, set[str]]:
-    """{gateway code: spec-mandated codes for that claimed side}.
+def _gateway_claims(version: str, profile: DeviceProfile, claim_codes) -> dict[str, set[str]]:
+    """{gateway code: spec-mandated codes for that claimed side} (shared layer)."""
+    from .generate.cluster_engine import active_conditions, load_transport_map
 
-    Claiming ``OO.C`` means the device IS an On/Off client; the spec then
-    dictates the commands every such client must send. Pure derivation from a
-    user-stated fact -- never a guess.
-    """
-    from .generate.cluster_engine import (active_conditions, claim_cluster_side,
-                                          load_transport_map)
-
-    model = _model(version)
-    prefix_map = _pics_to_cluster(version)
-    known = known_item_numbers(version)
     conditions = active_conditions(profile, load_transport_map())
-    # claimed features feed the claimed side too, so "X.S + X.S.F03" yields
-    # everything mandatory under (claimed side + claimed features) -- the
-    # conformance evaluator resolves the full AND/OR/NOT expressions.
-    feature_seeds = _feature_seeds_from_codes(version, claims or [])
-    out: dict[str, set[str]] = {}
-    for code in claims or []:
-        m = _GATEWAY_RE.match(code)
-        if not m:
-            continue
-        cid = prefix_map.get(m.group("pics"))
-        if cid is not None:
-            out[code] = claim_cluster_side(
-                model, cid, m.group("side"), conditions,
-                seed_feature_codes=feature_seeds.get(cid, set())) & known
-    return out
+    return claims.side_claims(_model(version), profile, claim_codes or [],
+                              conditions, known_item_numbers(version))
+
+
+def _selection_of(profile_dict: dict, claim_codes=None) -> Selection:
+    """A Selection from the UI/CLI payload.
+
+    ``profile_dict`` may carry the multi-endpoint ``endpoints`` list (new UI) or
+    the single ``device_type`` shorthand (old UI). A legacy flat ``claim_codes``
+    list is folded onto endpoint 1 + node-level MCORE for back-compat.
+    """
+    selection = Selection.from_dict(profile_dict)
+    if claim_codes:
+        selection.endpoints[0].claims = list(selection.endpoints[0].claims) + [
+            c for c in claim_codes if not c.startswith("MCORE.")]
+        selection.mcore_claims = list(selection.mcore_claims) + [
+            c for c in claim_codes if c.startswith("MCORE.")]
+    return selection
+
+
+def _payload_inputs(profile_dict: dict, legacy_claims=None):
+    """Everything generate_payload needs, with claims scoped per ENDPOINT id.
+
+    Claims may arrive three ways, all unified here into ``{endpoint_id: [codes]}``
+    (0 = Root Node / EP0, 1..N = application endpoints) + a node-level MCORE set:
+    - the new UI sends ``profile_dict["claims_by_tab"]`` = {"base":[...], "0":[...], "1":[...]};
+    - the CLI/Selection puts claims inside ``endpoints[i].claims`` + ``mcore_claims``;
+    - a legacy flat ``claims`` arg folds onto EP1 + MCORE.
+    """
+    selection = Selection.from_dict(profile_dict)
+    version = selection.profile.spec_version
+    model = _model(version)
+    conditions = active_conditions(selection.profile, load_transport_map())
+    known = known_item_numbers(version)
+
+    by_ep: dict[int, list] = {}
+    mcore: list = list(selection.mcore_claims)
+    for epid, ep in enumerate(selection.endpoints, start=1):
+        if ep.claims:
+            by_ep.setdefault(epid, []).extend(ep.claims)
+    cbt = profile_dict.get("claims_by_tab")
+    if isinstance(cbt, dict):
+        for t, codes in cbt.items():
+            if t == "base":
+                mcore += [c for c in codes if c.startswith("MCORE.")]
+            elif str(t).isdigit():
+                by_ep.setdefault(int(t), []).extend(codes)
+    if legacy_claims:
+        by_ep.setdefault(1, []).extend([c for c in legacy_claims if not c.startswith("MCORE.")])
+        mcore += [c for c in legacy_claims if c.startswith("MCORE.")]
+
+    app_endpoints = [ep.device_types for ep in selection.endpoints]
+    per_ep_seeds = {epid: claims.feature_seeds_from_codes(model, codes)
+                    for epid, codes in by_ep.items()}
+    per_ep_side = {epid: claims.side_claims(model, selection.profile, codes, conditions, known)
+                   for epid, codes in by_ep.items()}
+    mcore_atoms = {c for c in mcore if c.startswith("MCORE.")}
+    all_claims = [c for codes in by_ep.values() for c in codes]
+    return selection, app_endpoints, per_ep_seeds, per_ep_side, mcore_atoms, all_claims
 
 
 def generate_payload(profile_dict: dict, claims=None) -> dict:
@@ -385,16 +405,18 @@ def generate_payload(profile_dict: dict, claims=None) -> dict:
     bucket_of, decided_dims = _classify(version)
     text = _item_text(version)
     model = _model(version)
-    profile = DeviceProfile.from_dict(profile_dict)
-    extra_seeds = _feature_seeds_from_codes(version, claims or [])
-    gateway_claims = _gateway_claims(version, profile, claims)
+    # Per-endpoint claims: a feature/side claimed on EP1 never leaks to EP2.
+    selection, app_endpoints, per_ep_seeds, per_ep_side, mcore_claim_atoms, all_claim_codes = \
+        _payload_inputs(profile_dict, claims)
+    profile = selection.profile
 
     # Real pipeline: clusters first, then MCORE seeded by the enabled cluster set.
     # TWO runs on purpose: the baseline (profile only) defines "Answered by the
     # tool"; whatever the user's claims add on top stays in Optional Items --
     # pre-filled Yes where the spec mandates it, but it is THEIR selection.
-    baseline = generate_cluster_pics(model, profile)
-    endpoints = generate_cluster_pics(model, profile, extra_feature_seeds=extra_seeds)
+    baseline = generate_cluster_pics(model, profile, app_endpoints=app_endpoints)
+    endpoints = generate_cluster_pics(model, profile, app_endpoints=app_endpoints,
+                                      per_endpoint_feature_seeds=per_ep_seeds)
     baseline_pics = {ep.endpoint: ep.pics for ep in baseline}
     cluster_ids = all_enabled_cluster_ids(endpoints)
     mcore_on = compute_mcore_pics(profile, version, cluster_ids) & set(order)
@@ -402,18 +424,22 @@ def generate_payload(profile_dict: dict, claims=None) -> dict:
     # and gateway claims: claiming DD.CONCATENATED_QR_CODE makes DD.QR
     # mandatory AT GENERATION TIME, not only in the export validator. The delta
     # over the claim-free run stays in Optional Items (it is the user's claim).
-    mcore_claim_atoms = {c for c in (claims or []) if c.startswith("MCORE.")}
     mcore_claimed: set = set()
     if mcore_claim_atoms:
         mcore_full = compute_mcore_pics(profile, version, cluster_ids,
                                         extra_seeds=mcore_claim_atoms) & set(order)
         mcore_claimed = mcore_full - mcore_on
-    derived_im_types = is_im_client(model, [profile.device_type, *profile.node_device_types])
+    # IM role considers every application endpoint's device types (a switch on any
+    # endpoint makes the node an IM client).
+    all_app_dts = [dt for ep in selection.endpoints for dt in ep.device_types]
+    derived_im_types = is_im_client(model, [*all_app_dts, *profile.node_device_types])
+    all_side_codes = [c for side in per_ep_side.values()
+                      for codes in side.values() for c in codes]
     # A claimed client gateway (X.C = Yes) IS client behavior: the IM role must
     # follow the claim, or the export would send commands while declaring
     # "IM server only" -- an inconsistent PICS.
     claimed_client = any(_GATEWAY_RE.match(c) and c.endswith(".C")
-                         for c in (claims or []))
+                         for c in all_claim_codes)
     derived_im = derived_im_types or claimed_client
     im_client = derived_im if profile.im_client is None else profile.im_client
     # Client role driven purely by the user's claims -> its IDM consequences
@@ -426,7 +452,7 @@ def generate_payload(profile_dict: dict, claims=None) -> dict:
     has_client_tx = (any(re.search(r"\.C\.C[0-9a-fA-F]{2}\.Tx$", c)
                          for ep in baseline for c in ep.pics)
                      or any(re.search(r"\.C\.C[0-9a-fA-F]{2}\.Tx$", c)
-                            for codes in gateway_claims.values() for c in codes))
+                            for c in all_side_codes))
     role_profile = load_role_profile(profile.role)
     facts = node_facts_from_clusters(cluster_ids)
 
@@ -545,7 +571,7 @@ def generate_payload(profile_dict: dict, claims=None) -> dict:
         # elements) is pre-filled Yes but stays in Manual selection.
         tool_here = baseline_pics.get(ep.endpoint, set()) & known
         claim_here = (ep.pics & known) - tool_here
-        for gateway, claim_codes in gateway_claims.items():
+        for gateway, claim_codes in per_ep_side.get(ep.endpoint, {}).items():
             for _, codes in _template_codes(version):
                 if gateway in codes and tool_here.intersection(codes):
                     claim_here |= claim_codes - tool_here
@@ -657,12 +683,15 @@ def export_pics_files(profile_dict: dict, enabled_codes) -> dict:
     from .generate.writer import write_pics
 
     version = profile_dict.get("spec_version", "1.6")
-    profile = DeviceProfile.from_dict(profile_dict)
+    selection = _selection_of(profile_dict)
+    profile = selection.profile
+    app_endpoints = [ep.device_types for ep in selection.endpoints]
     by_tab = enabled_codes if isinstance(enabled_codes, dict) else None
     flat = ([c for codes in by_tab.values() for c in codes] if by_tab
             else list(enabled_codes))
     extra_seeds = _feature_seeds_from_codes(version, flat)
     endpoints = generate_cluster_pics(_model(version), profile,
+                                      app_endpoints=app_endpoints,
                                       extra_feature_seeds=extra_seeds)
     app_ep = next((e.endpoint for e in endpoints if e.endpoint != 0), 1)
 
@@ -736,7 +765,9 @@ def validate_selection(profile_dict: dict, enabled_codes) -> list[dict]:
     the UI shows them); a flat list is accepted and validated in one scope.
     """
     version = profile_dict.get("spec_version", "1.6")
-    profile = DeviceProfile.from_dict(profile_dict)
+    selection = _selection_of(profile_dict)
+    profile = selection.profile
+    app_endpoints = [ep.device_types for ep in selection.endpoints]
     by_tab = enabled_codes if isinstance(enabled_codes, dict) else None
     flat = set(c for codes in by_tab.values() for c in codes) if by_tab \
         else set(enabled_codes)
@@ -745,22 +776,27 @@ def validate_selection(profile_dict: dict, enabled_codes) -> list[dict]:
     problems: list[dict] = []
     flagged: set[str] = set()
 
-    def add(code: str, why: str, severity: str = "error") -> None:
+    def add(code: str, why: str, severity: str = "error", tab: str = None) -> None:
         if code in flagged:
             return
         flagged.add(code)
         problems.append({"code": code,
                          "question": text.get(code, ("", ""))[0] or code,
-                         "why": why, "severity": severity})
+                         "why": why, "severity": severity,
+                         # which endpoint tab to enable it on (the UI's auto-fix
+                         # needs this: the same code lives on several endpoints).
+                         "tab": tab or ("base" if code.startswith("MCORE.") else None)})
 
     # 1) Engine side: re-run with the user's claims; everything the engine
     #    yields is mandatory for the claimed device.
     extra_seeds = _feature_seeds_from_codes(version, flat)
     endpoints = generate_cluster_pics(_model(version), profile,
+                                      app_endpoints=app_endpoints,
                                       extra_feature_seeds=extra_seeds)
     for ep in sorted(endpoints, key=lambda e: e.endpoint):
         for code in sorted((ep.pics & known) - flat):
-            add(code, f"mandatory on endpoint {ep.endpoint} for this device profile")
+            add(code, f"mandatory on endpoint {ep.endpoint} for this device profile",
+                tab=str(ep.endpoint))
 
     # 2) Gateway claims: a claimed X.S / X.C mandates its side's elements.
     for gateway, claim_codes in _gateway_claims(version, profile, flat).items():
@@ -815,7 +851,7 @@ def validate_selection(profile_dict: dict, enabled_codes) -> list[dict]:
                         continue
                     if _effective_status(it.statuses, resolve) == "M":
                         cond_text = " ; ".join(c for _, c in it.statuses if c) or "unconditional"
-                        add(it.number, f"required because: {cond_text}")
+                        add(it.number, f"required because: {cond_text}", tab=scope_name)
                         working.add(it.number)
                         changed = True
         # prohibited / inapplicable checks on what the user actually enabled
@@ -826,13 +862,14 @@ def validate_selection(profile_dict: dict, enabled_codes) -> list[dict]:
                     continue
                 eff = _effective_status(it.statuses, resolve)
                 if eff == "X":
-                    add(it.number, "PROHIBITED by the spec for this configuration")
+                    add(it.number, "PROHIBITED by the spec for this configuration",
+                        tab=scope_name)
                 elif eff is None:
                     quirk = _KNOWN_TEMPLATE_QUIRKS.get(it.number)
                     add(it.number,
                         quirk or "enabled, but no status condition applies to "
                                  "this configuration (the validator will note it)",
-                        severity="warning")
+                        severity="warning", tab=scope_name)
     return problems
 
 

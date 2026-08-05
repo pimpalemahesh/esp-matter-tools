@@ -1,0 +1,25 @@
+    /* Create a Matter node with the Root Node device type on endpoint 0. */
+    node::config_t node_config;
+    node_t *node = node::create(&node_config, app_attribute_update_cb, app_identification_cb);
+    ABORT_APP_ON_FAILURE(node != nullptr, ESP_LOGE(TAG, "Failed to create Matter node"));
+
+{% for ep in endpoints %}
+    /* Endpoint {{ ep.endpoint }}: {{ ep.device_types | join(" + ") }} (default config; set attribute defaults as needed). */
+    {{ ep.primary.namespace }}::config_t {{ ep.primary.namespace }}_config_{{ ep.endpoint }};
+    endpoint_t *endpoint_{{ ep.endpoint }} = {{ ep.primary.namespace }}::create(node, &{{ ep.primary.namespace }}_config_{{ ep.endpoint }}, ENDPOINT_FLAG_NONE, priv_data);
+    ABORT_APP_ON_FAILURE(endpoint_{{ ep.endpoint }} != nullptr, ESP_LOGE(TAG, "Failed to create {{ ep.primary.name }} endpoint"));
+{% for c in ep.composed %}
+    {{ c.namespace }}::config_t {{ c.namespace }}_config_{{ ep.endpoint }};
+    ABORT_APP_ON_FAILURE({{ c.namespace }}::add(endpoint_{{ ep.endpoint }}, &{{ c.namespace }}_config_{{ ep.endpoint }}) == ESP_OK, ESP_LOGE(TAG, "Failed to add {{ c.name }} device type"));
+{% endfor %}
+{% for f in ep.optional_features %}
+    /* Optional feature claimed in PICS: {{ f.cluster_name }} / {{ f.feature_name }}. To enable:
+       cluster_t *{{ f.cluster_namespace }}_cluster = cluster::get(endpoint_{{ ep.endpoint }}, {{ f.cluster_id }});
+       cluster::{{ f.cluster_namespace }}::feature::{{ f.feature_namespace }}::add({{ f.cluster_namespace }}_cluster, ...);  // check add() signature */
+{% endfor %}
+{% for s in ep.optional_sides %}
+    /* Optional claimed in PICS: {{ s }} -- add the cluster/side (cluster::<name>::create or a binding) yourself. */
+{% endfor %}
+
+{% endfor %}
+    uint16_t endpoint_id = endpoint::get_id(endpoint_1);

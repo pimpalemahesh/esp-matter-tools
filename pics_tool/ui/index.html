@@ -66,8 +66,22 @@
           <select id="specVersion"></select>
         </div>
         <div class="control-group">
-          <label for="deviceType">Application device type <span class="req">required</span></label>
-          <select id="deviceType"></select>
+          <label>Application endpoints <span class="req">required</span>
+            <span class="helptip" tabindex="0" aria-label="What are application endpoints?">?
+              <span class="helptext">Each endpoint hosts one application device type and is
+                numbered 1, 2, … (endpoint 0 is always the Root Node). Add an endpoint for every
+                application function your product exposes (e.g. a light on EP1 and a sensor on EP2).</span>
+            </span>
+          </label>
+          <div id="endpoints" class="endpoint-list"></div>
+          <button type="button" class="btn ghost add-ep" id="addEndpoint">+ Add endpoint</button>
+          <template id="endpointRowTpl">
+            <div class="endpoint-row">
+              <span class="ep-num"></span>
+              <select class="ep-devtype" aria-label="Endpoint device type"></select>
+              <button type="button" class="ep-remove" aria-label="Remove endpoint" title="Remove endpoint">✕</button>
+            </div>
+          </template>
         </div>
         <div class="control-group">
           <label>Device role
@@ -163,16 +177,21 @@
         </div>
       </div>
       <div class="profile-actions">
-        <button class="btn" id="exportBtn" disabled
-          title="Validate the selection against the spec, then download the filled PICS XML files as a zip">Export PICS ↓</button>
-        <button class="btn ghost" id="resetBtn"
-          title="Discard your manual Yes/No changes and regenerate from the engine">Clear my answers</button>
+        <button class="btn primary" id="generateBtn" disabled
+          title="Lock in these inputs and generate the PICS questions">Generate PICS →</button>
+        <span class="gen-status" id="genStatus"></span>
+        <span class="actions-right" id="reviewActions" hidden>
+          <button class="btn" id="exportBtn" disabled
+            title="Validate the selection against the spec, then download the filled PICS XML files as a zip">Export PICS ↓</button>
+          <button class="btn ghost" id="resetBtn"
+            title="Discard your manual Yes/No changes and regenerate from the engine">Clear my answers</button>
+        </span>
       </div>
     </section>
 
     <!-- Results -->
     <div id="resultArea">
-      <div class="empty-state">Describe your device above to generate its PICS.</div>
+      <div class="empty-state">Describe your device above, then click <b>Generate PICS</b>.</div>
     </div>
 
     <footer class="footer">

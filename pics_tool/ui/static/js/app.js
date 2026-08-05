@@ -7,8 +7,14 @@ let webapp = null;            // pics_tool.webapp module proxy
 let payload = null;           // last generated payload
 let tab = "base";             // active section tab (base | endpoint id)
 let grp = "decided";          // active view: tool-decided items | manual selection
-let answers = {};             // code -> "yes" | "no" (the human's current answer)
-let touched = new Set();      // codes the human explicitly answered
+// answers/touched are keyed per (endpoint tab, code) -- the SAME PICS code can
+// appear on several endpoints (Descriptor, On/Off), and each must be answerable
+// independently. Key = `${tab}|${code}`.
+let answers = {};             // "tab|code" -> "yes" | "no"
+let touched = new Set();      // "tab|code" the human explicitly answered
+let searchQ = "";             // current search text (survives tab re-render)
+let deviceTypeNames = [];     // device-type names for the current spec version
+let dirty = false;            // form edited since the last Generate (results stale)
 const BASE = new URL(".", window.location.href).href;
 // distinct accent per cluster group (dot + row edge), stable per session
 const CLUSTER_PALETTE = ["#2f6fed", "#0ea5a4", "#8b5cf6", "#d97706", "#16a34a",
@@ -21,6 +27,10 @@ const GATEWAY_RE = /^[A-Z0-9_]+\.[SC]$/;
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) =>
   ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+// (endpoint tab, code) composite key helpers
+const keyOf = (it) => `${it.tab}|${it.code}`;
+function splitKey(k) { const i = k.indexOf("|"); return [k.slice(0, i), k.slice(i + 1)]; }
 
 // ---- chip helpers ----
 function selected(groupId) {
@@ -42,6 +52,42 @@ function wireChips(groupId, single) {
   });
 }
 
+// ---- application endpoint rows (one device type per endpoint; "+" adds more) ----
+function populateSelect(sel, chosen) {
+  sel.innerHTML = "";
+  // No device type is pre-selected: the user must choose one explicitly.
+  const pick = deviceTypeNames.includes(chosen) ? chosen : "";
+  sel.add(new Option("— Choose device type —", "", pick === "", pick === ""));
+  deviceTypeNames.forEach((n) => sel.add(new Option(n, n, false, n === pick)));
+  sel.value = pick;
+}
+function renumberEndpoints() {
+  const rows = [...$("endpoints").querySelectorAll(".endpoint-row")];
+  rows.forEach((r, i) => { r.querySelector(".ep-num").textContent = `${i + 1}`; });
+  // the node must have at least one application endpoint
+  rows.forEach((r) => { r.querySelector(".ep-remove").disabled = rows.length <= 1; });
+}
+function addEndpointRow(chosen) {
+  const tpl = $("endpointRowTpl").content.firstElementChild.cloneNode(true);
+  const sel = tpl.querySelector(".ep-devtype");
+  populateSelect(sel, chosen);
+  sel.addEventListener("change", markDirty);
+  tpl.querySelector(".ep-remove").addEventListener("click", () => {
+    tpl.remove(); renumberEndpoints(); markDirty();
+  });
+  $("endpoints").appendChild(tpl);
+  renumberEndpoints();
+}
+function setEndpoints(deviceTypes) {
+  $("endpoints").innerHTML = "";
+  const list = (deviceTypes && deviceTypes.length) ? deviceTypes : [""];
+  list.forEach((name) => addEndpointRow(name));
+}
+function endpointValues() {
+  return [...$("endpoints").querySelectorAll(".ep-devtype")]
+    .map((s) => ({ device_types: [s.value] }));
+}
+
 function readProfile() {
   // OTA is an either/or per Base.xml: no OTA Requestor => vendor-specific
   // OTA is mandatory for a commissionee (OTA Provider is profile/CLI-only in
@@ -49,7 +95,7 @@ function readProfile() {
   const ota = selected("ota")[0] || "vendor";
   return {
     spec_version: $("specVersion").value,
-    device_type: $("deviceType").value,
+    endpoints: endpointValues(),        // [{device_types:[name]}] -> EP1..EPN
     node_device_types: ota === "requestor" ? ["OTA Requestor"] : [],
     vendor_specific_ota: ota === "vendor",
     transport: selected("transport"),
@@ -62,17 +108,26 @@ function readProfile() {
   };
 }
 
-function loadDeviceTypes(version, preferred) {
-  const sel = $("deviceType");
-  sel.innerHTML = "";
-  const names = JSON.parse(webapp.list_device_types_json(version));
-  const pick = names.includes(preferred) ? preferred : "Extended Color Light";
-  names.forEach((n) => sel.add(new Option(n, n, false, n === pick)));
+// device-type names for the version; (re)populate every endpoint row's select,
+// preserving each row's current selection where the name still exists.
+function loadDeviceTypes(version) {
+  deviceTypeNames = JSON.parse(webapp.list_device_types_json(version));
+  const rows = [...$("endpoints").querySelectorAll(".ep-devtype")];
+  if (!rows.length) { setEndpoints([]); return; }
+  rows.forEach((sel) => populateSelect(sel, sel.value));
+}
+
+// device types for the profile snapshot, new (endpoints) or old (device_type)
+function profileDeviceTypes(p) {
+  if (p.endpoints && p.endpoints.length)
+    return p.endpoints.map((ep) => (ep.device_types || [])[0]).filter(Boolean);
+  if (p.device_type) return [p.device_type];
+  return [];
 }
 
 function applyProfileToForm(p) {
   if (!p) return;
-  if (p.device_type) $("deviceType").value = p.device_type;
+  setEndpoints(profileDeviceTypes(p));
   setSelected("transport", p.transport || []);
   const disc = [];
   if (p.ble_commissioning !== false) disc.push("ble");
@@ -93,13 +148,50 @@ function applyProfileToForm(p) {
 // A profile the engine would reject never reaches the engine: say what's wrong.
 function validateProfile(p) {
   const errs = [];
-  if (!p.device_type) errs.push("Pick an application device type.");
+  const dts = (p.endpoints || []).map((ep) => (ep.device_types || [])[0]).filter(Boolean);
+  if (!dts.length) errs.push("Add at least one application endpoint with a device type.");
   if (!p.transport.length) errs.push("Pick at least one transport.");
   if (p.role === "commissionee" && !p.onboarding.length)
     errs.push("A commissionee needs at least one onboarding method (QR / manual pairing code / NFC).");
   if (p.wifi_paf && !p.transport.some((t) => t.startsWith("wifi")))
     errs.push("Wi-Fi PAF commissioning requires a Wi-Fi transport.");
   return errs;
+}
+
+// Inputs are NOT auto-generated: the user edits the profile, then clicks
+// Generate. Every form change just re-checks validity (to enable/disable the
+// Generate button) and, if results are already shown, flags them as stale.
+function markDirty() {
+  dirty = true;
+  refreshValidity();
+}
+function refreshValidity() {
+  const errs = validateProfile(readProfile());
+  const btn = $("generateBtn");
+  if (btn) {
+    btn.disabled = errs.length > 0;
+    btn.textContent = payload ? "Regenerate →" : "Generate PICS →";
+  }
+  const st = $("genStatus");
+  if (st) {
+    st.className = "gen-status";
+    if (errs.length && dirty) { st.textContent = errs[0]; st.classList.add("warn"); }
+    else if (payload && dirty) { st.textContent = "Inputs changed — click Regenerate to refresh."; st.classList.add("warn"); }
+    else st.textContent = "";
+  }
+}
+
+// Claims the user switched ON that carry spec consequences, grouped per endpoint
+// tab so a feature/side claimed on EP1 never leaks to EP2. base -> MCORE atoms.
+function claimsByTab(ans, tched) {
+  const out = {};
+  tched.forEach((k) => {
+    const [t, code] = splitKey(k);
+    if (ans[k] === "yes" &&
+        (FEATURE_RE.test(code) || GATEWAY_RE.test(code) || code.startsWith("MCORE.")))
+      (out[t] ??= []).push(code);
+  });
+  return out;
 }
 
 // ---- session persistence (survives reload; cleared by Reset) ----
@@ -142,13 +234,16 @@ async function init() {
   const session = loadSession();
   const savedV = session && session.profile && session.profile.spec_version;
   vsel.value = versions.includes(savedV) ? savedV : versions[versions.length - 1];
-  loadDeviceTypes(vsel.value, session && session.profile && session.profile.device_type);
-  vsel.addEventListener("change", () => { loadDeviceTypes(vsel.value); scheduleGenerate(); });
+  loadDeviceTypes(vsel.value);
+  vsel.addEventListener("change", () => { loadDeviceTypes(vsel.value); markDirty(); });
 
   if (session && session.profile) applyProfileToForm(session.profile);
+  else setEndpoints([]);
 
   $("initOverlay").style.display = "none";
-  generate(session); // show the default (or restored) device immediately
+  refreshValidity();
+  // Restore a prior session's results; a fresh visit waits for Generate.
+  if (session && session.profile && validateProfile(readProfile()).length === 0) generate(session);
 }
 
 // ---- generate (runs automatically on every profile / claim change) ----
@@ -158,14 +253,16 @@ function scheduleGenerate() {
   genTimer = setTimeout(() => generate(), 250);
 }
 
-function generate(session) {
+function generate(session, announce) {
   const profile = readProfile();
   const errs = validateProfile(profile);
   if (errs.length) {
     payload = null;
     $("exportBtn").disabled = true;
+    $("reviewActions").hidden = true;
     $("resultArea").innerHTML =
       `<div class="empty-state">${errs.map((e) => esc(e)).join("<br>")}</div>`;
+    refreshValidity();
     return;
   }
   // first run: full spinner; later runs: dim the results while updating in place
@@ -177,7 +274,8 @@ function generate(session) {
   // defer so the paint happens before the (synchronous) Python call
   setTimeout(() => {
     try {
-      runGenerate(profile, session ? session.answers : null, session ? session.touched : null);
+      runGenerate(profile, session ? session.answers : null,
+                  session ? session.touched : null, announce);
     } catch (err) {
       $("resultArea").innerHTML = `<div class="empty-state">Generation failed: ${esc(err.message || err)}</div>`;
       console.error(err);
@@ -187,35 +285,45 @@ function generate(session) {
   }, 30);
 }
 
-// Run the engine. User claims (features + cluster-side gateways) re-enter it,
-// so everything a claim makes mandatory flips to "yes" consistently.
-function runGenerate(profile, keepAnswers, keepTouched) {
+// Run the engine. User claims (features + cluster-side gateways), scoped per
+// endpoint, re-enter it, so everything a claim makes mandatory flips to "yes"
+// consistently on that endpoint only.
+function runGenerate(profile, keepAnswers, keepTouched, announce) {
   const prevAnswers = keepAnswers || answers;
   const prevTouched = new Set(keepTouched || [...touched]);
-  const claims = Object.keys(prevAnswers).filter((c) =>
-    (FEATURE_RE.test(c) || GATEWAY_RE.test(c) || c.startsWith("MCORE."))
-    && prevAnswers[c] === "yes" && prevTouched.has(c));
+  profile.claims_by_tab = claimsByTab(prevAnswers, prevTouched);
 
-  payload = JSON.parse(webapp.generate_payload_json(
-    JSON.stringify(profile), JSON.stringify(claims)));
+  payload = JSON.parse(webapp.generate_payload_json(JSON.stringify(profile), "[]"));
 
   // engine answers first, then the human's explicit overrides on top
   answers = {}; touched = new Set();
-  payload.items.forEach((it) => { answers[it.code] = it.answer; });
+  payload.items.forEach((it) => { answers[keyOf(it)] = it.answer; });
   payload.items.forEach((it) => {
-    if (prevTouched.has(it.code) && prevAnswers[it.code] !== undefined) {
-      answers[it.code] = prevAnswers[it.code];
-      touched.add(it.code);
+    const k = keyOf(it);
+    if (prevTouched.has(k) && prevAnswers[k] !== undefined) {
+      answers[k] = prevAnswers[k];
+      touched.add(k);
     }
   });
   const y = window.scrollY;   // full re-render: keep the user's place
   render();
   window.scrollTo(0, y);
   $("exportBtn").disabled = false;
+  $("reviewActions").hidden = false;   // review-step actions appear once generated
+  dirty = false;
   saveSession();
+  refreshValidity();
+  if (announce) {   // explicit Generate click: confirm + move to the review step
+    const st = $("genStatus");
+    if (st) { st.textContent = "✓ Generated — review the answers below."; st.className = "gen-status ok"; }
+    $("resultArea").scrollIntoView({ behavior: "smooth", block: "start" });
+  }
 }
 
 // ---- render ----
+// The shell (tabs, stat bar, view switch, empty table) is built once per engine
+// run; the row body holds ONLY the active tab's rows and is rebuilt on tab
+// switch. This keeps the DOM to a single endpoint's rows instead of all of them.
 function render() {
   const perTab = {};
   payload.items.forEach((it) => { perTab[it.tab] = (perTab[it.tab] || 0) + 1; });
@@ -253,20 +361,24 @@ function render() {
     </table></div>
     <div id="noMatchHint" class="hint" hidden></div>`;
 
-  // The two groups are exclusive views (switched above the table), never mixed:
-  // "Selected by the tool" = defendable engine answers; "Manual selection" =
-  // everything else in the same templates, default No, for the user to claim.
-  // Within a view, questions are grouped under their cluster (or MCORE area),
-  // each with a stable accent color, so long tables stay scannable.
+  $("q").value = searchQ;
+  wireShell();
+  renderRows();
+}
+
+// Build the row body for the ACTIVE tab only (both groups; the view switch hides
+// the inactive one). Questions are grouped under their cluster with a stable
+// accent so long tables stay scannable.
+function renderRows() {
   const clColor = {};
   let ci = 0;
   const colorOf = (cl) => (clColor[cl] ??= CLUSTER_PALETTE[ci++ % CLUSTER_PALETTE.length]);
 
   const rowsHtml = [];
-  payload.tabs.forEach((t) => ["decided", "manual"].forEach((g) => {
+  ["decided", "manual"].forEach((g) => {
     const members = payload.items
       .map((it, i) => ({ it, i }))
-      .filter(({ it }) => it.tab === t.id && it.group === g);
+      .filter(({ it }) => it.tab === tab && it.group === g);
     const clusters = [];
     const byCl = new Map();
     members.forEach((m) => {
@@ -275,13 +387,13 @@ function render() {
     });
     clusters.forEach((cl) => {
       const rows = byCl.get(cl);
-      const key = `${t.id}|${g}|${cl}`;
+      const key = `${tab}|${g}|${cl}`;
       const color = colorOf(cl);
       rowsHtml.push(`<tr class="clhdr" data-key="${esc(key)}">
         <td colspan="2"><span class="cldot" style="background:${color}"></span>${esc(cl)}
         <span class="clcount">${rows.length}</span></td></tr>`);
       rows.forEach(({ it, i }) => {
-        const a = answers[it.code];
+        const a = answers[keyOf(it)];
         // Server/Client side from the PICS code: the CSA templates reuse the
         // SAME question text for both sides (CNET.S.F01 vs CNET.C.F01), so
         // without this badge the two look like duplicates.
@@ -298,29 +410,34 @@ function render() {
             <div class="qmeta"><span class="code">${esc(it.code)}</span><span class="conf">${esc(it.conformance)}</span></div>
           </td>
           <td class="answercol">
-            <div class="yn" data-code="${esc(it.code)}">
+            <div class="yn" data-k="${esc(keyOf(it))}" data-code="${esc(it.code)}">
               <button class="yn-btn yes ${a === "yes" ? "act" : ""}" data-a="yes" aria-label="Yes: ${esc(it.code)}">Yes</button>
               <button class="yn-btn no ${a === "no" ? "act" : ""}" data-a="no" aria-label="No: ${esc(it.code)}">No</button>
             </div>
           </td></tr>`);
       });
     });
-  }));
+  });
   $("tb").innerHTML = rowsHtml.join("");
-
-  wireResults();
+  wireRows();
   applyFilter();
 }
 
-function wireResults() {
+// wire the shell controls (tabs, search, view switch, details) -- once per render
+function wireShell() {
   const RA = $("resultArea");
   RA.querySelectorAll(".tab").forEach((t) =>
     t.addEventListener("click", () => {
       tab = t.dataset.tab;
       RA.querySelectorAll(".tab").forEach((x) => x.setAttribute("aria-pressed", String(x === t)));
-      applyFilter();
+      renderRows();   // rebuild the body for the newly active endpoint
     }));
-  $("q").addEventListener("input", applyFilter);
+  let qTimer = null;
+  $("q").addEventListener("input", (e) => {
+    searchQ = e.target.value;
+    clearTimeout(qTimer);
+    qTimer = setTimeout(applyFilter, 150);   // debounce: don't scan on every keystroke
+  });
   $("grpSwitch").querySelectorAll(".chipf").forEach((b) =>
     b.addEventListener("click", () => {
       grp = b.dataset.g;
@@ -329,25 +446,31 @@ function wireResults() {
       applyFilter();
     }));
   $("showDetails").addEventListener("change", (e) => $("tbl").classList.toggle("show-details", e.target.checked));
+}
 
+// wire the Yes/No toggles for the currently rendered rows
+function wireRows() {
   $("tb").querySelectorAll(".yn").forEach((yn) => {
-    const code = yn.dataset.code;
+    const k = yn.dataset.k;             // "tab|code"
+    const code = yn.dataset.code;       // bare code (for claim regex / child match)
     const btns = [...yn.querySelectorAll(".yn-btn")];
     btns.forEach((b) => b.addEventListener("click", () => {
-      answers[code] = b.dataset.a;
-      touched.add(code);
+      answers[k] = b.dataset.a;
+      touched.add(k);
       btns.forEach((x) => x.classList.toggle("act", x === b));
       const tr = yn.closest("tr");
       tr.classList.toggle("changed", isChanged(payload.items[+tr.dataset.i]));
       // Un-claiming a parent (gateway X.C -> No, or a feature -> No) withdraws
-      // everything revealed under it: drop manual overrides on its children so
-      // nothing hidden leaks into the export.
-      if (answers[code] === "no") {
+      // everything revealed under it, ON THE SAME endpoint: drop manual
+      // overrides on its children so nothing hidden leaks into the export.
+      if (answers[k] === "no") {
+        const [t] = splitKey(k);
         payload.items.forEach((it) => {
-          if (it.parent === code
-              || (GATEWAY_RE.test(code) && it.code.startsWith(code + "."))) {
-            touched.delete(it.code);
-            answers[it.code] = it.answer;
+          if (it.tab === t && (it.parent === code
+              || (GATEWAY_RE.test(code) && it.code.startsWith(code + ".")))) {
+            const ck = keyOf(it);
+            touched.delete(ck);
+            answers[ck] = it.answer;
           }
         });
       }
@@ -364,26 +487,29 @@ function wireResults() {
 // Nested gateway model: an item with a parent (client sub-item under X.C,
 // feature-dependent item under X.S.Fxx) is only shown while the parent is Yes.
 // Anything currently answered Yes is always visible -- nothing enabled hides.
+// Parent lookup is scoped to the item's own endpoint tab.
 function isApplicable(it) {
   if (!it.parent) return true;
-  if (answers[it.code] === "yes") return true;
-  return answers[it.parent] === "yes";
+  if (answers[keyOf(it)] === "yes") return true;
+  return answers[`${it.tab}|${it.parent}`] === "yes";
 }
 
 function applyFilter() {
-  const q = ($("q") ? $("q").value.toLowerCase() : "");
-  const matchesElsewhere = {};   // "tabId|group" -> count of search hits
-  const clusterVisible = {};     // "tabId|group|cluster" -> visible row count
+  const q = searchQ.toLowerCase();
+  // cross-scope search-hit counts computed from data (only the active tab's rows
+  // are in the DOM, so "matches elsewhere" cannot come from a DOM scan).
+  const scopeHits = {};   // "tab|group" -> hits
+  const matches = (it) => isApplicable(it)
+    && (!q || it.code.toLowerCase().includes(q) || (it.question || it.code).toLowerCase().includes(q));
+  payload.items.forEach((it) => {
+    if (matches(it)) scopeHits[`${it.tab}|${it.group}`] = (scopeHits[`${it.tab}|${it.group}`] || 0) + 1;
+  });
+
+  const clusterVisible = {};
   let visible = 0;
   $("tb").querySelectorAll("tr:not(.clhdr)").forEach((tr) => {
     const it = payload.items[+tr.dataset.i];
-    const hit = isApplicable(it)
-      && (!q || tr.dataset.code.includes(q) || tr.dataset.q.includes(q));
-    if (hit) {
-      const key = `${tr.dataset.tab}|${tr.dataset.group}`;
-      matchesElsewhere[key] = (matchesElsewhere[key] || 0) + 1;
-    }
-    const show = tr.dataset.tab === tab && tr.dataset.group === grp && hit;
+    const show = it.group === grp && matches(it);   // tab is implicit (only active rows rendered)
     if (show) { visible++; clusterVisible[tr.dataset.key] = (clusterVisible[tr.dataset.key] || 0) + 1; }
     tr.style.display = show ? "" : "none";
   });
@@ -406,7 +532,7 @@ function applyFilter() {
   const others = [];
   payload.tabs.forEach((t) => ["decided", "manual"].forEach((g) => {
     if (t.id === tab && g === grp) return;
-    const n = matchesElsewhere[`${t.id}|${g}`];
+    const n = scopeHits[`${t.id}|${g}`];
     if (n) others.push({ t, g, n });
   }));
   hint.innerHTML = others.length
@@ -425,22 +551,22 @@ function switchTo(tabId, group) {
     x.setAttribute("aria-pressed", String(x.dataset.tab === tabId)));
   $("grpSwitch").querySelectorAll(".chipf").forEach((x) =>
     x.setAttribute("aria-pressed", String(x.dataset.g === group)));
-  applyFilter();
+  renderRows();
 }
 
 // "Changed by you" = differs from the PROFILE-ONLY baseline. Manual items
 // baseline to No, so any manual Yes -- clicked directly or derived from your
 // claim -- is yours, even after a regeneration bakes the claim into payload.
 function isChanged(it) {
-  return it.group === "manual" ? answers[it.code] === "yes"
-                               : answers[it.code] !== it.answer;
+  return it.group === "manual" ? answers[keyOf(it)] === "yes"
+                               : answers[keyOf(it)] !== it.answer;
 }
 
 // Whole-device counts (all endpoints): what the exported PICS will actually say.
 function recount() {
   let yes = 0, no = 0, mine = 0;
   payload.items.forEach((it) => {
-    if (answers[it.code] === "yes") yes++; else no++;
+    if (answers[keyOf(it)] === "yes") yes++; else no++;
     if (isChanged(it)) mine++;
   });
   const set = (id, v) => { const e = $(id); if (e) e.textContent = v; };
@@ -448,15 +574,12 @@ function recount() {
 }
 
 // ---- export (with a spec-consistency gate) ----
-function enabledCodes() {
-  return payload.items.map((it) => it.code).filter((c) => answers[c] === "yes");
-}
 // {tab: [codes]} — so every claim is exported into the SAME endpoint file the
 // user answered it on (clusters like Descriptor exist on several endpoints).
 function enabledByTab() {
   const out = {};
   payload.items.forEach((it) => {
-    if (answers[it.code] === "yes") (out[it.tab] ??= []).push(it.code);
+    if (answers[keyOf(it)] === "yes") (out[it.tab] ??= []).push(it.code);
   });
   return out;
 }
@@ -476,7 +599,11 @@ async function exportPICS() {
       const fix = await confirmProblems(errors, warns);
       if (fix === null) return; // cancelled
       if (fix) {
-        errors.forEach((p) => { answers[p.code] = "yes"; touched.add(p.code); });
+        // enable each on the endpoint(s) the validator flagged it for
+        errors.forEach((p) => {
+          const t = p.tab || tab;
+          answers[`${t}|${p.code}`] = "yes"; touched.add(`${t}|${p.code}`);
+        });
         render();
         saveSession();
       }
@@ -489,7 +616,8 @@ async function exportPICS() {
     const blob = await zip.generateAsync({ type: "blob" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
-    a.download = `pics_${payload.device_type.replace(/[^a-z0-9]+/gi, "_")}.zip`;
+    const label = (payload.device_type || "device").replace(/[^a-z0-9]+/gi, "_");
+    a.download = `pics_${label}.zip`;
     a.click();
     URL.revokeObjectURL(a.href);
   } catch (err) {
@@ -536,11 +664,12 @@ function confirmProblems(problems, warns = []) {
   });
 }
 
-// ---- reset ----
+// ---- clear my answers (keep the profile; re-derive from the engine) ----
 function resetAll() {
-  clearSession();
-  tab = "base"; grp = "decided";
-  generate();
+  answers = {}; touched = new Set();
+  saveSession();
+  if (payload) generate();      // re-derive the same profile, dropping manual edits
+  else refreshValidity();
 }
 
 // ---- theme toggle ----
@@ -565,8 +694,9 @@ wireChips("ota", true);
 wireChips("role", true);
 // results update automatically on any form change — no Generate button
 ["transport", "onboarding", "commdisc", "ota", "role"].forEach((id) =>
-  $(id).addEventListener("click", (e) => { if (e.target.closest(".opt")) scheduleGenerate(); }));
-$("deviceType").addEventListener("change", scheduleGenerate);
+  $(id).addEventListener("click", (e) => { if (e.target.closest(".opt")) markDirty(); }));
+$("addEndpoint").addEventListener("click", () => { addEndpointRow(); markDirty(); });
+$("generateBtn").addEventListener("click", () => generate(null, true));
 $("exportBtn").addEventListener("click", exportPICS);
 $("resetBtn").addEventListener("click", resetAll);
 

@@ -113,34 +113,49 @@ def _resolve_device_type(model: DataModel, name: str) -> DeviceType:
 def generate_cluster_pics(
     model: DataModel, profile: DeviceProfile, transport_map: dict | None = None,
     extra_feature_seeds: dict[str, set[str]] | None = None,
+    app_endpoints: list[list[str]] | None = None,
+    per_endpoint_feature_seeds: dict[int, dict[str, set[str]]] | None = None,
 ) -> list[EndpointPics]:
     """Generate per-endpoint PICS.
 
-    ``extra_feature_seeds`` ({cluster_id: {feature_code, ...}}) lets a caller
-    force optional features ON (e.g. the user's answers in the web UI); the
-    conformance fixpoint then pulls in everything those features make mandatory,
-    so a user choice re-enters the engine instead of being a raw row flip.
+    ``extra_feature_seeds`` ({cluster_id: {feature_code, ...}}) forces optional
+    features ON node-wide (e.g. the web UI's single-endpoint claims); the
+    conformance fixpoint then pulls in everything those features make mandatory.
+
+    ``app_endpoints`` (list of device-type-name lists, one per application
+    endpoint) places EP1..EPN; each endpoint may host several device types
+    (composed device types). Defaults to a single EP1 = ``[profile.device_type]``.
+
+    ``per_endpoint_feature_seeds`` ({endpoint_id: {cluster_id: {feature_code}}})
+    forces optional features ON for ONE endpoint only, so a claim on EP1 does not
+    leak to the same cluster on EP2.
     """
     transport_map = transport_map or load_transport_map()
     conditions = active_conditions(profile, transport_map)
-    seeds = transport_feature_seeds(profile, transport_map)
+    # Node-wide seeds: transport + any global extra (applies to every endpoint).
+    node_seeds = transport_feature_seeds(profile, transport_map)
     for cid, codes in (extra_feature_seeds or {}).items():
-        seeds.setdefault(cid, set()).update(codes)
+        node_seeds.setdefault(cid, set()).update(codes)
 
-    app_dt = _resolve_device_type(model, profile.device_type)
     node_dts = [_resolve_device_type(model, n) for n in profile.node_device_types]
     root_dt = model.device_types.get(ROOT_NODE_DEVICE_TYPE_ID)
 
+    if app_endpoints is None:
+        app_endpoints = [[profile.device_type]]
+    resolved_app = [[_resolve_device_type(model, n) for n in dts] for dts in app_endpoints]
+
     # EP0 = Root Node + any node-level device types (OTA Requestor, Aggregator, ...);
-    # EP1 = the application device type. Base device type merges into both.
+    # EP1..EPN = the application device types. Base device type merges into all.
     ep0_dts = ([root_dt] if root_dt is not None else []) + node_dts
     layout: list[tuple[int, list[DeviceType]]] = []
     if ep0_dts:
         layout.append((0, ep0_dts))
-    layout.append((1, [app_dt]))
+    for epid, dts in enumerate(resolved_app, start=1):
+        layout.append((epid, dts))
 
     endpoints: list[EndpointPics] = []
     for epid, dts in layout:
+        seeds = _endpoint_seeds(node_seeds, per_endpoint_feature_seeds, epid)
         result = EndpointPics(epid, dts[0].id, dts[0].name)
         for cid, req in _merge_requirements(dts, model.base_device_type).items():
             enabled = _enable_cluster(req, model.clusters.get(cid), conditions,
@@ -155,6 +170,19 @@ def generate_cluster_pics(
                 result.client_cluster_ids.add(cid)
         endpoints.append(result)
     return endpoints
+
+
+def _endpoint_seeds(node_seeds: dict[str, set[str]],
+                    per_endpoint: dict[int, dict[str, set[str]]] | None,
+                    epid: int) -> dict[str, set[str]]:
+    """Node-wide seeds unioned with this endpoint's own claim seeds (no mutation)."""
+    per = (per_endpoint or {}).get(epid)
+    if not per:
+        return node_seeds
+    merged = {cid: set(codes) for cid, codes in node_seeds.items()}
+    for cid, codes in per.items():
+        merged.setdefault(cid, set()).update(codes)
+    return merged
 
 
 def all_enabled_cluster_ids(endpoints: list[EndpointPics]) -> set[str]:

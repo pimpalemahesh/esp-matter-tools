@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""``esp-matter-pics`` CLI: generate PICS from a device profile."""
+"""``esp-matter-pics`` CLI: generate PICS / esp-matter code from a selection."""
 
 from __future__ import annotations
 
@@ -20,10 +20,10 @@ import logging
 import click
 from esp_matter_datamodel import loader
 
-from ..generate.cluster_engine import all_enabled_cluster_ids, generate_cluster_pics
-from ..generate.mcore_engine import compute_mcore_pics
 from ..generate.profile import load_profile
-from ..generate.template_io import known_item_numbers
+from ..generate.scaffold import generate_scaffold
+from ..generate.selection import (Selection, build_endpoints_enabled,
+                                  load_selection)
 from ..generate.writer import write_pics
 
 
@@ -37,59 +37,118 @@ def main(verbose: bool) -> None:
     )
 
 
+def _selection_options(f):
+    """Shared input options for both commands: a selection doc, a profile, or flags."""
+    opts = [
+        click.option("--selection", "selection_path", type=click.Path(exists=True),
+                     help="Path to a canonical selection.(yaml|json) -- multi-endpoint + claims."),
+        click.option("--profile", "profile_path", type=click.Path(exists=True),
+                     help="Path to a device-profile.(yaml|json)."),
+        click.option("--spec-version", help="Override profile spec_version (e.g. 1.6)."),
+        click.option("--device-type", help="Override profile device_type (name)."),
+        click.option("--transport", multiple=True,
+                     help="Override transport (repeatable): wifi_2g/wifi_5g/thread/ethernet."),
+        click.option("--role", help="Override role: commissionee/commissioner/controller."),
+        click.option("--wifi-paf", "wifi_paf", is_flag=True, default=None,
+                     help="Device supports commissioning discovery over Wi-Fi PAF."),
+        click.option("--vendor-ota", "vendor_specific_ota", is_flag=True, default=None,
+                     help="Device supports a vendor-specific OTA mechanism."),
+        click.option("--model", "model_path", type=click.Path(exists=True),
+                     help="Data-model JSON to use instead of the packaged one for the version."),
+    ]
+    for opt in reversed(opts):
+        f = opt(f)
+    return f
+
+
+def _resolve_selection(selection_path, profile_path, spec_version, device_type,
+                       transport, role, wifi_paf, vendor_specific_ota, model_path):
+    """A Selection + its DataModel from either a selection doc, a profile, or flags."""
+    if selection_path:
+        selection = load_selection(selection_path)
+    else:
+        profile = load_profile(
+            profile_path,
+            spec_version=spec_version,
+            device_type=device_type,
+            transport=list(transport) or None,
+            role=role,
+            wifi_paf=wifi_paf,
+            vendor_specific_ota=vendor_specific_ota,
+        )
+        selection = Selection.from_profile(profile)
+    model = (loader.load(model_path) if model_path
+             else loader.load_version(selection.profile.spec_version))
+    return selection, model
+
+
+def _generate_pics(selection: Selection, model, output: str):
+    """Run the engines for a selection and write per-endpoint PICS XML."""
+    enabled = build_endpoints_enabled(model, selection)
+    return write_pics(selection.profile.spec_version, enabled, output)
+
+
+def _echo_selection(selection: Selection) -> None:
+    p = selection.profile
+    click.echo(f"Spec        : {p.spec_version}   transport={', '.join(p.transport)}   role={p.role}")
+    for epid, ep in enumerate(selection.endpoints, start=1):
+        line = f"  endpoint{epid}: {' + '.join(ep.device_types)}"
+        if ep.claims:
+            line += f"   claims: {', '.join(ep.claims)}"
+        click.echo(line)
+    if selection.mcore_claims:
+        click.echo(f"  mcore claims: {', '.join(selection.mcore_claims)}")
+
+
+def _echo_snippet(result) -> None:
+    """Print the data-model construction code to paste into app_main.cpp."""
+    click.echo("// paste into app_main() (esp_matter namespaces in scope)")
+    click.echo(result.snippet.rstrip("\n"))
+
+
 @main.command("gen-pics")
-@click.option("--profile", "profile_path", type=click.Path(exists=True),
-              help="Path to a device-profile.(yaml|json).")
-@click.option("--spec-version", help="Override profile spec_version (e.g. 1.6).")
-@click.option("--device-type", help="Override profile device_type (name).")
-@click.option("--transport", multiple=True,
-              help="Override transport (repeatable): wifi_2g/wifi_5g/thread/ethernet.")
-@click.option("--role", help="Override role: commissionee/commissioner/controller.")
-@click.option("--node-device-type", "node_device_types", multiple=True,
-              help="Extra node-level device type (repeatable), e.g. 'OTA Requestor', 'Aggregator'.")
-@click.option("--wifi-paf", "wifi_paf", is_flag=True, default=None,
-              help="Device supports commissioning discovery over Wi-Fi PAF.")
-@click.option("--vendor-ota", "vendor_specific_ota", is_flag=True, default=None,
-              help="Device supports a vendor-specific OTA mechanism.")
-@click.option("--model", "model_path", type=click.Path(exists=True),
-              help="Data-model JSON to use instead of the packaged one for the version.")
+@_selection_options
 @click.option("-o", "--output", default="pics_out", show_default=True,
               help="Output directory.")
-def gen_pics(profile_path, spec_version, device_type, transport, role,
-             node_device_types, wifi_paf, vendor_specific_ota, model_path, output):
-    """Generate per-endpoint PICS XML for a device profile."""
-    profile = load_profile(
-        profile_path,
-        spec_version=spec_version,
-        device_type=device_type,
-        transport=list(transport) or None,
-        role=role,
-        node_device_types=list(node_device_types) or None,
-        wifi_paf=wifi_paf,
-        vendor_specific_ota=vendor_specific_ota,
-    )
+def gen_pics(selection_path, profile_path, spec_version, device_type, transport,
+             role, wifi_paf, vendor_specific_ota, model_path, output):
+    """Generate per-endpoint PICS XML for a selection / device profile."""
+    selection, model = _resolve_selection(
+        selection_path, profile_path, spec_version, device_type, transport, role,
+        wifi_paf, vendor_specific_ota, model_path)
 
-    model = loader.load(model_path) if model_path else loader.load_version(profile.spec_version)
+    summary = _generate_pics(selection, model, output)
 
-    cluster_endpoints = generate_cluster_pics(model, profile)
-    cluster_ids = all_enabled_cluster_ids(cluster_endpoints)
-    mcore = compute_mcore_pics(profile, profile.spec_version, cluster_ids)
-
-    # Only template-backed codes are claimable (e.g. OTA clusters have no
-    # per-element grid -- their test plan runs off MCORE.OTA/BDX instead).
-    known = known_item_numbers(profile.spec_version)
-    endpoints_enabled = {ep.endpoint: set(ep.pics) & known for ep in cluster_endpoints}
-    endpoints_enabled.setdefault(0, set()).update(mcore)  # MCORE lives on endpoint 0
-
-    summary = write_pics(profile.spec_version, endpoints_enabled, output)
-
-    click.echo(f"Device type : {profile.device_type}  (spec {profile.spec_version})")
-    click.echo(f"Transport   : {', '.join(profile.transport)}  role={profile.role}")
-    for ep in sorted(endpoints_enabled):
-        click.echo(f"  endpoint{ep}: {len(endpoints_enabled[ep])} PICS codes enabled")
+    _echo_selection(selection)
     click.echo(f"Wrote {len(summary.files)} files ({summary.supported} supported items) to {output}/")
     if summary.pixits:
         click.echo(f"Note: {summary.pixits} PIXIT values need manual entry -- see PIXIT_CHECKLIST.md")
+
+
+@main.command("gen-scaffold")
+@_selection_options
+@click.option("-o", "--output", default=None,
+              help="Optional: also write the snippet to <dir>/app_data_model.cpp.")
+@click.option("--pics-output", default="pics_out", show_default=True,
+              help="Directory for the intermediate PICS XML.")
+def gen_scaffold(selection_path, profile_path, spec_version, device_type, transport,
+                 role, wifi_paf, vendor_specific_ota, model_path, output, pics_output):
+    """Generate the esp-matter data-model construction code from a selection.
+
+    Prints the ``node::create`` / ``endpoint::<device_type>::create`` block to
+    paste into app_main.cpp -- the construction the user would otherwise
+    hand-write. One run, inputs given once.
+    """
+    selection, model = _resolve_selection(
+        selection_path, profile_path, spec_version, device_type, transport, role,
+        wifi_paf, vendor_specific_ota, model_path)
+
+    _generate_pics(selection, model, pics_output)
+    result = generate_scaffold(selection, model, output)
+
+    _echo_snippet(result)
+    if result.file:
+        click.echo(f"\n// also written to: {result.file}")
 
 
 if __name__ == "__main__":

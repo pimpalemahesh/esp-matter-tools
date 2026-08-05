@@ -76,16 +76,100 @@ list the device types the node implements in `node_device_types` (e.g.
 both the cluster PICS and the node-level `MCORE.OTA.*` / `MCORE.BRIDGE.*` (and the
 BDX roles) from a single source of truth. ICD/SIT-LIT is deferred (feature-dependent).
 
+## Selection document (multiple endpoints + optional claims)
+
+For products with **more than one application endpoint**, or to **enable optional
+things** (features, cluster sides, MCORE items) from the CLI the same way the web
+UI does, pass a canonical **selection** document with `--selection`. It is the
+single source of truth both the CLI and (later) the UI drive, so identical input
+gives identical output, deterministically.
+
+```bash
+python3 cli.py gen-pics --selection selection.yaml -o pics_out
+python3 cli.py gen-scaffold --selection selection.yaml
+```
+
+```yaml
+# selection.yaml
+spec_version: "1.6"
+role: commissionee
+transport: [wifi_2g]
+mcore_claims: ["MCORE.DD.NFC"]          # optional node-level (endpoint 0) atoms
+endpoints:                              # application endpoints, EP1..EPN in order
+  - device_types: ["Extended Color Light"]
+    claims: ["OO.S.F02"]                # optional PICS codes enabled ON THIS endpoint
+  - device_types: ["On/Off Light", "Occupancy Sensor"]   # composed device types on one EP
+```
+
+- Each endpoint has a **list** of device types (composed device types) and its own
+  optional **claims**. A claim is a PICS code the product supports: a feature
+  (`OO.S.F02`), a cluster side (`OO.C`), or an `MCORE.*` atom. Claims scope
+  per-endpoint, so a claim on EP1 never leaks to the same cluster on EP2.
+- The plain `--profile` / flag form is the single-endpoint shorthand (a top-level
+  `device_type` == one application endpoint on EP1).
+
 ## Output
 
 ```
 pics_out/
   endpoint0/   Base.xml + Root Node cluster PICS (Basic Info, ACL, CNET, ...)
   endpoint1/   application device-type cluster PICS (On/Off, Identify, ...)
+  endpoint2/   ... one folder per application endpoint (selection document)
 ```
 
 Each file is the maintained template with `<support>` set to `true` for the
 enabled items.
+
+## Generate the esp-matter data-model code
+
+`gen-scaffold` takes the same profile inputs as `gen-pics` and prints the
+esp-matter **data-model construction code** for that selection — the
+`node::create` / `endpoint::<device_type>::create` block a developer would
+otherwise hand-write in `app_main.cpp`. It is derived from the PICS, since the
+device type / clusters / features were already chosen when the PICS was
+generated. Paste it straight into `app_main()`.
+
+```bash
+python3 cli.py gen-scaffold \
+    --spec-version 1.6 --device-type "Extended Color Light" \
+    --transport wifi_2g --role commissionee
+```
+
+prints:
+
+```cpp
+    /* Create a Matter node with the Root Node device type on endpoint 0. */
+    node::config_t node_config;
+    node_t *node = node::create(&node_config, app_attribute_update_cb, app_identification_cb);
+    ABORT_APP_ON_FAILURE(node != nullptr, ESP_LOGE(TAG, "Failed to create Matter node"));
+
+    /* Endpoint 1: Extended Color Light (default config; set attribute defaults as needed). */
+    extended_color_light::config_t extended_color_light_config_1;
+    endpoint_t *endpoint_1 = extended_color_light::create(node, &extended_color_light_config_1, ENDPOINT_FLAG_NONE, priv_data);
+    ABORT_APP_ON_FAILURE(endpoint_1 != nullptr, ESP_LOGE(TAG, "Failed to create Extended Color Light endpoint"));
+
+    uint16_t endpoint_id = endpoint::get_id(endpoint_1);
+```
+
+With `--selection` it emits **one `endpoint::<type>::create` per application
+endpoint**, adds composed device types with `endpoint::<type>::add(...)`, and
+surfaces optional feature/side claims as precise `// TODO` guidance (the exact
+`cluster::<x>::feature::<y>::add(...)` call) — whether a feature's `add()` takes a
+config is esp-matter-specific, so it is named rather than guessed.
+
+Drivers, callbacks, and attribute *values* stay hand-written (PICS declares which
+elements exist, not their default values, so the code uses library defaults;
+adapt `priv_data` to your driver handle). Options:
+
+- `-o/--output` — optional: also write the snippet to `<dir>/app_data_model.cpp`.
+- `--pics-output` — where the intermediate PICS XML is written (default: `pics_out`).
+
+No esp-matter checkout is needed to generate; the code only depends on esp-matter
+at compile time (`node::create` / `endpoint::<type>::create` are provided by the
+esp_matter component in either the legacy or the generated data model). Currently
+supports one application device type per node (Root Node on endpoint 0 + the
+device type on endpoint 1), default config values; server clusters the PICS
+enables beyond the device-type baseline are reported (not yet generated).
 
 ## CSA PICS Validator notes
 
