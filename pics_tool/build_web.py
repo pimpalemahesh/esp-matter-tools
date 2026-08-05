@@ -26,24 +26,29 @@ Run from the pics_tool directory:  python3 build_web.py
 
 from __future__ import annotations
 
+import json
+import re
 import zipfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent           # .../pics_tool
+DM_PKG = ROOT / "esp-matter-datamodel" / "esp_matter_datamodel"
+PICS_PKG = ROOT / "pics_tool"
 
 # (source package directory, arcname root inside the zip). esp_matter_datamodel
 # is vendored inside pics_tool (pics_tool/esp-matter-datamodel) but stays a
 # standalone package so it can be decoupled later.
-PACKAGES = [
-    (ROOT / "esp-matter-datamodel" / "esp_matter_datamodel", "esp_matter_datamodel"),
-    (ROOT / "pics_tool", "pics_tool"),
-]
+PACKAGES = [(DM_PKG, "esp_matter_datamodel"), (PICS_PKG, "pics_tool")]
 # Only ship what the engine needs at runtime.
 KEEP_SUFFIXES = {".py", ".json", ".xml", ".yaml", ".yml"}
 SKIP_DIR_PARTS = {"__pycache__", "tests", ".pytest_cache"}
 
 OUT_DIR = ROOT / "ui" / "web_bundle"
-OUT_ZIP = OUT_DIR / "pics_bundle.zip"
+CORE_ZIP = OUT_DIR / "pics_bundle.zip"          # engine only (no per-version data)
+DATA_DIR = OUT_DIR / "data"                     # per-version data zips, fetched on demand
+MANIFEST = OUT_DIR / "versions.json"
+
+_DATAMODEL_RE = re.compile(r"datamodel_(.+)\.json$")
 
 
 def _included(path: Path) -> bool:
@@ -52,19 +57,61 @@ def _included(path: Path) -> bool:
     return not any(part in SKIP_DIR_PARTS for part in path.parts)
 
 
+def _is_version_data(rel: Path) -> bool:
+    """Per-version payload split out of the core bundle: cluster templates
+    (pics_tool/templates/<v>/*) and the datamodel JSONs (esp_matter_datamodel/
+    datamodels/datamodel_<v>.json). These are lazy-loaded, not in core."""
+    parts = rel.parts
+    return "templates" in parts or "datamodels" in parts
+
+
+def _versions() -> list[str]:
+    """Versions that have BOTH a template dir and a datamodel JSON."""
+    tmpl = {p.name for p in (PICS_PKG / "templates").iterdir() if p.is_dir()} \
+        if (PICS_PKG / "templates").is_dir() else set()
+    models = {m.group(1) for p in (DM_PKG / "datamodels").glob("*.json")
+              if (m := _DATAMODEL_RE.search(p.name))}
+    return sorted(tmpl & models)
+
+
 def build() -> None:
     OUT_DIR.mkdir(parents=True, exist_ok=True)
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+    for old in DATA_DIR.glob("*.zip"):
+        old.unlink()
+
+    # 1) Core bundle: all engine code + config, but NOT the per-version data.
     n = 0
-    with zipfile.ZipFile(OUT_ZIP, "w", zipfile.ZIP_DEFLATED, compresslevel=9) as zf:
+    with zipfile.ZipFile(CORE_ZIP, "w", zipfile.ZIP_DEFLATED, compresslevel=9) as zf:
         for src_dir, arc_root in PACKAGES:
             if not src_dir.is_dir():
                 raise SystemExit(f"error: package dir not found: {src_dir}")
             for path in sorted(src_dir.rglob("*")):
-                if path.is_file() and _included(path):
-                    zf.write(path, f"{arc_root}/{path.relative_to(src_dir)}")
+                rel = path.relative_to(src_dir)
+                if path.is_file() and _included(path) and not _is_version_data(rel):
+                    zf.write(path, f"{arc_root}/{rel}")
                     n += 1
-    size_kb = OUT_ZIP.stat().st_size // 1024
-    print(f"Bundled {n} files -> {OUT_ZIP.relative_to(ROOT)} ({size_kb} KB)")
+    core_kb = CORE_ZIP.stat().st_size // 1024
+
+    # 2) One data zip per version: its templates + its datamodel JSON, arced to
+    #    the same package paths so unpacking into /bundle drops them in place.
+    versions = _versions()
+    for v in versions:
+        with zipfile.ZipFile(DATA_DIR / f"{v}.zip", "w", zipfile.ZIP_DEFLATED, compresslevel=9) as zf:
+            for path in sorted((PICS_PKG / "templates" / v).rglob("*")):
+                if path.is_file() and _included(path):
+                    zf.write(path, f"pics_tool/templates/{v}/{path.relative_to(PICS_PKG / 'templates' / v)}")
+            dm = DM_PKG / "datamodels" / f"datamodel_{v}.json"
+            zf.write(dm, f"esp_matter_datamodel/datamodels/datamodel_{v}.json")
+
+    # 3) Manifest so the web app can list versions without fetching any data.
+    MANIFEST.write_text(json.dumps({"versions": versions}), encoding="utf-8")
+
+    print(f"Core bundle: {n} files -> {CORE_ZIP.relative_to(ROOT)} ({core_kb} KB)")
+    for v in versions:
+        kb = (DATA_DIR / f"{v}.zip").stat().st_size // 1024
+        print(f"  data/{v}.zip ({kb} KB)")
+    print(f"Manifest: {MANIFEST.relative_to(ROOT)} -> {versions}")
 
 
 if __name__ == "__main__":

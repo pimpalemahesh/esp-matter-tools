@@ -23,3 +23,17 @@ _HERE = Path(__file__).resolve().parent
 for _path in (_HERE, _HERE / "esp-matter-datamodel"):
     if str(_path) not in sys.path:
         sys.path.insert(0, str(_path))
+
+_DATAMODELS = _HERE / "esp-matter-datamodel" / "esp_matter_datamodel" / "datamodels"
+
+
+def pytest_collection_modifyitems(config, items):
+    """The datamodel JSONs are generated (not tracked); most tests need them.
+    If they're absent, skip with a clear pointer instead of a cryptic error."""
+    if any(_DATAMODELS.glob("datamodel_*.json")):
+        return
+    import pytest
+    skip = pytest.mark.skip(reason="Data models not built -- run ./build_tool.sh "
+                            "(or set MATTER_SDK_PATH to a connectedhomeip checkout) first.")
+    for item in items:
+        item.add_marker(skip)

@@ -228,15 +228,19 @@ async function init() {
   pyodide.runPython("import sys\nif '/bundle' not in sys.path: sys.path.insert(0, '/bundle')");
   webapp = pyodide.pyimport("pics_tool.webapp");
 
-  // spec versions: whatever this build ships data for (newest preselected)
-  const versions = JSON.parse(webapp.list_versions_json());
+  // Spec versions come from the manifest (no per-version data fetched yet) --
+  // each version's templates + datamodel are lazy-loaded on selection.
+  const { versions } = await (await fetch(BASE + "web_bundle/versions.json")).json();
   const vsel = $("specVersion");
   versions.forEach((v) => vsel.add(new Option(`Matter ${v}`, v)));
   const session = loadSession();
   const savedV = session && session.profile && session.profile.spec_version;
   vsel.value = versions.includes(savedV) ? savedV : versions[versions.length - 1];
+  await ensureVersion(vsel.value, status);
   loadDeviceTypes(vsel.value);
-  vsel.addEventListener("change", () => { loadDeviceTypes(vsel.value); markDirty(); });
+  vsel.addEventListener("change", async () => {
+    await ensureVersion(vsel.value); loadDeviceTypes(vsel.value); markDirty();
+  });
 
   if (session && session.profile) applyProfileToForm(session.profile);
   else setEndpoints([]);
@@ -249,6 +253,16 @@ async function init() {
     generate(session, true);
 }
 
+// Lazy-load a version's data (templates + datamodel) into the Pyodide FS once.
+const loadedVersions = new Set();
+async function ensureVersion(v, status) {
+  if (!v || loadedVersions.has(v)) return;
+  if (status) status.textContent = `Loading Matter ${v} data...`;
+  const buf = await (await fetch(BASE + `web_bundle/data/${v}.zip`)).arrayBuffer();
+  pyodide.unpackArchive(buf, "zip", { extractDir: "/bundle" });
+  loadedVersions.add(v);
+}
+
 // ---- generate (runs automatically on every profile / claim change) ----
 let genTimer = null;
 function scheduleGenerate() {
@@ -256,7 +270,7 @@ function scheduleGenerate() {
   genTimer = setTimeout(() => generate(), 250);
 }
 
-function generate(session, announce) {
+async function generate(session, announce) {
   const profile = readProfile();
   const errs = validateProfile(profile);
   if (errs.length) {
@@ -267,6 +281,7 @@ function generate(session, announce) {
     refreshValidity();
     return;
   }
+  await ensureVersion(profile.spec_version);   // safety: data present before the engine runs
   // first run: full spinner; later runs: dim the results while updating in place
   if (!payload) {
     $("resultArea").innerHTML = `<div class="loading"><div class="spinner"></div><div>Running the engine...</div></div>`;

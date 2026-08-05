@@ -1,6 +1,10 @@
 # Generated Pyodide bundle (rebuilt by build_tool.sh / build_web.py and in CI)
 ui/web_bundle/
 
+# Generated data models -- derived from connectedhomeip data_model/ by
+# build_tool.sh (run it once before dev/tests); not tracked in git.
+esp-matter-datamodel/esp_matter_datamodel/datamodels/*.json
+
 # Python
 __pycache__/
 *.pyc

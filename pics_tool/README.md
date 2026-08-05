@@ -36,14 +36,26 @@ owns all PICS-specific logic.
 
 ## Setup
 
-Nothing is pip-installed — like `dm_diff_tool`, the tool runs straight from the
-repo checkout (`esp_matter_datamodel` is picked up from the bundled
-`esp-matter-datamodel/` directory automatically). Only the third-party
-dependencies are needed:
+The tool runs straight from the repo checkout — no pip install of the packages
+themselves (`esp_matter_datamodel` is picked up from the bundled
+`esp-matter-datamodel/` directory automatically). Two steps:
 
 ```bash
+# 1. third-party dependencies
 pip install -r requirements.txt
+
+# 2. build the per-version data models ONCE (derived from connectedhomeip's
+#    data_model/ and NOT tracked in git). Run this before the first pytest /
+#    serve.py / gen-pics. It clones connectedhomeip (shallow, data_model only)
+#    or reuses an existing checkout, then generates datamodel_<version>.json.
+./build_tool.sh
+#    …or point it at a checkout you already have:
+MATTER_SDK_PATH=/path/to/connectedhomeip ./build_tool.sh
 ```
+
+`build_tool.sh` is idempotent — once the JSONs exist it regenerates nothing and
+needs no checkout. The **PICS templates** (`pics_tool/templates/<version>/`) are
+committed in the repo; only the derived data-model JSONs are generated.
 
 ## Usage
 
@@ -211,7 +223,8 @@ Expect a handful of *warnings*, which are by design:
 
 ```bash
 pip install -r requirements.txt pytest
-python3 -m pytest    # no install needed; conftest.py wires up the in-repo packages
+./build_tool.sh      # generate the data models first (see Setup); tests skip without them
+python3 -m pytest    # conftest.py wires up the in-repo packages
 # regenerate golden snapshots after an intended output change:
 python3 tools/update_golden.py
 ```

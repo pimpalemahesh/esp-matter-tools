@@ -57,6 +57,47 @@ done
 
 cd "$SCRIPT_DIR"
 
+# --- Ensure the per-version datamodel JSONs exist -------------------------------
+# They are DERIVED from connectedhomeip's data_model/ and are NOT tracked in git.
+# Generate any that are missing from a Matter SDK checkout ($MATTER_SDK_PATH) or a
+# shallow clone. Idempotent: does nothing (and needs no checkout) once built.
+DM_DIR="esp-matter-datamodel/esp_matter_datamodel/datamodels"
+TPL_DIR="pics_tool/templates"
+CHIP_CLONE_DIR="/tmp/connectedhomeip-pics"
+DID_CLONE=false
+cleanup() { [ "$DID_CLONE" = true ] && rm -rf "$CHIP_CLONE_DIR"; }
+trap cleanup EXIT
+
+versions=""
+for d in "$TPL_DIR"/*/; do [ -d "$d" ] && versions="$versions $(basename "$d")"; done
+
+missing=""
+for v in $versions; do
+  [ -f "$DM_DIR/datamodel_$v.json" ] || missing="$missing $v"
+done
+
+if [ -n "${missing// }" ]; then
+  CHIP="${MATTER_SDK_PATH:-$CHIP_CLONE_DIR}"
+  if [ ! -d "$CHIP/data_model" ]; then
+    if [ -n "${MATTER_SDK_PATH:-}" ]; then
+      echo "error: MATTER_SDK_PATH=$MATTER_SDK_PATH has no data_model/ directory" >&2
+      exit 1
+    fi
+    echo "Datamodels missing (${missing# }); cloning connectedhomeip data_model ..."
+    git clone --depth 1 --filter=blob:none --sparse \
+      https://github.com/project-chip/connectedhomeip "$CHIP_CLONE_DIR"
+    git -C "$CHIP_CLONE_DIR" sparse-checkout set data_model
+    DID_CLONE=true
+  fi
+  mkdir -p "$DM_DIR"
+  for v in $missing; do
+    echo "Building datamodel_$v.json ..."
+    PYTHONPATH="esp-matter-datamodel" python3 -m esp_matter_datamodel.cli.main build-model \
+      --data-model-dir "$CHIP/data_model" --version "$v" \
+      --output "$DM_DIR/datamodel_$v.json"
+  done
+fi
+
 echo "Building PICS engine bundle..."
 python3 build_web.py
 
