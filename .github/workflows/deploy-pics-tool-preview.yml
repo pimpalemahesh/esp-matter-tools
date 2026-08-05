@@ -1,0 +1,57 @@
+# SPDX-FileCopyrightText: 2024-2026 Espressif Systems (Shanghai) CO LTD
+# SPDX-License-Identifier: Apache-2.0
+
+# Branch preview: deploy ONLY the PICS Generator to GitHub Pages from the
+# test/feat/pics-tool branch. Publishes pics_tool/ui at the Pages root so the
+# site IS the tool. NOTE: GitHub Pages has a single site per repo, so a run of
+# this workflow replaces whatever is currently live (including main's deploy)
+# until the next deploy from main. It is intended for previewing this branch.
+
+name: Deploy PICS tool (branch preview)
+
+on:
+  push:
+    branches: [test/feat/pics-tool]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Share the "pages" group with the production deploy so the two never publish
+# to the single Pages site at the same time.
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Build PICS tool Pyodide bundle
+        run: bash pics_tool/build_tool.sh
+
+      - name: Prepare Pages content (PICS tool at root)
+        run: |
+          mkdir public
+          cp -r pics_tool/ui/* public/
+
+      - name: Upload GitHub Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: public
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
