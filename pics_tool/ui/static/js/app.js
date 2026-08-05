@@ -241,9 +241,11 @@ async function init() {
   else setEndpoints([]);
 
   $("initOverlay").style.display = "none";
+  setStepsEnabled(false);
   refreshValidity();
-  // Restore a prior session's results; a fresh visit waits for Generate.
-  if (session && session.profile && validateProfile(readProfile()).length === 0) generate(session);
+  // Restore a prior session straight to Review; a fresh visit starts on Describe.
+  if (session && session.profile && validateProfile(readProfile()).length === 0)
+    generate(session, true);
 }
 
 // ---- generate (runs automatically on every profile / claim change) ----
@@ -258,8 +260,7 @@ function generate(session, announce) {
   const errs = validateProfile(profile);
   if (errs.length) {
     payload = null;
-    $("exportBtn").disabled = true;
-    $("reviewActions").hidden = true;
+    setStepsEnabled(false);
     $("resultArea").innerHTML =
       `<div class="empty-state">${errs.map((e) => esc(e)).join("<br>")}</div>`;
     refreshValidity();
@@ -305,132 +306,180 @@ function runGenerate(profile, keepAnswers, keepTouched, announce) {
       touched.add(k);
     }
   });
-  const y = window.scrollY;   // full re-render: keep the user's place
   render();
-  window.scrollTo(0, y);
-  $("exportBtn").disabled = false;
-  $("reviewActions").hidden = false;   // review-step actions appear once generated
+  setStepsEnabled(true);   // Review / Export steps become reachable
   dirty = false;
   saveSession();
   refreshValidity();
-  if (announce) {   // explicit Generate click: confirm + move to the review step
-    const st = $("genStatus");
-    if (st) { st.textContent = "✓ Generated — review the answers below."; st.className = "gen-status ok"; }
-    $("resultArea").scrollIntoView({ behavior: "smooth", block: "start" });
-  }
+  if (announce) showView("review");   // Generate (or a restored session) -> Review screen
 }
 
-// ---- render ----
-// The shell (tabs, stat bar, view switch, empty table) is built once per engine
-// run; the row body holds ONLY the active tab's rows and is rebuilt on tab
-// switch. This keeps the DOM to a single endpoint's rows instead of all of them.
+// ---- render (endpoint rail + plain-language rows) ----
+// The shell (summary, stats, rail, panel) is built per engine run; the row body
+// holds ONLY the active section's rows and is rebuilt on section switch.
+const VIEWS = ["describe", "review", "export"];
+function markStep(step) {
+  const idx = VIEWS.indexOf(step);
+  document.querySelectorAll("#stepper .rv-step").forEach((b) => {
+    b.setAttribute("aria-current", String(b.dataset.step === step));
+    b.classList.toggle("done", VIEWS.indexOf(b.dataset.step) < idx);
+  });
+}
+// Review / Export are only reachable once a payload exists.
+function setStepsEnabled(on) {
+  document.querySelectorAll("#stepper .rv-step").forEach((b) => {
+    if (b.dataset.step !== "describe")
+      b.setAttribute("aria-disabled", String(!on));
+  });
+}
+// Show one wizard screen at a time (Describe / Review / Export).
+function showView(name) {
+  VIEWS.forEach((v) => { const el = $("view-" + v); if (el) el.hidden = v !== name; });
+  markStep(name);
+  if (name === "export") populateExport();
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+// Fill the Export screen recap: counts + the files that will be produced.
+function populateExport() {
+  if (!payload) return;
+  let yes = 0, no = 0, mine = 0;
+  payload.items.forEach((it) => {
+    if (answers[keyOf(it)] === "yes") yes++; else no++;
+    if (isChanged(it)) mine++;
+  });
+  $("exportStats").innerHTML =
+    `<div class="rv-stat on"><span class="v">${yes}</span><span class="l">Supported (Yes)</span></div>
+     <div class="rv-stat"><span class="v">${no}</span><span class="l">Not supported (No)</span></div>
+     <div class="rv-stat mine"><span class="v">${mine}</span><span class="l">Changed by you</span></div>`;
+  const eps = new Set();
+  payload.tabs.forEach((t) => eps.add(t.id === "base" ? "0" : t.id));   // base + EP0 share endpoint0
+  const files = [...eps].sort().map((e) => ({
+    f: `endpoint${e}/`,
+    d: e === "0" ? "Root Node + node-wide (Base)"
+                 : ((payload.tabs.find((t) => t.id === e) || {}).label || ""),
+  }));
+  files.push({ f: "PIXIT_CHECKLIST.md", d: "test-bed values to fill in the CSA tool" });
+  $("exportFiles").innerHTML = files.map((x) =>
+    `<li><span class="fi">${esc(x.f)}</span><small>${esc(x.d)}</small></li>`).join("");
+}
+
 function render() {
   const perTab = {};
   payload.items.forEach((it) => { perTab[it.tab] = (perTab[it.tab] || 0) + 1; });
   if (!payload.tabs.some((t) => t.id === tab)) tab = payload.tabs[0].id;
-  const tabHtml = payload.tabs.map((t) =>
-    `<button class="tab" data-tab="${esc(t.id)}" aria-pressed="${t.id === tab}">
-       <span class="tt">${esc(t.label)}<span class="tn">${perTab[t.id] || 0}</span></span>
-       <span class="tc">${esc(t.caption || "")}</span>
+  markStep("review");
+
+  const dts = (payload.profile.endpoints || [])
+    .map((ep) => (ep.device_types || [])[0]).filter(Boolean);
+  const rail = payload.tabs.map((t) =>
+    `<button data-tab="${esc(t.id)}" aria-current="${t.id === tab}">
+       <span class="epi">${esc(t.id === "base" ? "N" : t.id)}</span>
+       <span class="rt">${esc(t.label)}<small>${esc(t.caption || "")}</small></span>
+       <span class="cnt">${perTab[t.id] || 0}</span>
      </button>`).join("");
 
   $("resultArea").innerHTML = `
-    <div class="reviewhead">
-      <div class="card-title"><span class="stepno">2</span> Review the answers, then export</div>
-      <div class="reviewtools">
-        <label class="detailtoggle"><input type="checkbox" id="showDetails"> Show details</label>
-        <div class="searchwrap">
-          <input class="search" id="q" placeholder="Search questions or PICS codes"
-            aria-label="Search questions or PICS codes">
+    <div class="rv-summary">
+      <span class="sg"><span class="k">Device</span> <b>${dts.map(esc).join("</b> + <b>") || "—"}</b></span>
+      <span class="sg"><span class="k">Transport</span> ${(payload.profile.transport || []).map(esc).join(", ") || "—"}</span>
+      <span class="sg"><span class="k">Role</span> ${esc(payload.profile.role || "")}</span>
+      <button class="btn ghost edit" id="editInputs">Edit inputs</button>
+    </div>
+    <div class="rv-stats">
+      <div class="rv-stat on"><span class="v" id="t-yes">0</span><span class="l">Supported (Yes)</span></div>
+      <div class="rv-stat"><span class="v" id="t-no">0</span><span class="l">Not supported (No)</span></div>
+      <div class="rv-stat mine"><span class="v" id="t-mine">0</span><span class="l">Changed by you</span></div>
+    </div>
+    <div class="rv-review">
+      <nav class="rv-rail" id="rail"><div class="rg">Sections</div>${rail}</nav>
+      <div class="rv-panel" id="panel">
+        <div class="rv-ptop">
+          <h3 id="panelTitle"></h3><span style="flex:1"></span>
+          <div class="rv-seg" id="grpSeg">
+            <button data-g="decided" aria-pressed="${grp === "decided"}"><span class="sw" style="background:var(--on)"></span>Mandatory <span id="gc-decided"></span></button>
+            <button data-g="manual" aria-pressed="${grp === "manual"}"><span class="sw" style="background:var(--review)"></span>Optional <span id="gc-manual"></span></button>
+          </div>
+        </div>
+        <div class="rv-ptop" style="border-top:none">
+          <div class="rv-searchbox">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+            <input id="q" type="text" placeholder="Search questions or PICS codes" aria-label="Search">
+          </div>
+          <label class="rv-detail-t"><input type="checkbox" id="showDetails"> Show PICS codes</label>
+        </div>
+        <div id="tb"></div>
+        <div id="noMatchHint" class="rv-hint" hidden></div>
+        <div class="rv-footbar">
+          <span class="muted">Answers are saved as you go.</span>
+          <span style="flex:1"></span>
+          <button class="btn ghost" id="clearBtn">Clear my answers</button>
+          <button class="btn" id="toExport">Continue to Export →</button>
         </div>
       </div>
-    </div>
-    <div class="statbar">
-      <span class="stat on"><b id="t-yes">0</b> supported</span>
-      <span class="stat off"><b id="t-no">0</b> not supported</span>
-      <span class="stat mine"><b id="t-mine">0</b> changed by you</span>
-    </div>
-    <div class="tabs big">${tabHtml}</div>
-    <div class="viewswitch" id="grpSwitch">
-      <button class="chipf" data-g="decided" aria-pressed="${grp === "decided"}"><span class="sw" style="background:var(--on)"></span>Mandatory Items <span id="gc-decided"></span></button>
-      <button class="chipf" data-g="manual" aria-pressed="${grp === "manual"}"><span class="sw" style="background:var(--review)"></span>Optional Items <span id="gc-manual"></span></button>
-    </div>
-    <div class="tablewrap attached"><table id="tbl">
-      <thead><tr><th>Question</th><th class="answercol">Answer</th></tr></thead>
-      <tbody id="tb"></tbody>
-    </table></div>
-    <div id="noMatchHint" class="hint" hidden></div>`;
+    </div>`;
 
   $("q").value = searchQ;
   wireShell();
   renderRows();
 }
 
-// Build the row body for the ACTIVE tab only (both groups; the view switch hides
-// the inactive one). Questions are grouped under their cluster with a stable
-// accent so long tables stay scannable.
+// Row body for the ACTIVE section only (both groups; the view switch hides one).
 function renderRows() {
+  const t = payload.tabs.find((x) => x.id === tab);
+  $("panelTitle").textContent = t ? t.label : "";
   const clColor = {};
   let ci = 0;
   const colorOf = (cl) => (clColor[cl] ??= CLUSTER_PALETTE[ci++ % CLUSTER_PALETTE.length]);
 
-  const rowsHtml = [];
+  const html = [];
   ["decided", "manual"].forEach((g) => {
     const members = payload.items
       .map((it, i) => ({ it, i }))
       .filter(({ it }) => it.tab === tab && it.group === g);
-    const clusters = [];
+    const order = [];
     const byCl = new Map();
     members.forEach((m) => {
-      if (!byCl.has(m.it.cluster)) { byCl.set(m.it.cluster, []); clusters.push(m.it.cluster); }
+      if (!byCl.has(m.it.cluster)) { byCl.set(m.it.cluster, []); order.push(m.it.cluster); }
       byCl.get(m.it.cluster).push(m);
     });
-    clusters.forEach((cl) => {
+    order.forEach((cl) => {
       const rows = byCl.get(cl);
       const key = `${tab}|${g}|${cl}`;
       const color = colorOf(cl);
-      rowsHtml.push(`<tr class="clhdr" data-key="${esc(key)}">
-        <td colspan="2"><span class="cldot" style="background:${color}"></span>${esc(cl)}
-        <span class="clcount">${rows.length}</span></td></tr>`);
+      html.push(`<div class="rv-clhead" data-key="${esc(key)}">
+        <span class="rv-cldot" style="background:${color}"></span>${esc(cl)}<span class="cc">${rows.length}</span></div>`);
       rows.forEach(({ it, i }) => {
         const a = answers[keyOf(it)];
-        // Server/Client side from the PICS code: the CSA templates reuse the
-        // SAME question text for both sides (CNET.S.F01 vs CNET.C.F01), so
-        // without this badge the two look like duplicates.
         const roleTok = it.code.startsWith("MCORE.") ? "" : it.code.split(".")[1];
         const side = roleTok === "S" ? "server" : roleTok === "C" ? "client" : "";
-        const badge = side
-          ? `<span class="sidebadge ${side}">${side === "server" ? "Server" : "Client"}</span>` : "";
-        rowsHtml.push(`<tr data-i="${i}" data-tab="${esc(it.tab)}" data-group="${esc(it.group)}"
-            data-key="${esc(key)}" style="--clc:${color}"
-            class="${it.parent ? "childrow" : ""} ${isChanged(it) ? "changed" : ""}"
+        const badge = side ? `<span class="rv-side ${side}">${side === "server" ? "Server" : "Client"}</span>` : "";
+        html.push(`<div class="rv-qrow ${it.parent ? "child" : ""} ${isChanged(it) ? "changed" : ""}"
+            data-i="${i}" data-tab="${esc(it.tab)}" data-group="${esc(it.group)}" data-key="${esc(key)}"
             data-code="${esc(it.code).toLowerCase()}" data-q="${esc((it.question || it.code)).toLowerCase()}">
-          <td class="qcell">
-            <div class="qtext">${esc(it.question || it.code)}${badge}</div>
-            <div class="qmeta"><span class="code">${esc(it.code)}</span><span class="conf">${esc(it.conformance)}</span></div>
-          </td>
-          <td class="answercol">
-            <div class="yn" data-k="${esc(keyOf(it))}" data-code="${esc(it.code)}">
-              <button class="yn-btn yes ${a === "yes" ? "act" : ""}" data-a="yes" aria-label="Yes: ${esc(it.code)}">Yes</button>
-              <button class="yn-btn no ${a === "no" ? "act" : ""}" data-a="no" aria-label="No: ${esc(it.code)}">No</button>
-            </div>
-          </td></tr>`);
+          <div class="rv-qmain">
+            <div class="rv-qtext">${esc(it.question || it.code)}${badge}</div>
+            <div class="rv-why">${esc(it.why || "")}</div>
+            <div class="rv-meta"><span class="code">${esc(it.code)}</span><span>${esc(it.conformance)}</span></div>
+          </div>
+          <div class="rv-yn" data-k="${esc(keyOf(it))}" data-code="${esc(it.code)}">
+            <button class="yes ${a === "yes" ? "act" : ""}" data-a="yes" aria-label="Yes: ${esc(it.code)}">Yes</button>
+            <button class="no ${a === "no" ? "act" : ""}" data-a="no" aria-label="No: ${esc(it.code)}">No</button>
+          </div></div>`);
       });
     });
   });
-  $("tb").innerHTML = rowsHtml.join("");
+  $("tb").innerHTML = html.join("");
   wireRows();
   applyFilter();
 }
 
-// wire the shell controls (tabs, search, view switch, details) -- once per render
+// wire the shell controls (rail, view switch, search, details, edit) -- per render
 function wireShell() {
-  const RA = $("resultArea");
-  RA.querySelectorAll(".tab").forEach((t) =>
-    t.addEventListener("click", () => {
-      tab = t.dataset.tab;
-      RA.querySelectorAll(".tab").forEach((x) => x.setAttribute("aria-pressed", String(x === t)));
-      renderRows();   // rebuild the body for the newly active endpoint
+  $("rail").querySelectorAll("button").forEach((b) =>
+    b.addEventListener("click", () => {
+      tab = b.dataset.tab;
+      $("rail").querySelectorAll("button").forEach((x) => x.setAttribute("aria-current", String(x === b)));
+      renderRows();
     }));
   let qTimer = null;
   $("q").addEventListener("input", (e) => {
@@ -438,31 +487,35 @@ function wireShell() {
     clearTimeout(qTimer);
     qTimer = setTimeout(applyFilter, 150);   // debounce: don't scan on every keystroke
   });
-  $("grpSwitch").querySelectorAll(".chipf").forEach((b) =>
+  $("grpSeg").querySelectorAll("button").forEach((b) =>
     b.addEventListener("click", () => {
       grp = b.dataset.g;
-      $("grpSwitch").querySelectorAll(".chipf").forEach((x) =>
-        x.setAttribute("aria-pressed", String(x === b)));
+      $("grpSeg").querySelectorAll("button").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
       applyFilter();
     }));
-  $("showDetails").addEventListener("change", (e) => $("tbl").classList.toggle("show-details", e.target.checked));
+  $("showDetails").addEventListener("change", (e) => $("panel").classList.toggle("show-details", e.target.checked));
+  const edit = $("editInputs");
+  if (edit) edit.addEventListener("click", () => showView("describe"));
+  const clear = $("clearBtn");
+  if (clear) clear.addEventListener("click", resetAll);
+  const toExport = $("toExport");
+  if (toExport) toExport.addEventListener("click", () => showView("export"));
 }
 
 // wire the Yes/No toggles for the currently rendered rows
 function wireRows() {
-  $("tb").querySelectorAll(".yn").forEach((yn) => {
+  $("tb").querySelectorAll(".rv-yn").forEach((yn) => {
     const k = yn.dataset.k;             // "tab|code"
     const code = yn.dataset.code;       // bare code (for claim regex / child match)
-    const btns = [...yn.querySelectorAll(".yn-btn")];
+    const btns = [...yn.querySelectorAll("button")];
     btns.forEach((b) => b.addEventListener("click", () => {
       answers[k] = b.dataset.a;
       touched.add(k);
       btns.forEach((x) => x.classList.toggle("act", x === b));
-      const tr = yn.closest("tr");
-      tr.classList.toggle("changed", isChanged(payload.items[+tr.dataset.i]));
+      const row = yn.closest(".rv-qrow");
+      row.classList.toggle("changed", isChanged(payload.items[+row.dataset.i]));
       // Un-claiming a parent (gateway X.C -> No, or a feature -> No) withdraws
-      // everything revealed under it, ON THE SAME endpoint: drop manual
-      // overrides on its children so nothing hidden leaks into the export.
+      // everything revealed under it, ON THE SAME endpoint.
       if (answers[k] === "no") {
         const [t] = splitKey(k);
         payload.items.forEach((it) => {
@@ -476,7 +529,6 @@ function wireRows() {
       }
       recount();
       saveSession();
-      // claims (features, gateways, Base atoms) have spec consequences -> re-derive
       if (FEATURE_RE.test(code) || GATEWAY_RE.test(code) || code.startsWith("MCORE.")) scheduleGenerate();
       else applyFilter();
     }));
@@ -484,9 +536,7 @@ function wireRows() {
   recount();
 }
 
-// Nested gateway model: an item with a parent (client sub-item under X.C,
-// feature-dependent item under X.S.Fxx) is only shown while the parent is Yes.
-// Anything currently answered Yes is always visible -- nothing enabled hides.
+// Nested gateway model: a child item is only shown while its parent is Yes.
 // Parent lookup is scoped to the item's own endpoint tab.
 function isApplicable(it) {
   if (!it.parent) return true;
@@ -496,9 +546,7 @@ function isApplicable(it) {
 
 function applyFilter() {
   const q = searchQ.toLowerCase();
-  // cross-scope search-hit counts computed from data (only the active tab's rows
-  // are in the DOM, so "matches elsewhere" cannot come from a DOM scan).
-  const scopeHits = {};   // "tab|group" -> hits
+  const scopeHits = {};   // "tab|group" -> hits (from data; only active rows in DOM)
   const matches = (it) => isApplicable(it)
     && (!q || it.code.toLowerCase().includes(q) || (it.question || it.code).toLowerCase().includes(q));
   payload.items.forEach((it) => {
@@ -507,26 +555,24 @@ function applyFilter() {
 
   const clusterVisible = {};
   let visible = 0;
-  $("tb").querySelectorAll("tr:not(.clhdr)").forEach((tr) => {
-    const it = payload.items[+tr.dataset.i];
-    const show = it.group === grp && matches(it);   // tab is implicit (only active rows rendered)
-    if (show) { visible++; clusterVisible[tr.dataset.key] = (clusterVisible[tr.dataset.key] || 0) + 1; }
-    tr.style.display = show ? "" : "none";
+  $("tb").querySelectorAll(".rv-qrow").forEach((row) => {
+    const it = payload.items[+row.dataset.i];
+    const show = it.group === grp && matches(it);
+    if (show) { visible++; clusterVisible[row.dataset.key] = (clusterVisible[row.dataset.key] || 0) + 1; }
+    row.style.display = show ? "" : "none";
   });
-  $("tb").querySelectorAll("tr.clhdr").forEach((tr) => {
-    const n = clusterVisible[tr.dataset.key] || 0;
-    tr.style.display = n ? "" : "none";
-    const cnt = tr.querySelector(".clcount");
-    if (cnt) cnt.textContent = n;
+  $("tb").querySelectorAll(".rv-clhead").forEach((h) => {
+    const n = clusterVisible[h.dataset.key] || 0;
+    h.style.display = n ? "" : "none";
+    const cc = h.querySelector(".cc");
+    if (cc) cc.textContent = n;
   });
 
-  // per-tab counts on the two view buttons
   const counts = { decided: 0, manual: 0 };
   payload.items.forEach((it) => { if (it.tab === tab) counts[it.group]++; });
   const gset = (id, v) => { const e = $(id); if (e) e.textContent = `(${v})`; };
   gset("gc-decided", counts.decided); gset("gc-manual", counts.manual);
 
-  // the table shows one tab+view; when search matches live elsewhere, link there
   const hint = $("noMatchHint");
   if (visible > 0 || !q) { hint.hidden = true; return; }
   const others = [];
@@ -537,7 +583,7 @@ function applyFilter() {
   }));
   hint.innerHTML = others.length
     ? "Nothing matches here — matches elsewhere: " + others.map(({ t, g, n }) =>
-        `<button class="linklike" data-goto="${esc(t.id)}" data-g="${g}">${esc(t.label)} › ${g === "manual" ? "Optional Items" : "Mandatory Items"} (${n})</button>`).join(" · ")
+        `<button class="linklike" data-goto="${esc(t.id)}" data-g="${g}">${esc(t.label)} › ${g === "manual" ? "Optional" : "Mandatory"} (${n})</button>`).join(" · ")
     : "Nothing matches.";
   hint.hidden = false;
   hint.querySelectorAll("[data-goto]").forEach((b) =>
@@ -547,9 +593,9 @@ function applyFilter() {
 function switchTo(tabId, group) {
   tab = tabId;
   grp = group;
-  $("resultArea").querySelectorAll(".tab").forEach((x) =>
-    x.setAttribute("aria-pressed", String(x.dataset.tab === tabId)));
-  $("grpSwitch").querySelectorAll(".chipf").forEach((x) =>
+  $("rail").querySelectorAll("button").forEach((x) =>
+    x.setAttribute("aria-current", String(x.dataset.tab === tabId)));
+  $("grpSeg").querySelectorAll("button").forEach((x) =>
     x.setAttribute("aria-pressed", String(x.dataset.g === group)));
   renderRows();
 }
@@ -604,8 +650,8 @@ async function exportPICS() {
           const t = p.tab || tab;
           answers[`${t}|${p.code}`] = "yes"; touched.add(`${t}|${p.code}`);
         });
-        render();
         saveSession();
+        populateExport();   // refresh the recap; stay on the Export screen
       }
     }
     btn.textContent = "Building…";
@@ -628,29 +674,37 @@ async function exportPICS() {
   }
 }
 
-// Modal listing spec-consistency problems. Resolves true = enable & continue,
-// false = export as-is, null = cancel.
+// Plain-language spec-check dialog: lead with the item's name + why; PICS codes
+// live under "Technical details". Resolves true = enable & continue, false =
+// export as-is, null = cancel.
 function confirmProblems(problems, warns = []) {
   return new Promise((resolve) => {
     const overlay = document.createElement("div");
     overlay.className = "modal-overlay";
-    const warnHtml = warns.length ? `
-        <details class="expected"><summary>${warns.length} expected validator
-          notice${warns.length > 1 ? "s" : ""} (no action needed)</summary>
-          <ul>${warns.map((p) =>
-            `<li><span class="code">${esc(p.code)}</span><br><small>${esc(p.why)}</small></li>`).join("")}</ul>
-        </details>` : "";
+    const items = problems.slice(0, 20).map((p) => `
+        <div class="rv-vitem"><div class="vic">!</div><div>
+          <div class="vt">${esc(p.name || p.question || p.code)}${p.cluster ? ` <span class="cl">· ${esc(p.cluster)}</span>` : ""}</div>
+          <div class="vw">${esc(p.why || "")}</div>
+        </div></div>`).join("");
+    const tech = problems.map((p) => `${esc(p.code)}${p.tab ? ` · EP ${esc(p.tab)}` : ""}`).join("<br>");
+    const benign = warns.length ? `
+        <div class="rv-benign"><b>${warns.length} expected notice${warns.length > 1 ? "s" : ""}</b>
+          (no action needed): ${warns.map((w) => esc(w.name || w.code)).join(", ")}.
+          The official CSA tool shows the same.</div>` : "";
     overlay.innerHTML = `
-      <div class="modal" role="alertdialog" aria-label="Spec consistency check">
-        <h3>The spec requires ${problems.length} more item${problems.length > 1 ? "s" : ""}</h3>
-        <p>Given your answers, these are mandatory but currently "No":</p>
-        <ul>${problems.slice(0, 12).map((p) =>
-          `<li><span class="code">${esc(p.code)}</span> — ${esc(p.question)}<br><small>${esc(p.why)}</small></li>`).join("")}
-        ${problems.length > 12 ? `<li>… and ${problems.length - 12} more</li>` : ""}</ul>
-        ${warnHtml}
+      <div class="modal" role="alertdialog" aria-label="Spec check">
+        <h3>A few items are required by your selections</h3>
+        <p style="color:var(--text-dim);font-size:13px;margin:0 0 14px">
+          To keep the PICS spec‑compliant, these need to be <b>Yes</b>. Enable them
+          automatically, or export as‑is.</p>
+        ${items}
+        ${problems.length > 20 ? `<p style="color:var(--text-dim);font-size:12.5px;margin:10px 0 0">…and ${problems.length - 20} more.</p>` : ""}
+        <details class="rv-tech"><summary>Technical details (PICS codes)</summary>
+          <div class="tb">${tech}</div></details>
+        ${benign}
         <div class="modal-actions">
           <button class="btn" data-act="fix">Enable them &amp; export</button>
-          <button class="btn ghost" data-act="asis">Export as-is</button>
+          <button class="btn ghost" data-act="asis">Export as‑is</button>
           <button class="btn ghost" data-act="cancel">Cancel</button>
         </div>
       </div>`;
@@ -698,7 +752,15 @@ wireChips("role", true);
 $("addEndpoint").addEventListener("click", () => { addEndpointRow(); markDirty(); });
 $("generateBtn").addEventListener("click", () => generate(null, true));
 $("exportBtn").addEventListener("click", exportPICS);
-$("resetBtn").addEventListener("click", resetAll);
+$("backToReview").addEventListener("click", () => showView("review"));
+
+// stepper switches between the three screens; Review/Export need a generated payload.
+document.querySelectorAll("#stepper .rv-step").forEach((b) =>
+  b.addEventListener("click", () => {
+    const step = b.dataset.step;
+    if (step !== "describe" && !payload) return;   // gated until Generate
+    showView(step);
+  }));
 
 init().catch((err) => {
   $("initStatus").textContent = "Failed to initialize: " + (err.message || err);

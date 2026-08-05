@@ -388,6 +388,70 @@ def _payload_inputs(profile_dict: dict, legacy_claims=None):
     return selection, app_endpoints, per_ep_seeds, per_ep_side, mcore_atoms, all_claims
 
 
+_CODE_TOKEN = re.compile(r"[A-Z0-9_]+\.[SC](?:\.[A-Za-z0-9]+)*|MCORE\.[A-Za-z0-9_.]+")
+
+
+def _pretty(name: str) -> str:
+    """Split a camelCase element name for reading: 'OccupiedHeatingSetpoint' -> 'Occupied Heating Setpoint'."""
+    return re.sub(r"([a-z0-9])([A-Z])", r"\1 \2", name or "").strip()
+
+
+def _short_name(code: str, model, prefix_map: dict):
+    """Human name for a cluster PICS code, e.g. 'OO.S.F00' -> 'Lighting'.
+
+    Returns None for codes we can't resolve (unknown cluster, MCORE, etc.) so
+    callers can fall back to the code itself.
+    """
+    if not code or code.startswith(("MCORE.", "PIXIT.")):
+        return None
+    parts = code.split(".")
+    if len(parts) < 2:
+        return None
+    cl = model.clusters.get(prefix_map.get(parts[0]))
+    if cl is None:
+        return None
+    role = "server" if parts[1] == "S" else "client" if parts[1] == "C" else parts[1]
+    if len(parts) == 2:
+        return f"{cl.name} ({role})"
+    tag, val = parts[2][0], parts[2][1:]
+    if tag == "F":
+        f = cl.features.get(int(val, 16)) if val else None
+        return _pretty(f.name) if f else None
+    lookup = {"A": cl.attributes, "C": {**cl.accepted_commands, **cl.generated_commands},
+              "E": cl.events}.get(tag)
+    if lookup is not None:
+        el = lookup.get("0x" + val.lower()) or lookup.get(val.lower())
+        return _pretty(el.name) if el else None
+    return None
+
+
+def _humanize_cond(cond: str, model, prefix_map: dict) -> str:
+    """Replace PICS codes in a conformance expression with human names."""
+    out = _CODE_TOKEN.sub(lambda m: _short_name(m.group(0), model, prefix_map) or m.group(0), cond)
+    for op, word in (("AND", "and"), ("OR", "or"), ("NOT", "not")):
+        out = re.sub(rf"\b{op}\b", word, out)
+    return " ".join(out.split()).strip()
+
+
+def _why(code: str, group: str, conf: str, model, prefix_map: dict) -> str:
+    """A plain-language reason an item is/ isn't required, for the row + dialog."""
+    if code.startswith("MCORE."):
+        return "Optional node capability — enable if your product supports it." \
+            if group == "manual" else "Required for node operation."
+    if group == "manual":
+        return "Optional — enable it if your product implements it."
+    if " if " in conf:
+        cond = conf.split(" if ", 1)[1].split(" ; ")[0]
+        human = _humanize_cond(cond, model, prefix_map)
+        # a bare cluster-role condition reads better as "for the X cluster"
+        parts = code.split(".")
+        cl = model.clusters.get(prefix_map.get(parts[0])) if len(parts) > 1 else None
+        if cl and human == f"{cl.name} ({'server' if parts[1] == 'S' else 'client'})":
+            return f"Required for the {cl.name} cluster."
+        return f"Required when {human}."
+    return "Required by this device type."
+
+
 def generate_payload(profile_dict: dict, claims=None) -> dict:
     """Run the engines for a profile and return every question, plainly answered.
 
@@ -405,6 +469,7 @@ def generate_payload(profile_dict: dict, claims=None) -> dict:
     bucket_of, decided_dims = _classify(version)
     text = _item_text(version)
     model = _model(version)
+    prefix_map = _pics_to_cluster(version)
     # Per-endpoint claims: a feature/side claimed on EP1 never leaks to EP2.
     selection, app_endpoints, per_ep_seeds, per_ep_side, mcore_claim_atoms, all_claim_codes = \
         _payload_inputs(profile_dict, claims)
@@ -536,7 +601,8 @@ def generate_payload(profile_dict: dict, claims=None) -> dict:
         return {"tab": tab, "code": code, "question": q_of(code),
                 "answer": "yes" if st in ("on", "claimed") else "no",
                 "group": group, "cluster": cluster, "parent": parent,
-                "needs_you": group == "manual", "conformance": conf_of(code)}
+                "needs_you": group == "manual", "conformance": conf_of(code),
+                "why": _why(code, group, conf_of(code), model, prefix_map)}
 
     # Three distinct sections, shown as separate tabs: the node-level Base.xml
     # (MCORE) questions, the Root Node cluster PICS on endpoint 0 (Basic Info,
@@ -773,6 +839,8 @@ def validate_selection(profile_dict: dict, enabled_codes) -> list[dict]:
         else set(enabled_codes)
     text = _item_text(version)
     known = known_item_numbers(version)
+    model = _model(version)
+    prefix_map = _pics_to_cluster(version)
     problems: list[dict] = []
     flagged: set[str] = set()
 
@@ -780,8 +848,14 @@ def validate_selection(profile_dict: dict, enabled_codes) -> list[dict]:
         if code in flagged:
             return
         flagged.add(code)
+        cl = model.clusters.get(prefix_map.get(code.split(".")[0])) if "." in code else None
         problems.append({"code": code,
                          "question": text.get(code, ("", ""))[0] or code,
+                         # plain-language label + cluster for the dialog; the raw
+                         # code/expression stay available under "technical details".
+                         "name": _short_name(code, model, prefix_map)
+                                 or text.get(code, ("", ""))[0] or code,
+                         "cluster": cl.name if cl else ("Node-wide" if code.startswith("MCORE.") else ""),
                          "why": why, "severity": severity,
                          # which endpoint tab to enable it on (the UI's auto-fix
                          # needs this: the same code lives on several endpoints).
@@ -800,8 +874,9 @@ def validate_selection(profile_dict: dict, enabled_codes) -> list[dict]:
 
     # 2) Gateway claims: a claimed X.S / X.C mandates its side's elements.
     for gateway, claim_codes in _gateway_claims(version, profile, flat).items():
+        gname = _short_name(gateway, model, prefix_map) or gateway
         for code in sorted(claim_codes - flat):
-            add(code, f"mandatory because you claimed {gateway}")
+            add(code, f"Required because you enabled {gname}.")
 
     # 2b) IM-role consistency: a device that claims any client cluster side or
     # sends client commands IS an IM client -- MCORE.IDM.C (and InvokeRequest,
@@ -850,8 +925,10 @@ def validate_selection(profile_dict: dict, enabled_codes) -> list[dict]:
                     if it.number in working:
                         continue
                     if _effective_status(it.statuses, resolve) == "M":
-                        cond_text = " ; ".join(c for _, c in it.statuses if c) or "unconditional"
-                        add(it.number, f"required because: {cond_text}", tab=scope_name)
+                        cond_text = " ; ".join(c for _, c in it.statuses if c)
+                        why = ("Required when " + _humanize_cond(cond_text, model, prefix_map) + "."
+                               if cond_text else "Required by the spec for this configuration.")
+                        add(it.number, why, tab=scope_name)
                         working.add(it.number)
                         changed = True
         # prohibited / inapplicable checks on what the user actually enabled

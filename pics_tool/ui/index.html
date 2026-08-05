@@ -49,7 +49,16 @@
       <h1>Matter PICS Generator</h1>
     </header>
 
-    <!-- Device profile -->
+    <div class="rv-stepper" id="stepper">
+      <button class="rv-step" data-step="describe" aria-current="true"><span class="n">1</span> Describe device</button>
+      <span class="rv-stepsep"></span>
+      <button class="rv-step" data-step="review"><span class="n">2</span> Review answers</button>
+      <span class="rv-stepsep"></span>
+      <button class="rv-step" data-step="export"><span class="n">3</span> Export PICS</button>
+    </div>
+
+    <!-- Step 1: Describe -->
+    <div id="view-describe" class="view">
     <section class="card profile-card">
       <div class="card-title"><span class="stepno">1</span> Describe your device</div>
       <div class="form-sections">
@@ -180,18 +189,32 @@
         <button class="btn primary" id="generateBtn" disabled
           title="Lock in these inputs and generate the PICS questions">Generate PICS →</button>
         <span class="gen-status" id="genStatus"></span>
-        <span class="actions-right" id="reviewActions" hidden>
-          <button class="btn" id="exportBtn" disabled
-            title="Validate the selection against the spec, then download the filled PICS XML files as a zip">Export PICS ↓</button>
-          <button class="btn ghost" id="resetBtn"
-            title="Discard your manual Yes/No changes and regenerate from the engine">Clear my answers</button>
-        </span>
       </div>
     </section>
+    </div><!-- /view-describe -->
 
-    <!-- Results -->
-    <div id="resultArea">
-      <div class="empty-state">Describe your device above, then click <b>Generate PICS</b>.</div>
+    <!-- Step 2: Review -->
+    <div id="view-review" class="view" hidden>
+      <div id="resultArea"></div>
+    </div>
+
+    <!-- Step 3: Export -->
+    <div id="view-export" class="view" hidden>
+      <section class="card card-pad">
+        <div class="section-title">Step 3 — Export</div>
+        <h2 class="export-h">Export your PICS package</h2>
+        <p class="export-sub">A ZIP with one folder per endpoint, ready for the CSA PICS tool.</p>
+        <div class="rv-stats" id="exportStats"></div>
+        <div class="export-files-wrap">
+          <div class="eyebrow">Files that will be generated</div>
+          <ul id="exportFiles" class="export-files"></ul>
+        </div>
+        <div class="profile-actions">
+          <button class="btn ghost" id="backToReview">← Back to review</button>
+          <span style="flex:1"></span>
+          <button class="btn" id="exportBtn">Export PICS ↓</button>
+        </div>
+      </section>
     </div>
 
     <footer class="footer">
