@@ -16,6 +16,7 @@ let searchQ = "";             // current search text (survives tab re-render)
 let deviceTypeNames = [];     // device-type names for the current spec version
 let dirty = false;            // form edited since the last Generate (results stale)
 let collapsed = new Set();    // cluster keys ("tab|group|cluster") folded shut in the review
+let scaffoldSnippet = "";     // last-generated esp-matter data-model code (for copy/download)
 const BASE = new URL(".", window.location.href).href;
 // distinct accent per cluster group (dot + row edge), stable per session
 const CLUSTER_PALETTE = ["#2f6fed", "#0ea5a4", "#8b5cf6", "#d97706", "#16a34a",
@@ -377,6 +378,96 @@ function populateExport() {
   files.push({ f: "PIXIT_CHECKLIST.md", d: "test-bed values to fill in the CSA tool" });
   $("exportFiles").innerHTML = files.map((x) =>
     `<li><span class="fi">${esc(x.f)}</span><small>${esc(x.d)}</small></li>`).join("");
+  renderScaffold();
+}
+
+// Every optional element the user explicitly switched ON (touched + yes),
+// grouped per endpoint tab, for the scaffold: features, cluster sides, AND
+// optional attributes/commands. Unlike claimsByTab (which keeps only
+// features/sides/MCORE, the codes the PICS engine re-seeds from), this passes
+// everything so the generated code adds the exact optional elements you picked.
+function optionalClaimsByTab() {
+  const out = {};
+  touched.forEach((k) => {
+    if (answers[k] !== "yes") return;
+    const [t, code] = splitKey(k);
+    (out[t] ??= []).push(code);
+  });
+  return out;
+}
+
+// Generate the esp-matter data-model code with the SAME engine the CLI uses, so
+// the browser and `gen-scaffold` emit identical code. Optional elements the user
+// switched on ride along per endpoint and show as add/create guidance.
+// Pure-Python renderer (no Jinja2), so nothing extra loads in the browser.
+function renderScaffold() {
+  const pre = $("scaffoldCode"), note = $("scaffoldNote");
+  if (!pre || !payload) return;
+  scaffoldSnippet = "";
+  try {
+    const res = JSON.parse(webapp.generate_scaffold_json(
+      JSON.stringify(payload.profile), JSON.stringify(optionalClaimsByTab())));
+    scaffoldSnippet = res.snippet;
+    pre.querySelector("code").textContent = res.snippet;
+    renderScaffoldNote(res.endpoints, note);
+  } catch (err) {
+    scaffoldSnippet = "";
+    pre.querySelector("code").textContent = "// Could not generate code: " + (err.message || err);
+    note.hidden = true;
+    console.error(err);
+  }
+}
+
+// Recap of what the generated CODE adds, grouped per endpoint (device type) then
+// cluster -- so it's clear which endpoint a shared cluster (Descriptor, On/Off)
+// belongs to. This counts data-model elements the code emits, which is a
+// different thing from the "Changed by you" PICS-answer stat (node-level/MCORE
+// answers and disabled items don't produce data-model code), so it's worded to
+// say so. Empty -> hide the note entirely.
+function renderScaffoldNote(endpoints, note) {
+  const eps = endpoints.filter((e) => (e.optional || []).length);
+  const total = eps.reduce((n, e) => n + e.optional.length, 0);
+  if (!total) { note.hidden = true; note.innerHTML = ""; return; }
+  const sections = eps.map((e) => {
+    const groups = new Map();             // cluster -> [items]
+    e.optional.forEach((o) => {
+      if (!groups.has(o.cluster)) groups.set(o.cluster, []);
+      groups.get(o.cluster).push(o);
+    });
+    const rows = [...groups.entries()].map(([cl, els]) =>
+      `<div class="sn-row"><span class="sn-cluster">${esc(cl)}</span>`
+      + `<span class="sn-els">${els.map((o) =>
+          `<span class="sn-chip" data-kind="${esc(o.kind)}" title="${esc(o.kind)}">${esc(o.name)}</span>`).join("")}`
+      + `</span></div>`).join("");
+    const dt = e.label || (e.device_types || []).join(" + ");
+    return `<div class="sn-ep"><div class="sn-eptitle">Endpoint ${e.endpoint}`
+      + `<span class="sn-dt">${esc(dt)}</span></div>${rows}</div>`;
+  }).join("");
+  note.hidden = false;
+  note.innerHTML =
+    `<div class="sn-head">Optional elements this code adds`
+    + ` <span class="sn-sub">(${total}, on top of the device-type defaults)</span></div>`
+    + sections;
+}
+
+function downloadScaffold() {
+  if (!scaffoldSnippet) return;
+  const blob = new Blob([scaffoldSnippet], { type: "text/x-c++src" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "app_data_model.cpp";
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+async function copyScaffold() {
+  if (!scaffoldSnippet) return;
+  const btn = $("copyCode");
+  try {
+    await navigator.clipboard.writeText(scaffoldSnippet);
+    const was = btn.textContent; btn.textContent = "Copied ✓";
+    setTimeout(() => { btn.textContent = was; }, 1400);
+  } catch (e) { /* clipboard blocked: the code is still visible to select manually */ }
 }
 
 function render() {
@@ -778,6 +869,8 @@ wireChips("role", true);
 $("addEndpoint").addEventListener("click", () => { addEndpointRow(); markDirty(); });
 $("generateBtn").addEventListener("click", () => generate(null, true));
 $("exportBtn").addEventListener("click", exportPICS);
+$("downloadCode").addEventListener("click", downloadScaffold);
+$("copyCode").addEventListener("click", copyScaffold);
 $("backToReview").addEventListener("click", () => showView("review"));
 
 // stepper switches between the three screens; Review/Export need a generated payload.

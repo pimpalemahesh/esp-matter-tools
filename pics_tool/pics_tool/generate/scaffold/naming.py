@@ -55,3 +55,28 @@ def to_namespace(name: str) -> str:
 
 # Back-compat alias: the transform used to be the simpler "esp_name".
 esp_name = to_namespace
+
+
+# The chip (connectedhomeip) ``Clusters`` namespace title-cases every word,
+# INCLUDING acronyms: "OTA ..."->"Ota...", "ICD ..."->"Icd...", "RVC ..."->"Rvc",
+# "... AV ..."->"...Av...", "TLS ..."->"Tls...". A handful of names are genuinely
+# irregular (acronym kept upper, or a different word order) and can't be derived;
+# those are listed explicitly.
+_CHIP_CLUSTER_OVERRIDES = {
+    "Valid Proxies": "ProxyValid",
+    "WebRTC Transport Provider": "WebRTCTransportProvider",
+    "WebRTC Transport Requestor": "WebRTCTransportRequestor",
+}
+
+
+def chip_cluster_name(spec_name: str) -> str:
+    """chip ``Clusters`` C++ identifier for a spec cluster name, for ``<name>::Id``.
+
+    ``"Color Control" -> "ColorControl"``, ``"On/Off" -> "OnOff"``,
+    ``"OTA Software Update Requestor" -> "OtaSoftwareUpdateRequestor"``. Used to
+    emit ``cluster::get(endpoint, ColorControl::Id)`` -- the form esp-matter
+    examples use (with ``using namespace chip::app::Clusters;``).
+    """
+    if spec_name in _CHIP_CLUSTER_OVERRIDES:
+        return _CHIP_CLUSTER_OVERRIDES[spec_name]
+    return "".join(t.capitalize() for t in re.split(r"[^A-Za-z0-9]+", spec_name) if t)

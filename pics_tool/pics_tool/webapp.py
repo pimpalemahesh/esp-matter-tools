@@ -839,6 +839,70 @@ def export_pics_files(profile_dict: dict, enabled_codes) -> dict:
     return files
 
 
+def generate_scaffold_files(profile_dict: dict, claims_by_tab=None) -> dict:
+    """The esp-matter data-model construction code for this selection.
+
+    Drives the SAME engine as the CLI's ``gen-scaffold`` (``generate_scaffold``),
+    so identical input yields identical code in the browser and on the command
+    line. Optional feature/side claims the user switched ON in the UI arrive as
+    ``claims_by_tab`` -- the endpoint-tab map from ``generate_payload`` ("1",
+    "2", ... = application endpoints; "base"/MCORE don't affect endpoint
+    construction) -- and are folded onto the matching endpoint so they surface as
+    precise enable-guidance in the snippet.
+
+    Returns ``{snippet, file, endpoints:[{endpoint, device_types, features,
+    sides}]}`` -- the code, the suggested file name, and a small recap of the
+    optional bits it called out (for the UI note).
+    """
+    from .generate.scaffold import generate_scaffold
+
+    model = _model(profile_dict.get("spec_version", "1.6"))
+    selection = Selection.from_dict(profile_dict)
+    if isinstance(claims_by_tab, dict):
+        for tab_id, codes in claims_by_tab.items():
+            if not str(tab_id).isdigit():
+                continue                       # "base"/MCORE: node-level, not an endpoint
+            idx = int(tab_id) - 1              # tabs are 1-based (EP1..EPN)
+            if 0 <= idx < len(selection.endpoints):
+                ep = selection.endpoints[idx]
+                ep.claims = list(ep.claims) + [
+                    c for c in codes if not c.startswith("MCORE.")]
+    result = generate_scaffold(selection, model)
+
+    def _optional_items(e):
+        """Structured recap of the optional bits the code adds, for the UI note."""
+        items = [{"cluster": f.cluster_name, "name": f.feature_name, "kind": "feature"}
+                 for f in e.optional_features]
+        items += [{"cluster": a.cluster_name, "name": a.name, "kind": "attribute"}
+                  for a in e.optional_attributes]
+        items += [{"cluster": c.cluster_name, "name": c.name, "kind": "command"}
+                  for c in e.optional_commands]
+        items += [{"cluster": v.cluster_name, "name": v.name, "kind": "event"}
+                  for v in e.optional_events]
+        items += [{"cluster": s.cluster_name, "name": s.side_text, "kind": "cluster"}
+                  for s in e.optional_sides]
+        return items
+
+    return {
+        "snippet": result.snippet,
+        "file": "app_data_model.cpp",
+        "endpoints": [
+            {"endpoint": e.endpoint, "device_types": e.device_types,
+             "label": " + ".join(e.device_types),   # device type(s) on this endpoint
+             # structured recap the UI renders as chips, grouped per endpoint
+             "optional": _optional_items(e),
+             # flat string forms kept for the CLI / back-compat
+             "features": [f"{f.cluster_name} / {f.feature_name}"
+                          for f in e.optional_features],
+             "attributes": [f"{a.cluster_name} / {a.name}" for a in e.optional_attributes],
+             "commands": [f"{c.cluster_name} / {c.name}" for c in e.optional_commands],
+             "events": [f"{v.cluster_name} / {v.name}" for v in e.optional_events],
+             "sides": [f"{s.cluster_name} ({s.side_text})" for s in e.optional_sides]
+                      + list(e.unknown_sides)}
+            for e in result.endpoints],
+    }
+
+
 # Items we deliberately claim/leave despite a known CSA template gap. They
 # surface as WARNINGS with an explanation, never as blocking errors.
 _KNOWN_TEMPLATE_QUIRKS = {
@@ -1014,3 +1078,8 @@ def export_pics_files_json(profile_json: str, enabled_json: str = "[]") -> str:
 
 def validate_selection_json(profile_json: str, enabled_json: str = "[]") -> str:
     return json.dumps(validate_selection(json.loads(profile_json), json.loads(enabled_json)))
+
+
+def generate_scaffold_json(profile_json: str, claims_json: str = "{}") -> str:
+    return json.dumps(generate_scaffold_files(json.loads(profile_json),
+                                              json.loads(claims_json)))
