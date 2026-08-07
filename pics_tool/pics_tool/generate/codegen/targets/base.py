@@ -38,8 +38,9 @@ class GeneratedOutput:
     files: list[GeneratedFile] = field(default_factory=list)
     elements: list[dict] = field(default_factory=list)  # recap: {endpoint, cluster, name, kind}
     notes: list[str] = field(default_factory=list)
-    exact: bool = False                                 # real signatures vs placeholders
-    knowledge_source: str = ""                          # e.g. "bundled 1.5.1" | "none (placeholders)"
+    exact: bool = False                                 # a knowledge source was consulted
+    knowledge_source: str = ""                          # e.g. "bundled esp_matter 1.5.1"
+    unresolved: list[dict] = field(default_factory=list)  # selected elements omitted (no signature)
 
 
 class CodeTarget:

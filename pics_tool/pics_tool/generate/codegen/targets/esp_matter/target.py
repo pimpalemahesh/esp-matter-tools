@@ -111,8 +111,11 @@ class ScaffoldResult:
     snippet: str
     file: str | None = None
     endpoints: list[EndpointScaffold] = field(default_factory=list)
-    exact: bool = False              # real signatures (knowledge used) vs placeholders
-    knowledge_source: str = "none (placeholders)"
+    exact: bool = False              # a knowledge source was consulted
+    knowledge_source: str = "none"
+    # selected elements with no matching esp_matter function in the knowledge used;
+    # omitted from the code (kept compile-ready) and reported for manual handling.
+    unresolved: list[dict] = field(default_factory=list)
 
     @property
     def device_type_name(self) -> str:
@@ -184,27 +187,33 @@ class EspMatterTarget(CodeTarget):
                 optional_sides=sides, unknown_sides=list(ep.unknown_sides)))
         return out
 
-    # ---- emit one feature/attribute/command/event call ----
-    def _emit_call(self, symbol, receiver, var_base, n, knowledge, placeholder):
-        """Signature-driven call when knowledge has ``symbol``; else the placeholder.
+    # ---- the optional calls for one cluster group (only verified ones) ----
+    @staticmethod
+    def _group_items(cns, g):
+        """(kind, symbol, var_base, display_name, cluster_name) per element, in
+        render order: features, attributes, commands, events."""
+        items = [("feature", f"cluster::{cns}::feature::{f.feature_namespace}::add",
+                  f"{cns}_{f.feature_namespace}", f.feature_name, f.cluster_name)
+                 for f in g["features"]]
+        for a in g["attributes"]:
+            items.append(("attribute", f"cluster::{cns}::attribute::create_{a.namespace}",
+                          f"{cns}_{a.namespace}", a.name, a.cluster_name))
+        for c in g["commands"]:
+            items.append(("command", f"cluster::{cns}::command::create_{c.namespace}",
+                          f"{cns}_{c.namespace}", c.name, c.cluster_name))
+        for e in g["events"]:
+            items.append(("event", f"cluster::{cns}::event::create_{e.namespace}",
+                          f"{cns}_{e.namespace}", e.name, e.cluster_name))
+        return items
 
-        ``placeholder`` is the fill-in arg (e.g. "/* config */") emitted when the
-        signature is unknown -- ``None`` means the call takes no extra args. This
-        is a required *argument*, not a comment; the generated code carries no
-        explanatory comments.
-        """
-        sig = knowledge.symbol(symbol) if knowledge is not None else None
-        if sig is None:
-            if placeholder is None:
-                return [f"    {symbol}({receiver});"]
-            return [f"    {symbol}({receiver}, {placeholder});"]
-        decls, args = build_call(sig, symbol, var_base, n)
-        lines = [f"    {d}" for d in decls]
-        lines.append(f"    {symbol}({receiver}" + "".join(f", {a}" for a in args) + ");")
-        return lines
-
-    # ---- render the esp-matter snippet (real signatures when knowledge is given) ----
-    def render_snippet(self, endpoints: list[EndpointScaffold], knowledge=None) -> str:
+    # ---- render the esp-matter snippet. Every selected element is verified against
+    #      the knowledge (component): a known API becomes a real call; an unknown one
+    #      is kept in place as a comment naming the API to look up -- never dropped.
+    #      Returns (snippet, unresolved). ----
+    def render_snippet(self, endpoints: list[EndpointScaffold], knowledge=None):
+        unresolved: list[dict] = []
+        ver = getattr(knowledge, "component_version", "") if knowledge is not None else ""
+        where = f"esp_matter {ver}" if ver and ver != "component" else "the esp_matter component"
         L: list[str] = [
             "    node::config_t node_config;",
             "    node_t *node = node::create(&node_config, app_attribute_update_cb, app_identification_cb);",
@@ -220,35 +229,39 @@ class EspMatterTarget(CodeTarget):
                 L.append(f"    {c.namespace}::config_t {c.namespace}_config_{n};")
                 L.append(f'    ABORT_APP_ON_FAILURE({c.namespace}::add(endpoint_{n}, &{c.namespace}_config_{n}) == ESP_OK, ESP_LOGE(TAG, "Failed to add {c.name} device type"));')
             for cns, g in _cluster_groups(ep):
-                L.append("")
                 recv = f"{cns}_cluster_{n}"
-                L.append(f"    cluster_t *{recv} = cluster::get(endpoint_{n}, {g['chip']}::Id);")
-                for f in g["features"]:
-                    L += self._emit_call(f"cluster::{cns}::feature::{f.feature_namespace}::add",
-                                         recv, f"{cns}_{f.feature_namespace}", n, knowledge,
-                                         placeholder="/* config */")
-                for a in g["attributes"]:
-                    L += self._emit_call(f"cluster::{cns}::attribute::create_{a.namespace}",
-                                         recv, f"{cns}_{a.namespace}", n, knowledge,
-                                         placeholder="/* value */")
-                for c in g["commands"]:
-                    L += self._emit_call(f"cluster::{cns}::command::create_{c.namespace}",
-                                         recv, f"{cns}_{c.namespace}", n, knowledge,
-                                         placeholder=None)
-                for e in g["events"]:
-                    L += self._emit_call(f"cluster::{cns}::event::create_{e.namespace}",
-                                         recv, f"{cns}_{e.namespace}", n, knowledge,
-                                         placeholder=None)
+                calls: list[str] = []
+                notes: list[str] = []
+                for kind, symbol, var_base, name, cluster_name in self._group_items(cns, g):
+                    sig = knowledge.symbol(symbol) if knowledge is not None else None
+                    if sig is None:                 # API not in this component -> comment, don't drop
+                        unresolved.append({"endpoint": n, "cluster": cluster_name,
+                                           "name": name, "kind": kind})
+                        # Reference the full qualified call, same style as the real
+                        # calls above, so the reader recognizes it in context.
+                        notes.append(f"    // {symbol}() not found in {where} -- add it manually")
+                        continue
+                    decls, args = build_call(sig, symbol, var_base, n)
+                    calls += [f"    {d}" for d in decls]
+                    calls.append(f"    {symbol}({recv}" + "".join(f", {a}" for a in args) + ");")
+                if calls or notes:
+                    L.append("")
+                    if calls:                        # fetch the cluster only if we emit real calls
+                        L.append(f"    cluster_t *{recv} = cluster::get(endpoint_{n}, {g['chip']}::Id);")
+                        L += calls
+                    L += notes
             for s in ep.optional_sides:
                 L.append("")
                 L.append(f"    cluster::{s.cluster_namespace}::config_t {s.cluster_namespace}_config_{n};")
                 L.append(f"    cluster::{s.cluster_namespace}::create(endpoint_{n}, &{s.cluster_namespace}_config_{n}, {s.flags});")
-            # unknown_sides (clusters not in the data model) can't be generated and
-            # carry no comment; they remain in the recap for the UI/CLI note only.
+            for u in ep.unknown_sides:
+                unresolved.append({"endpoint": n, "cluster": u, "name": u, "kind": "cluster"})
+                L.append("")
+                L.append(f"    // {u} not in the data model -- add it manually")
             L.append("")
         while L and L[-1] == "":       # no trailing blank line(s)
             L.pop()
-        return "\n".join(L) + "\n"
+        return "\n".join(L) + "\n", unresolved
 
     def _recap(self, endpoints: list[EndpointScaffold]) -> list[dict]:
         items: list[dict] = []
@@ -270,10 +283,12 @@ class EspMatterTarget(CodeTarget):
     # ---- public target API ----
     def render(self, plan: DataModelPlan, knowledge=None) -> GeneratedOutput:
         endpoints = self.build_endpoints(plan)
-        snippet = self.render_snippet(endpoints, knowledge)
-        src = getattr(knowledge, "source_label", None) or "none (placeholders)"
+        snippet, unresolved = self.render_snippet(endpoints, knowledge)
+        src = getattr(knowledge, "source_label", None) or "none"
+        notes = [f"{u['cluster']} / {u['name']} ({u['kind']}): no matching esp_matter "
+                 f"function in {src} -- add manually" for u in unresolved]
         return GeneratedOutput(
             target=self.name, version=plan.spec_version, primary=snippet,
             files=[GeneratedFile(self.default_filename, snippet)],
-            elements=self._recap(endpoints),
-            exact=knowledge is not None, knowledge_source=src)
+            elements=self._recap(endpoints), notes=notes,
+            exact=knowledge is not None, knowledge_source=src, unresolved=unresolved)

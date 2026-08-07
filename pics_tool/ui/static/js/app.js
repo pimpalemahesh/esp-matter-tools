@@ -410,7 +410,7 @@ function renderScaffold() {
     scaffoldSnippet = res.snippet;
     pre.querySelector("code").textContent = res.snippet;
     renderScaffoldSource(res);
-    renderScaffoldNote(res.endpoints, note);
+    renderScaffoldNote(res, note);
   } catch (err) {
     scaffoldSnippet = "";
     pre.querySelector("code").textContent = "// Could not generate code: " + (err.message || err);
@@ -419,29 +419,31 @@ function renderScaffold() {
   }
 }
 
-// Show which esp_matter signatures the code was generated against: exact (a
-// bundled component matched this version) vs placeholders (no released component
-// for this version -- the /* ... */ args must be filled, or use the CLI's
-// --esp-matter-path against a local component).
+// A short caveat line ONLY when the generated code needs a second look: it used
+// the nearest available signatures (no released component for this Matter version
+// yet) or fell back to placeholders. For an exact match there's nothing to say,
+// so the line is hidden. (No CLI instructions here -- this is the browser UI.)
 function renderScaffoldSource(res) {
   const el = $("scaffoldSource");
   if (!el) return;
-  el.hidden = false;
-  const src = res.knowledge_source || "esp_matter";
+  const src = res.knowledge_source || "";
   const nearest = !!res.exact && /nearest/i.test(src);
-  el.classList.toggle("exact", !!res.exact && !nearest);   // green only for a true match
-  if (res.exact && !nearest) {
-    el.innerHTML = `<span class="src-dot"></span>Signatures from <b>${esc(src)}</b>. `
-      + `Building against a different esp-matter (e.g. <code>main</code>)? Generate with the CLI `
-      + `<code>gen-scaffold --esp-matter-path &lt;your esp-matter&gt;</code> for an exact match.`;
-  } else if (nearest) {
-    el.innerHTML = `<span class="src-dot"></span>Using <b>${esc(src)}</b> — no released component `
-      + `for this version yet. Clusters that changed since then (or a <code>main</code> build) may `
-      + `not compile; for an exact match run the CLI <code>gen-scaffold --esp-matter-path &lt;your esp-matter&gt;</code>.`;
+  el.classList.remove("exact");                 // caveat lines are amber
+  if (res.exact && !nearest) {                  // perfect match -> no note needed
+    el.hidden = true;
+    el.innerHTML = "";
+    return;
+  }
+  el.hidden = false;
+  if (nearest) {
+    const m = src.match(/esp_matter\s+([0-9.]+)/);
+    const ver = m ? m[1] : "the nearest release";
+    el.innerHTML = `<span class="src-dot"></span>Generated with <b>esp_matter ${esc(ver)}</b> `
+      + `signatures (closest available — no released component for this Matter version yet); `
+      + `double-check before building.`;
   } else {
-    el.innerHTML = `<span class="src-dot"></span>No esp_matter signatures for this version — `
-      + `<b>placeholder</b> arguments (<code>/* … */</code>); fill them in, or run the CLI `
-      + `<code>gen-scaffold --esp-matter-path</code> against your component.`;
+    el.innerHTML = `<span class="src-dot"></span>Some arguments are placeholders `
+      + `(<code>/* … */</code>) — fill in the values before building.`;
   }
 }
 
@@ -451,30 +453,44 @@ function renderScaffoldSource(res) {
 // different thing from the "Changed by you" PICS-answer stat (node-level/MCORE
 // answers and disabled items don't produce data-model code), so it's worded to
 // say so. Empty -> hide the note entirely.
-function renderScaffoldNote(endpoints, note) {
-  const eps = endpoints.filter((e) => (e.optional || []).length);
-  const total = eps.reduce((n, e) => n + e.optional.length, 0);
-  if (!total) { note.hidden = true; note.innerHTML = ""; return; }
-  const sections = eps.map((e) => {
-    const groups = new Map();             // cluster -> [items]
-    e.optional.forEach((o) => {
-      if (!groups.has(o.cluster)) groups.set(o.cluster, []);
-      groups.get(o.cluster).push(o);
-    });
-    const rows = [...groups.entries()].map(([cl, els]) =>
-      `<div class="sn-row"><span class="sn-cluster">${esc(cl)}</span>`
-      + `<span class="sn-els">${els.map((o) =>
-          `<span class="sn-chip" data-kind="${esc(o.kind)}" title="${esc(o.kind)}">${esc(o.name)}</span>`).join("")}`
-      + `</span></div>`).join("");
-    const dt = e.label || (e.device_types || []).join(" + ");
-    return `<div class="sn-ep"><div class="sn-eptitle">Endpoint ${e.endpoint}`
-      + `<span class="sn-dt">${esc(dt)}</span></div>${rows}</div>`;
-  }).join("");
+function renderScaffoldNote(res, note) {
+  const endpoints = res.endpoints || [];
+  const labelOf = {};
+  endpoints.forEach((e) => { labelOf[e.endpoint] = e.label || (e.device_types || []).join(" + "); });
+  // "added" = resolved elements the code actually emits (already per-endpoint);
+  // flatten with their endpoint so both lists render the same way.
+  const added = endpoints.flatMap((e) => (e.optional || []).map((o) => ({ ...o, endpoint: e.endpoint })));
+  const unresolved = res.unresolved || [];
+  if (!added.length && !unresolved.length) { note.hidden = true; note.innerHTML = ""; return; }
+
+  // render [{endpoint, cluster, name, kind}] grouped Endpoint -> cluster -> chips
+  const sections = (items) => {
+    const byEp = new Map();
+    items.forEach((o) => { if (!byEp.has(o.endpoint)) byEp.set(o.endpoint, []); byEp.get(o.endpoint).push(o); });
+    return [...byEp.entries()].map(([ep, its]) => {
+      const groups = new Map();
+      its.forEach((o) => { if (!groups.has(o.cluster)) groups.set(o.cluster, []); groups.get(o.cluster).push(o); });
+      const rows = [...groups.entries()].map(([cl, els]) =>
+        `<div class="sn-row"><span class="sn-cluster">${esc(cl)}</span><span class="sn-els">`
+        + els.map((o) => `<span class="sn-chip" data-kind="${esc(o.kind)}" title="${esc(o.kind)}">${esc(o.name)}</span>`).join("")
+        + `</span></div>`).join("");
+      return `<div class="sn-ep"><div class="sn-eptitle">Endpoint ${ep}`
+        + `<span class="sn-dt">${esc(labelOf[ep] || "")}</span></div>${rows}</div>`;
+    }).join("");
+  };
+
+  let html = "";
+  if (added.length) {
+    html += `<div class="sn-head">Optional elements this code adds`
+      + ` <span class="sn-sub">(${added.length})</span></div>${sections(added)}`;
+  }
+  if (unresolved.length) {   // kept in the code as // comments; list the actual items here
+    html += `<div class="sn-omit"><div class="sn-head">Add manually`
+      + ` <span class="sn-sub">(no esp_matter API — left as <code>//</code> comments)</span></div>`
+      + sections(unresolved) + `</div>`;
+  }
   note.hidden = false;
-  note.innerHTML =
-    `<div class="sn-head">Optional elements this code adds`
-    + ` <span class="sn-sub">(${total}, on top of the device-type defaults)</span></div>`
-    + sections;
+  note.innerHTML = html;
 }
 
 function downloadScaffold() {

@@ -20,11 +20,9 @@ import logging
 import click
 from esp_matter_datamodel import loader
 
+from .. import service
 from ..generate.profile import load_profile
-from ..generate.scaffold import generate_scaffold
-from ..generate.selection import (Selection, build_endpoints_enabled,
-                                  load_selection)
-from ..generate.writer import write_pics
+from ..generate.selection import Selection, load_selection
 
 
 @click.group()
@@ -84,8 +82,7 @@ def _resolve_selection(selection_path, profile_path, spec_version, device_type,
 
 def _generate_pics(selection: Selection, model, output: str):
     """Run the engines for a selection and write per-endpoint PICS XML."""
-    enabled = build_endpoints_enabled(model, selection)
-    return write_pics(selection.profile.spec_version, enabled, output)
+    return service.pics_for_selection(selection, model, output)
 
 
 def _echo_selection(selection: Selection) -> None:
@@ -157,11 +154,13 @@ def gen_scaffold(selection_path, profile_path, spec_version, device_type, transp
         knowledge = from_component(esp_matter_path, selection.profile.spec_version)
 
     _generate_pics(selection, model, pics_output)
-    result = generate_scaffold(selection, model, output, knowledge=knowledge)
+    result = service.scaffold_for_selection(selection, model, output, knowledge=knowledge)
 
     _echo_snippet(result)
-    click.echo(f"\n// esp_matter signatures: {result.knowledge_source}"
-               f"{'' if result.exact else '  (fill in the /* ... */ placeholders)'}")
+    click.echo(f"\n// esp_matter signatures: {result.knowledge_source}")
+    if result.unresolved:
+        click.echo(f"// {len(result.unresolved)} element(s) had no matching esp_matter API "
+                   f"and are left as comments in the code above -- add them manually.")
     if result.file:
         click.echo(f"// also written to: {result.file}")
 

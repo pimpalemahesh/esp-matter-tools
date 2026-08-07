@@ -46,7 +46,7 @@ def generate_scaffold(selection, model, output_dir: str | Path | None = None,
     if knowledge is None:
         knowledge = _TARGET.default_knowledge(plan.spec_version)
     endpoints = _TARGET.build_endpoints(plan)
-    snippet = _TARGET.render_snippet(endpoints, knowledge)
+    snippet, unresolved = _TARGET.render_snippet(endpoints, knowledge)
 
     written: str | None = None
     if output_dir is not None:
@@ -59,7 +59,8 @@ def generate_scaffold(selection, model, output_dir: str | Path | None = None,
     return ScaffoldResult(
         snippet=snippet, file=written, endpoints=endpoints,
         exact=knowledge is not None,
-        knowledge_source=getattr(knowledge, "source_label", None) or "none (placeholders)")
+        knowledge_source=getattr(knowledge, "source_label", None) or "none",
+        unresolved=unresolved)
 
 
 __all__ = ["generate_scaffold", "ScaffoldResult", "EndpointScaffold", "DeviceTypeInfo",

@@ -869,25 +869,33 @@ def generate_scaffold_files(profile_dict: dict, claims_by_tab=None) -> dict:
                     c for c in codes if not c.startswith("MCORE.")]
     result = generate_scaffold(selection, model)
 
+    # elements omitted from the code (no esp_matter signature) -> exclude from the
+    # "added" recap so the chips reflect only what the code actually emits.
+    _omitted = {(u["endpoint"], u["cluster"], u["name"], u["kind"]) for u in result.unresolved}
+
     def _optional_items(e):
-        """Structured recap of the optional bits the code adds, for the UI note."""
-        items = [{"cluster": f.cluster_name, "name": f.feature_name, "kind": "feature"}
-                 for f in e.optional_features]
-        items += [{"cluster": a.cluster_name, "name": a.name, "kind": "attribute"}
-                  for a in e.optional_attributes]
-        items += [{"cluster": c.cluster_name, "name": c.name, "kind": "command"}
-                  for c in e.optional_commands]
-        items += [{"cluster": v.cluster_name, "name": v.name, "kind": "event"}
-                  for v in e.optional_events]
-        items += [{"cluster": s.cluster_name, "name": s.side_text, "kind": "cluster"}
-                  for s in e.optional_sides]
-        return items
+        """Structured recap of the optional bits the code ADDS (resolved only)."""
+        raw = [{"cluster": f.cluster_name, "name": f.feature_name, "kind": "feature"}
+               for f in e.optional_features]
+        raw += [{"cluster": a.cluster_name, "name": a.name, "kind": "attribute"}
+                for a in e.optional_attributes]
+        raw += [{"cluster": c.cluster_name, "name": c.name, "kind": "command"}
+                for c in e.optional_commands]
+        raw += [{"cluster": v.cluster_name, "name": v.name, "kind": "event"}
+                for v in e.optional_events]
+        raw += [{"cluster": s.cluster_name, "name": s.side_text, "kind": "cluster"}
+                for s in e.optional_sides]
+        return [it for it in raw
+                if (e.endpoint, it["cluster"], it["name"], it["kind"]) not in _omitted]
 
     return {
         "snippet": result.snippet,
         "file": "app_data_model.cpp",
-        "exact": result.exact,                    # real signatures vs placeholders
+        "exact": result.exact,                    # a knowledge source was consulted
         "knowledge_source": result.knowledge_source,
+        # selected optional elements with no matching esp_matter function: omitted
+        # from the code (kept compile-ready), listed here to add manually.
+        "unresolved": result.unresolved,
         "endpoints": [
             {"endpoint": e.endpoint, "device_types": e.device_types,
              "label": " + ".join(e.device_types),   # device type(s) on this endpoint

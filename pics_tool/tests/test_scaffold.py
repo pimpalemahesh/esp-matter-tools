@@ -19,22 +19,18 @@ import pytest
 
 loader = pytest.importorskip("esp_matter_datamodel.loader")
 
-from pics_tool.generate.codegen.targets.esp_matter.knowledge import Knowledge
 from pics_tool.generate.scaffold import generate_scaffold
 from pics_tool.generate.scaffold.naming import esp_name
 from pics_tool.generate.selection import Selection
 
-# These tests exercise the PLACEHOLDER rendering path (structure, grouping, sides)
-# independent of any esp_matter component -- a Knowledge whose symbol() always
-# returns None forces the /* config */ / /* value */ output regardless of which
-# version's caps happen to ship. (Exact-signature output is covered separately.)
-_PLACEHOLDER_KB = Knowledge()
+# 1.6 has no released esp_matter component, so generation uses the NEAREST bundled
+# signatures (1.5.1). These tests assert the resulting real calls + structure; an
+# element with no matching esp_matter function is omitted (see test_codegen_*).
 
 
 def _gen(selection_dict, output_dir=None):
     model = loader.load_version("1.6")
-    return generate_scaffold(Selection.from_dict(selection_dict), model, output_dir,
-                             knowledge=_PLACEHOLDER_KB)
+    return generate_scaffold(Selection.from_dict(selection_dict), model, output_dir)
 
 
 def test_single_endpoint_snippet(tmp_path):
@@ -88,8 +84,8 @@ def test_optional_feature_claim_is_surfaced():
     # cluster fetched by ClusterName::Id (not a hardcoded 0x0006)
     assert "cluster::get(endpoint_1, OnOff::Id)" in snippet
     assert "0x0006" not in snippet
-    # live code with a placeholder config so a copy-paste won't silently compile
-    assert "cluster::on_off::feature::off_only::add(on_off_cluster_1, /* config */);" in snippet
+    # OffOnly takes no config in esp_matter 1.5.1 -> no extra argument
+    assert "cluster::on_off::feature::off_only::add(on_off_cluster_1);" in snippet
     assert result.endpoints[0].optional_features[0].feature_namespace == "off_only"
 
 
@@ -116,8 +112,8 @@ def test_optional_attributes_and_commands_are_added():
     snippet = result.snippet
     # one cluster::get for Level Control, then create_ calls for each element
     assert snippet.count("cluster::get(endpoint_1, LevelControl::Id)") == 1
-    assert "cluster::level_control::attribute::create_on_transition_time(level_control_cluster_1, /* value */);" in snippet
-    assert "cluster::level_control::attribute::create_off_transition_time(level_control_cluster_1, /* value */);" in snippet
+    assert "cluster::level_control::attribute::create_on_transition_time(level_control_cluster_1, nullable<uint16_t>());" in snippet
+    assert "cluster::level_control::attribute::create_off_transition_time(level_control_cluster_1, nullable<uint16_t>());" in snippet
     assert "cluster::level_control::command::create_move_to_level(level_control_cluster_1);" in snippet
     ep = result.endpoints[0]
     assert [a.name for a in ep.optional_attributes] == ["OnTransitionTime", "OffTransitionTime"]
@@ -159,6 +155,23 @@ def test_server_side_in_baseline_is_not_recreated():
     ]})
     assert "cluster::level_control::create(" not in result.snippet
     assert result.endpoints[0].optional_sides == []
+
+
+def test_unresolvable_element_becomes_a_comment_not_dropped():
+    # ColorControl Primary3X: esp_matter 1.5.1 exposes only the generic
+    # create_primary_n_x(value, index), so there's no create_primary_3_x. The
+    # element must NOT be dropped -- it stays in the code as a comment that names
+    # the API to look up, and is reported in .unresolved.
+    result = _gen({"spec_version": "1.6", "transport": ["wifi_2g"], "endpoints": [
+        {"device_types": ["Extended Color Light"], "claims": ["CC.S.A0019"]},
+    ]})
+    snippet = result.snippet
+    # kept as a comment naming the full qualified call (same style as real calls)
+    assert ("// cluster::color_control::attribute::create_primary_3_x() not found in "
+            "esp_matter 1.5.1 -- add it manually") in snippet
+    assert "create_primary_3_x(color_control_cluster_1" not in snippet   # a comment, not a real call
+    assert any(u["name"] == "Primary3X" and u["kind"] == "attribute"
+               and u["cluster"] == "Color Control" for u in result.unresolved)
 
 
 def test_esp_name_matches_convention():
