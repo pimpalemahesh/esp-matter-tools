@@ -49,6 +49,20 @@ DATA_DIR = OUT_DIR / "data"                     # per-version data zips, fetched
 MANIFEST = OUT_DIR / "versions.json"
 
 _DATAMODEL_RE = re.compile(r"datamodel_(.+)\.json$")
+_CAPS_RE = re.compile(r"caps_(.+)\.json$")
+
+CAPS_DIR = PICS_PKG / "generate" / "codegen" / "targets" / "esp_matter" / "data"
+
+
+def _vkey(v: str) -> tuple:
+    return tuple(int(x) for x in re.findall(r"\d+", v))
+
+
+def _caps_versions() -> list[str]:
+    if not CAPS_DIR.is_dir():
+        return []
+    return sorted((m.group(1) for p in CAPS_DIR.glob("caps_*.json")
+                   if (m := _CAPS_RE.match(p.name))), key=_vkey)
 
 
 def _included(path: Path) -> bool:
@@ -59,10 +73,12 @@ def _included(path: Path) -> bool:
 
 def _is_version_data(rel: Path) -> bool:
     """Per-version payload split out of the core bundle: cluster templates
-    (pics_tool/templates/<v>/*) and the datamodel JSONs (esp_matter_datamodel/
-    datamodels/datamodel_<v>.json). These are lazy-loaded, not in core."""
+    (pics_tool/templates/<v>/*), the datamodel JSONs (esp_matter_datamodel/
+    datamodels/datamodel_<v>.json), and the esp_matter capability maps
+    (.../esp_matter/data/caps_<v>.json). These are lazy-loaded, not in core."""
     parts = rel.parts
-    return "templates" in parts or "datamodels" in parts
+    return ("templates" in parts or "datamodels" in parts
+            or (rel.name.startswith("caps_") and rel.suffix == ".json"))
 
 
 def _versions() -> list[str]:
@@ -103,6 +119,22 @@ def build() -> None:
                     zf.write(path, f"pics_tool/templates/{v}/{path.relative_to(PICS_PKG / 'templates' / v)}")
             dm = DM_PKG / "datamodels" / f"datamodel_{v}.json"
             zf.write(dm, f"esp_matter_datamodel/datamodels/datamodel_{v}.json")
+            # esp_matter capability map. If this version has its own, ship it;
+            # else fill with the nearest lower version's caps (tagged nearest_for)
+            # so the browser's per-version zip is self-contained (matches the CLI's
+            # engine-level nearest fallback). Absent only if no caps ship at all.
+            arc = f"pics_tool/generate/codegen/targets/esp_matter/data/caps_{v}.json"
+            own = CAPS_DIR / f"caps_{v}.json"
+            if own.is_file():
+                zf.write(own, arc)
+            else:
+                avail = _caps_versions()
+                lower = [x for x in avail if _vkey(x) <= _vkey(v)]
+                pick = max(lower or avail, key=_vkey) if avail else None
+                if pick:
+                    data = json.loads((CAPS_DIR / f"caps_{pick}.json").read_text(encoding="utf-8"))
+                    data["nearest_for"] = v
+                    zf.writestr(arc, json.dumps(data))
 
     # 3) Manifest so the web app can list versions without fetching any data.
     MANIFEST.write_text(json.dumps({"versions": versions}), encoding="utf-8")

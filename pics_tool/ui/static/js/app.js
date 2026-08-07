@@ -91,10 +91,10 @@ function endpointValues() {
 }
 
 function readProfile() {
-  // OTA is an either/or per Base.xml: no OTA Requestor => vendor-specific
-  // OTA is mandatory for a commissionee (OTA Provider is profile/CLI-only in
-  // phase 1).
-  const ota = selected("ota")[0] || "vendor";
+  // OTA is an either/or per Base.xml: Matter OTA (OTA Requestor) is the default;
+  // vendor-specific is the alternative. OTA is mandatory for a commissionee
+  // (OTA Provider is profile/CLI-only in phase 1).
+  const ota = selected("ota")[0] || "requestor";
   return {
     spec_version: $("specVersion").value,
     endpoints: endpointValues(),        // [{device_types:[name]}] -> EP1..EPN
@@ -409,12 +409,39 @@ function renderScaffold() {
       JSON.stringify(payload.profile), JSON.stringify(optionalClaimsByTab())));
     scaffoldSnippet = res.snippet;
     pre.querySelector("code").textContent = res.snippet;
+    renderScaffoldSource(res);
     renderScaffoldNote(res.endpoints, note);
   } catch (err) {
     scaffoldSnippet = "";
     pre.querySelector("code").textContent = "// Could not generate code: " + (err.message || err);
     note.hidden = true;
     console.error(err);
+  }
+}
+
+// Show which esp_matter signatures the code was generated against: exact (a
+// bundled component matched this version) vs placeholders (no released component
+// for this version -- the /* ... */ args must be filled, or use the CLI's
+// --esp-matter-path against a local component).
+function renderScaffoldSource(res) {
+  const el = $("scaffoldSource");
+  if (!el) return;
+  el.hidden = false;
+  const src = res.knowledge_source || "esp_matter";
+  const nearest = !!res.exact && /nearest/i.test(src);
+  el.classList.toggle("exact", !!res.exact && !nearest);   // green only for a true match
+  if (res.exact && !nearest) {
+    el.innerHTML = `<span class="src-dot"></span>Signatures from <b>${esc(src)}</b>. `
+      + `Building against a different esp-matter (e.g. <code>main</code>)? Generate with the CLI `
+      + `<code>gen-scaffold --esp-matter-path &lt;your esp-matter&gt;</code> for an exact match.`;
+  } else if (nearest) {
+    el.innerHTML = `<span class="src-dot"></span>Using <b>${esc(src)}</b> — no released component `
+      + `for this version yet. Clusters that changed since then (or a <code>main</code> build) may `
+      + `not compile; for an exact match run the CLI <code>gen-scaffold --esp-matter-path &lt;your esp-matter&gt;</code>.`;
+  } else {
+    el.innerHTML = `<span class="src-dot"></span>No esp_matter signatures for this version — `
+      + `<b>placeholder</b> arguments (<code>/* … */</code>); fill them in, or run the CLI `
+      + `<code>gen-scaffold --esp-matter-path</code> against your component.`;
   }
 }
 

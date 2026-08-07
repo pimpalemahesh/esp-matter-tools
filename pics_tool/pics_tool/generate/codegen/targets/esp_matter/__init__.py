@@ -11,10 +11,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Back-compat re-export. The esp-matter naming convention now lives with the
-esp_matter code target (``codegen/targets/esp_matter/naming.py``)."""
+"""esp-matter output target: renders the neutral plan into esp-matter C++."""
 
-from ..codegen.targets.esp_matter.naming import (  # noqa: F401
-    chip_cluster_name, esp_name, to_namespace)
+from .target import EspMatterTarget
 
-__all__ = ["esp_name", "to_namespace", "chip_cluster_name"]
+__all__ = ["EspMatterTarget"]

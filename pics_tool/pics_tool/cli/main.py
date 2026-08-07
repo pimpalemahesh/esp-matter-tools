@@ -131,24 +131,58 @@ def gen_pics(selection_path, profile_path, spec_version, device_type, transport,
               help="Optional: also write the snippet to <dir>/app_data_model.cpp.")
 @click.option("--pics-output", default="pics_out", show_default=True,
               help="Directory for the intermediate PICS XML.")
+@click.option("--esp-matter-path", "esp_matter_path", type=click.Path(exists=True), default=None,
+              help="Path to a local esp_matter component/SDK: generate exact code "
+                   "against THAT component (any version) instead of the bundled one.")
 def gen_scaffold(selection_path, profile_path, spec_version, device_type, transport,
-                 role, wifi_paf, vendor_specific_ota, model_path, output, pics_output):
+                 role, wifi_paf, vendor_specific_ota, model_path, output, pics_output,
+                 esp_matter_path):
     """Generate the esp-matter data-model construction code from a selection.
 
     Prints the ``node::create`` / ``endpoint::<device_type>::create`` block to
     paste into app_main.cpp -- the construction the user would otherwise
     hand-write. One run, inputs given once.
+
+    By default it uses the esp_matter signatures bundled with the tool for the
+    spec version (exact where available, else ``/* ... */`` placeholders). Pass
+    ``--esp-matter-path`` to generate exact code against a local component.
     """
     selection, model = _resolve_selection(
         selection_path, profile_path, spec_version, device_type, transport, role,
         wifi_paf, vendor_specific_ota, model_path)
 
+    knowledge = None
+    if esp_matter_path:
+        from ..generate.codegen.targets.esp_matter.knowledge import from_component
+        knowledge = from_component(esp_matter_path, selection.profile.spec_version)
+
     _generate_pics(selection, model, pics_output)
-    result = generate_scaffold(selection, model, output)
+    result = generate_scaffold(selection, model, output, knowledge=knowledge)
 
     _echo_snippet(result)
+    click.echo(f"\n// esp_matter signatures: {result.knowledge_source}"
+               f"{'' if result.exact else '  (fill in the /* ... */ placeholders)'}")
     if result.file:
-        click.echo(f"\n// also written to: {result.file}")
+        click.echo(f"// also written to: {result.file}")
+
+
+@main.command("refresh-esp-matter-knowledge")
+@click.option("--version", "pics_version", required=True,
+              help="PICS spec version to refresh, e.g. 1.5.1.")
+@click.option("--component", "component_dir", type=click.Path(exists=True), default=None,
+              help="Local esp_matter component/SDK checkout to parse.")
+@click.option("--download", is_flag=True,
+              help="Download the mapped released component from the ESP registry.")
+def refresh_esp_matter_knowledge(pics_version, component_dir, download):
+    """(Maintainer) Regenerate the committed caps_<version>.json for a version.
+
+    Parses a released esp_matter component's data_model headers into the bundled
+    signature index. Provide --component <dir> or --download.
+    """
+    from ..generate.codegen.targets.esp_matter import refresh as _refresh
+    out, count = _refresh.refresh(pics_version, component_dir=component_dir, download=download)
+    compver = _refresh.component_version_for(pics_version)
+    click.echo(f"Wrote {out} ({count} symbols) from esp_matter component {compver}.")
 
 
 if __name__ == "__main__":

@@ -150,39 +150,58 @@ python3 cli.py gen-scaffold \
     --transport wifi_2g --role commissionee
 ```
 
-prints:
+prints (comment-free, paste-ready):
 
 ```cpp
-    /* Create a Matter node with the Root Node device type on endpoint 0. */
     node::config_t node_config;
     node_t *node = node::create(&node_config, app_attribute_update_cb, app_identification_cb);
     ABORT_APP_ON_FAILURE(node != nullptr, ESP_LOGE(TAG, "Failed to create Matter node"));
 
-    /* Endpoint 1: Extended Color Light (default config; set attribute defaults as needed). */
     extended_color_light::config_t extended_color_light_config_1;
-    endpoint_t *endpoint_1 = extended_color_light::create(node, &extended_color_light_config_1, ENDPOINT_FLAG_NONE, priv_data);
+    endpoint_t *endpoint_1 = extended_color_light::create(node, &extended_color_light_config_1, ENDPOINT_FLAG_NONE, nullptr);
     ABORT_APP_ON_FAILURE(endpoint_1 != nullptr, ESP_LOGE(TAG, "Failed to create Extended Color Light endpoint"));
 ```
 
 With `--selection` it emits **one `endpoint::<type>::create` per application
 endpoint**, adds composed device types with `endpoint::<type>::add(...)`, and
-surfaces optional feature/side claims as precise `// TODO` guidance (the exact
-`cluster::<x>::feature::<y>::add(...)` call) — whether a feature's `add()` takes a
-config is esp-matter-specific, so it is named rather than guessed.
+turns optional feature / attribute / command / event / cluster-side claims into
+explicit `cluster::<x>::feature::<y>::add(...)` / `attribute::create_<z>(...)` /
+`command::create_<z>(...)` / `cluster::<x>::create(..., CLUSTER_FLAG_*)` calls.
+
+**Exact vs. placeholder arguments.** The exact call arguments (does a feature's
+`add()` take a config? what type is an attribute's value?) come from a *capability
+map* of the esp_matter component that the tool ships per version
+(`codegen/targets/esp_matter/data/caps_<ver>.json`, parsed from the released
+component). When a version has a bundled map (1.4, 1.4.2, 1.5, 1.5.1), the code is
+**ready to compile** — config features declare their `config_t`, no-config
+features take none, attributes get a type-correct default value. A version with no
+released component (1.6, 1.4.1) uses the **nearest** lower version's map, so it is
+still ready to compile (only an element genuinely new to that version falls back
+to a `/* ... */` placeholder argument). The generated code carries **no comments**.
+To get exact code for any version (including `main` / a fork), point at your own
+component:
+
+```bash
+python3 cli.py gen-scaffold --spec-version 1.6 --device-type "Extended Color Light" \
+    --esp-matter-path $ESP_MATTER_PATH        # parse the live component's data_model/
+```
 
 Drivers, callbacks, and attribute *values* stay hand-written (PICS declares which
-elements exist, not their default values, so the code uses library defaults;
-adapt `priv_data` to your driver handle). Options:
+elements exist, not their values; the endpoint's private-data arg is emitted as
+`nullptr` -- pass your driver handle there).
+Options:
 
 - `-o/--output` — optional: also write the snippet to `<dir>/app_data_model.cpp`.
 - `--pics-output` — where the intermediate PICS XML is written (default: `pics_out`).
+- `--esp-matter-path` — generate exact code against a local esp_matter component
+  instead of the bundled capability map.
 
-No esp-matter checkout is needed to generate; the code only depends on esp-matter
-at compile time (`node::create` / `endpoint::<type>::create` are provided by the
-esp_matter component in either the legacy or the generated data model). Currently
-supports one application device type per node (Root Node on endpoint 0 + the
-device type on endpoint 1), default config values; server clusters the PICS
-enables beyond the device-type baseline are reported (not yet generated).
+No esp-matter checkout is needed to generate (the bundled capability map supplies
+the signatures); the code depends on esp-matter only at compile time.
+Multi-endpoint and composed device types are supported via `--selection`.
+
+**Maintainer:** refresh a bundled capability map when esp_matter ships a version:
+`python3 cli.py refresh-esp-matter-knowledge --version 1.5.1 --download`.
 
 ## CSA PICS Validator notes
 

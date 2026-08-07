@@ -886,6 +886,8 @@ def generate_scaffold_files(profile_dict: dict, claims_by_tab=None) -> dict:
     return {
         "snippet": result.snippet,
         "file": "app_data_model.cpp",
+        "exact": result.exact,                    # real signatures vs placeholders
+        "knowledge_source": result.knowledge_source,
         "endpoints": [
             {"endpoint": e.endpoint, "device_types": e.device_types,
              "label": " + ".join(e.device_types),   # device type(s) on this endpoint

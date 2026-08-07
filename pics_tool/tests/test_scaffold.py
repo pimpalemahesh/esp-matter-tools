@@ -19,14 +19,22 @@ import pytest
 
 loader = pytest.importorskip("esp_matter_datamodel.loader")
 
+from pics_tool.generate.codegen.targets.esp_matter.knowledge import Knowledge
 from pics_tool.generate.scaffold import generate_scaffold
 from pics_tool.generate.scaffold.naming import esp_name
 from pics_tool.generate.selection import Selection
 
+# These tests exercise the PLACEHOLDER rendering path (structure, grouping, sides)
+# independent of any esp_matter component -- a Knowledge whose symbol() always
+# returns None forces the /* config */ / /* value */ output regardless of which
+# version's caps happen to ship. (Exact-signature output is covered separately.)
+_PLACEHOLDER_KB = Knowledge()
+
 
 def _gen(selection_dict, output_dir=None):
     model = loader.load_version("1.6")
-    return generate_scaffold(Selection.from_dict(selection_dict), model, output_dir)
+    return generate_scaffold(Selection.from_dict(selection_dict), model, output_dir,
+                             knowledge=_PLACEHOLDER_KB)
 
 
 def test_single_endpoint_snippet(tmp_path):
@@ -38,7 +46,7 @@ def test_single_endpoint_snippet(tmp_path):
     assert "node::create(&node_config, app_attribute_update_cb, app_identification_cb)" in snippet
     assert "extended_color_light::config_t extended_color_light_config_1;" in snippet
     assert ("extended_color_light::create(node, &extended_color_light_config_1, "
-            "ENDPOINT_FLAG_NONE, priv_data)") in snippet
+            "ENDPOINT_FLAG_NONE, nullptr)") in snippet
     # A paste-in snippet: no wrapper/include/guard, and no trailing scratch var.
     assert "create_data_model" not in snippet and "#include" not in snippet
     assert "endpoint::get_id" not in snippet

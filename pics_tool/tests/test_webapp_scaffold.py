@@ -57,8 +57,11 @@ def test_optional_feature_from_ui_flows_into_code():
     res = webapp.generate_scaffold_files(prof, {"1": ["CC.S.F04"]})
     snippet = res["snippet"]
     assert "cluster::get(endpoint_1, ColorControl::Id)" in snippet   # chip Id, not 0x0300
-    # live code with a placeholder config -> won't compile until filled in
-    assert "cluster::color_control::feature::color_temperature::add(color_control_cluster_1, /* config */);" in snippet
+    # exact code (1.6 -> nearest 1.5.1): ColorTemperature has a config -> declared + &config
+    assert ("cluster::color_control::feature::color_temperature::config_t "
+            "color_control_color_temperature_config_1;") in snippet
+    assert ("cluster::color_control::feature::color_temperature::add("
+            "color_control_cluster_1, &color_control_color_temperature_config_1);") in snippet
     assert res["endpoints"][0]["features"] == ["Color Control / ColorTemperature"]
 
 
@@ -69,8 +72,9 @@ def test_optional_attribute_from_ui_flows_into_code():
     res = webapp.generate_scaffold_files(prof, {"1": ["LVL.S.A0012", "LVL.S.A0013"]})
     snippet = res["snippet"]
     assert "cluster::get(endpoint_1, LevelControl::Id)" in snippet
-    assert "attribute::create_on_transition_time(level_control_cluster_1, /* value */);" in snippet
-    assert "attribute::create_off_transition_time(level_control_cluster_1, /* value */);" in snippet
+    # exact code (1.6 -> nearest 1.5.1): nullable<uint16_t> value default + TODO
+    assert "attribute::create_on_transition_time(level_control_cluster_1, nullable<uint16_t>());" in snippet
+    assert "attribute::create_off_transition_time(level_control_cluster_1, nullable<uint16_t>());" in snippet
     assert res["endpoints"][0]["attributes"] == [
         "Level Control / OnTransitionTime", "Level Control / OffTransitionTime"]
 
