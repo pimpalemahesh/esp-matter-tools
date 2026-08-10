@@ -43,6 +43,32 @@ def test_selection_questions_are_human_decisions_only():
     assert out["summary"]["counts"]["to_decide"] == len(out["questions"])
 
 
+def test_questions_exclude_mandatory_if_and_ungated_children():
+    # A purely "Mandatory if <feature>" element is auto-resolved by the tool, so it
+    # is NEVER a question. A feature-gated OPTIONAL element only becomes a question
+    # once its feature is on. A compound conformance that carries an Optional clause
+    # (e.g. "Mandatory if CC.S AND CC.S.F01 ; Optional if CC.S") IS a question.
+    out = service.selection_questions(_ECL)
+    codes = {q["code"] for q in out["questions"]}
+    assert "CC.S.A0000" not in codes   # "Mandatory if CC.S AND CC.S.F00" -> auto
+    assert "CC.S.F00" in codes         # compound, has an Optional clause -> a choice
+    # every cluster (non-base) question is a genuine optional choice
+    for q in out["questions"]:
+        if q["tab"] != "base":
+            assert "optional" in q["conformance"].lower(), \
+                f"{q['code']} ({q['conformance']!r}) is not an optional choice"
+
+
+def test_enabling_a_feature_auto_includes_its_mandatory_elements():
+    # Turning on CC.S.F00 must auto-add CurrentHue (mandatory-if) to the generated
+    # PICS WITHOUT it ever being asked, and must not add it to the question set.
+    q = service.selection_questions(_ECL, {"1": ["CC.S.F00"]})
+    assert "CC.S.A0000" not in {x["code"] for x in q["questions"]}  # still not a question
+    gen = service.generate(_ECL, {"1": ["CC.S.F00"]})
+    all_xml = "".join(gen["pics_files"].values())
+    assert "CC.S.A0000" in all_xml   # but it IS claimed in the exported PICS
+
+
 def test_answering_a_question_is_reflected_on_recall():
     out = service.selection_questions(_ECL)
     feat = next(q for q in out["questions"] if re.search(r"\.S\.F[0-9a-f]{2}$", q["code"]))
@@ -74,3 +100,18 @@ def test_generate_threads_optional_answers_into_code():
 def test_generate_rejects_unknown_target():
     with pytest.raises(ValueError, match="unknown target"):
         service.generate(_ECL, {}, target="nope")
+
+
+def test_generate_goal_scopes_outputs():
+    both = service.generate(_ECL)                       # default "both"
+    assert both["pics_files"] and both["code"] and both["goal"] == "both"
+
+    code = service.generate(_ECL, goal="code")
+    assert code["code"] and code["code"]["snippet"]
+    assert code["pics_files"] == {} and code["problems"] == []  # no PICS work
+
+    pics = service.generate(_ECL, goal="pics")
+    assert pics["pics_files"] and pics["code"] is None
+
+    with pytest.raises(ValueError, match="unknown goal"):
+        service.generate(_ECL, goal="nope")

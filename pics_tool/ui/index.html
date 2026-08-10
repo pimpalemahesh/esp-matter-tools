@@ -147,18 +147,47 @@
             <button class="opt" data-v="nfc">NFC</button>
           </div>
         </div>
+        <div class="control-group">
+          <label>Additional capabilities
+            <span class="helptip" tabindex="0" aria-label="What are these capabilities?">?
+              <span class="helptext"><b>Matter over TCP</b>: large-payload sessions over TCP
+                (Matter 1.4+, MCORE.SC.TCP); enables the large-data question beneath it.
+                <b>Extended Discovery</b>: the device advertises over DNS-SD beyond the
+                commissioning window (decides both MCORE.DD.EXTENDED_DISCOVERY and
+                MCORE.SC.EXTENDED_DISCOVERY).</span>
+            </span>
+          </label>
+          <div class="chips" id="netcaps">
+            <button class="opt" data-v="tcp">Matter over TCP</button>
+            <button class="opt" data-v="extdisc">Extended Discovery</button>
+          </div>
+        </div>
         </div>
         <div class="form-section">
         <div class="section-title">Onboarding &amp; Updates</div>
         <div class="control-group">
+          <label>Commissioning flow
+            <span class="helptip" tabindex="0" aria-label="What is the commissioning flow?">?
+              <span class="helptext">Every device has exactly one (spec 5.1.3).
+                <b>Standard</b>: commissionable out of the box — 11-digit manual code.
+                <b>User-intent</b>: the user must trigger commissioning first (button press,
+                app step) — 11-digit code. <b>Custom</b>: the commissioner needs
+                vendor-specific instructions first — 21-digit code (VID/PID embedded).</span>
+            </span>
+          </label>
+          <div class="chips" id="flow">
+            <button class="opt seg-one" data-v="standard" aria-pressed="true">Standard</button>
+            <button class="opt seg-one" data-v="user_intent">User-intent</button>
+            <button class="opt seg-one" data-v="custom">Custom</button>
+          </div>
+        </div>
+        <div class="control-group">
           <label>Onboarding material
             <span class="helptip" tabindex="0" aria-label="What is onboarding?">?
               <span class="helptext">How a user gets the setup payload into a commissioner:
-                a printed/displayed QR code, a manual pairing code (11-digit assumed — the
-                standard case, which implies the Standard Commissioning Flow), or an NFC tag.
-                Select everything that ships with the product. For a 21-digit code device
-                (non-standard flow, spec 5.1.4), use <code>manual_pairing_code_21</code> in a
-                profile file.</span>
+                a printed/displayed QR code, the manual pairing code (always present — its
+                11- or 21-digit form is derived from the commissioning flow, spec 5.1.4),
+                or an NFC tag. Select everything that ships with the product.</span>
             </span>
           </label>
           <div class="chips" id="onboarding">

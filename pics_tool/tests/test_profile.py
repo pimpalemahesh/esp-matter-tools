@@ -96,3 +96,17 @@ def test_icd_mode_validated_and_defaulted():
         DeviceProfile.from_dict({"spec_version": "1.6", "device_type": "X",
                                  "transport": ["thread"], "is_icd": True,
                                  "icd_mode": "bogus"})
+
+
+def test_manual_code_aliases_normalize_to_flow_derived_form():
+    """The manual code's 11/21-digit form is derived from the commissioning
+    flow (spec 5.1.4); the legacy _11/_21 aliases normalize to the plain value
+    (a contradicting suffix is ignored -- the flow governs)."""
+    from pics_tool.generate.profile import DeviceProfile
+
+    base = {"spec_version": "1.6", "device_type": "X", "transport": ["wifi_2g"]}
+    p = DeviceProfile.from_dict(dict(base, commissioning_flow="custom",
+                                     onboarding=["qr", "manual_pairing_code_21"]))
+    assert p.onboarding == ["qr", "manual_pairing_code"]
+    p2 = DeviceProfile.from_dict(dict(base, onboarding=["manual_pairing_code_21"]))
+    assert p2.onboarding == ["manual_pairing_code"]  # alias ignored, flow governs

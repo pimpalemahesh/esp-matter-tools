@@ -82,12 +82,15 @@ def selection_questions(selection: dict, selected: dict | None = None) -> dict:
     """Optional items a *human* must decide for this selection.
 
     Returns ``{"summary": {...}, "questions": [...]}`` where each question is a
-    yes/no the tool could not derive on its own (the engine's ``needs_you`` set).
-    Mandatory items are auto-included and NOT returned here.
+    live decision the human must make -- a genuine optional item that applies
+    right now (the engine's ``needs_you`` set). Everything the tool can derive on
+    its own is auto-included and NOT returned here: mandatory items, and the
+    elements a feature/cluster-side mandates once it is enabled.
 
-    Re-callable: pass the growing ``selected`` back to reveal the sub-questions a
-    just-enabled feature unlocks (progressive disclosure). To accept a question,
-    append its ``code`` to ``selected[<its tab>]``.
+    Re-callable: pass the growing ``selected`` back to reveal the optional
+    sub-questions a just-enabled feature unlocks (progressive disclosure, driven
+    by the engine). To accept a question, append its ``code`` to
+    ``selected[<its tab>]``.
     """
     payload = webapp.generate_payload(_with_claims(selection, selected))
     labels = {t["id"]: t["label"] for t in payload["tabs"]}
@@ -119,30 +122,39 @@ def selection_questions(selection: dict, selected: dict | None = None) -> dict:
 # ---- generate ------------------------------------------------------------------
 
 def generate(selection: dict, selected: dict | None = None,
-             target: str = "esp_matter") -> dict:
-    """Produce the PICS files AND the data-model code for a finished selection.
+             target: str = "esp_matter", goal: str = "both") -> dict:
+    """Produce the PICS files and/or the data-model code for a finished selection.
 
-    ``selected`` is the human's optional Yes answers (``{tab:[codes]}``). Returns
-    ``{"target", "pics_files": {path: xml}, "code": {snippet, file, exact,
-    knowledge_source, endpoints}, "problems": [...]}``. ``problems`` is the
-    spec-check (empty == clean); each has ``severity`` "error"/"warning".
+    ``selected`` is the human's optional Yes answers (``{tab:[codes]}``). ``goal``
+    selects the outputs: ``"pics"`` (PICS XML + spec-check), ``"code"`` (esp-matter
+    data-model code only), or ``"both"`` (default). Returns
+    ``{"target", "goal", "pics_files": {path: xml}, "code": {snippet, file, exact,
+    knowledge_source, endpoints} | None, "problems": [...]}``. Keys not produced for
+    the chosen ``goal`` are empty (``pics_files == {}`` / ``problems == []`` /
+    ``code is None``). ``problems`` is the PICS spec-check (empty == clean); each
+    has ``severity`` "error"/"warning".
     """
     if target not in list_targets():
         raise ValueError(f"unknown target {target!r}; available: {list_targets()}")
+    if goal not in ("pics", "code", "both"):
+        raise ValueError(f"unknown goal {goal!r}; use 'pics', 'code' or 'both'")
     selected = selected or {}
     selection = selection or {}
 
-    # Full Yes set (mandatory + the human's optional choices) drives PICS + check;
-    # the code generator takes only the optional claims (it derives the baseline).
-    payload = webapp.generate_payload(_with_claims(selection, selected))
-    enabled = _enabled_by_tab(payload)
-
-    return {
-        "target": target,
-        "pics_files": webapp.export_pics_files(selection, enabled),
-        "code": webapp.generate_scaffold_files(selection, selected),
-        "problems": webapp.validate_selection(selection, enabled),
-    }
+    out: dict = {"target": target, "goal": goal,
+                 "pics_files": {}, "code": None, "problems": []}
+    if goal in ("pics", "both"):
+        # Full Yes set (mandatory + the human's optional choices) drives PICS + the
+        # spec-check. Base.xml/MCORE answers matter here (they ARE the node PICS).
+        payload = webapp.generate_payload(_with_claims(selection, selected))
+        enabled = _enabled_by_tab(payload)
+        out["pics_files"] = webapp.export_pics_files(selection, enabled)
+        out["problems"] = webapp.validate_selection(selection, enabled)
+    if goal in ("code", "both"):
+        # The code generator takes only the optional endpoint claims (it derives
+        # the baseline); node/Base.xml answers do not affect it.
+        out["code"] = webapp.generate_scaffold_files(selection, selected)
+    return out
 
 
 # ---- Selection-object API (the CLI drives this) --------------------------------

@@ -124,6 +124,12 @@ def _probe(version: str, **kw) -> set[str]:
         d["wifi_paf"] = kw["paf"]
     if "ntl" in kw:
         d["nfc_commissioning"] = kw["ntl"]
+    if "flow" in kw:
+        d["commissioning_flow"] = kw["flow"]
+    if "tcp" in kw:
+        d["tcp"] = kw["tcp"]
+    if "extdisc" in kw:
+        d["extended_discovery"] = kw["extdisc"]
     items = set(_mcore_meta(version)[0])
     return compute_mcore_pics(DeviceProfile.from_dict(d), version,
                               set(kw.get("clusters", frozenset()))) & items
@@ -145,6 +151,9 @@ def _classify(version: str):
         "ble_commissioning": [dict(ble=True), dict(ble=False)],
         "wifi_paf": [dict(paf=True), dict(paf=False)],
         "nfc_commissioning": [dict(ntl=True), dict(ntl=False)],
+        "commissioning_flow": [dict(flow=f) for f in ("standard", "user_intent", "custom")],
+        "tcp": [dict(tcp=True), dict(tcp=False)],
+        "extended_discovery": [dict(extdisc=True), dict(extdisc=False)],
         "role": [dict(role=r) for r in ("commissionee", "commissioner", "controller")],
         "onboarding": [dict(onboarding=x) for x in
                        ((), ("qr",), ("manual_pairing_code",),
@@ -598,19 +607,22 @@ def generate_payload(profile_dict: dict, claims=None) -> dict:
     def conf_of(code: str) -> str:
         return text.get(code, ("", ""))[1] or "-"
 
-    def row(code, tab, st, group, cluster, parent=None, why=None):
-        # "needs_you" == the item is in the manual group: the tool could not
-        # derive it, so it is the user's call. This holds uniformly for Base
-        # product-facts AND optional cluster elements (default No, claim if you
-        # implement them) -- so the "need your input" count reflects every
-        # undecided question, not just the node-level ones.
+    def row(code, tab, st, group, cluster, parent=None, why=None, needs_you=None):
+        # "needs_you" == a live decision the user must make NOW. By default it is
+        # the manual group (Base product-facts the tool cannot derive). Cluster
+        # items pass it explicitly: a genuine optional choice that is applicable
+        # right now (see the endpoint loop). "Mandatory if <feature>" elements are
+        # auto-resolved by the engine (Yes when the gate is on, else not
+        # applicable), so they are NOT questions even though they sit in the same
+        # manual section for the UI to nest and display.
         # "parent" is the gateway/feature this item reveals under.
         # "why" is a caller-supplied plain-language reason (MCORE items pass one);
         # cluster items fall back to the conformance-derived _why().
         return {"tab": tab, "code": code, "question": q_of(code),
                 "answer": "yes" if st in ("on", "claimed") else "no",
                 "group": group, "cluster": cluster, "parent": parent,
-                "needs_you": group == "manual", "conformance": conf_of(code),
+                "needs_you": (group == "manual") if needs_you is None else needs_you,
+                "conformance": conf_of(code),
                 "why": why if why is not None else _why(code, group, conf_of(code), model, prefix_map)}
 
     # Three distinct sections, shown as separate tabs: the node-level Base.xml
@@ -661,11 +673,14 @@ def generate_payload(profile_dict: dict, claims=None) -> dict:
         return f"No — determined by {dims}." if dims else "No — not required for this device."
 
     known = known_item_numbers(version)
+    # Base items with a reveal parent: LargeData rides on Matter-over-TCP.
+    _BASE_PARENTS = {"MCORE.IDM.S.LargeData": "MCORE.SC.TCP"}
     items = []
     for n in order:
         st = state(n, bucket_of[n])
         group = "manual" if st in ("review", "claimed") else "decided"
-        items.append(row(n, "base", st, group, _mcore_area(n), why=mcore_why(n, st)))
+        items.append(row(n, "base", st, group, _mcore_area(n),
+                         parent=_BASE_PARENTS.get(n), why=mcore_why(n, st)))
     tabs = [{"id": "base", "label": "Base PICS", "caption": "Node-Wide"}]
     for ep in sorted(endpoints, key=lambda e: e.endpoint):
         tab = str(ep.endpoint)
@@ -692,6 +707,10 @@ def generate_payload(profile_dict: dict, claims=None) -> dict:
         # the client gateway with its items. A code present in several
         # templates (ACL.S is in both the ACL and the ACE plan) belongs to the
         # first that lists it.
+        # Everything already Yes for this endpoint (baseline + the user's claims,
+        # incl. feature-seeded mandatory dependents): used to decide which gated
+        # optional items are *applicable* (a live question) right now.
+        enabled_here = tool_here | claim_here
         seen: set[str] = set()
         for tname, entries in _template_entries(version):
             t_codes = [c for c, _ in entries]
@@ -736,7 +755,17 @@ def generate_payload(profile_dict: dict, claims=None) -> dict:
                 ordered.extend(dep_rows)
             ordered.extend(client_rows)
             for code, st, parent in ordered:
-                items.append(row(code, tab, st, "manual", cluster, parent))
+                # A live question only if the element has a genuine OPTIONAL clause
+                # AND it is applicable now (top-level, or its gating parent is
+                # enabled). A purely "Mandatory if <feature>" element is derived by
+                # the engine -- Yes once its gate is on, otherwise not applicable --
+                # so it is never asked. (Compound conformance like "Mandatory if
+                # CC.S AND CC.S.F01 ; Optional if CC.S" still counts as optional --
+                # the substring test keeps it a question.)
+                live = ("optional" in conf_of(code).lower()
+                        and (parent is None or parent in enabled_here))
+                items.append(row(code, tab, st, "manual", cluster, parent,
+                                 needs_you=live))
 
     counts = {"yes": 0, "no": 0, "needs_you": 0}
     for it in items:

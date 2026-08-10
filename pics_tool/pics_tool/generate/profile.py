@@ -30,11 +30,12 @@ logger = logging.getLogger(__name__)
 
 VALID_TRANSPORTS = {"wifi_2g", "wifi_5g", "thread", "ethernet"}
 VALID_ROLES = {"commissionee", "commissioner", "controller"}
-# manual_pairing_code (legacy) == manual_pairing_code_11: an 11-digit code
-# implies Standard Commissioning Flow; a 21-digit code (VID/PID embedded)
-# implies a NON-standard flow, so it must not claim STANDARD_COMM_FLOW.
+# The manual code's 11/21-digit form is DERIVED from commissioning_flow
+# (spec 5.1.4: custom flow => 21-digit, VID/PID embedded). The _11/_21 values
+# are accepted as aliases for compatibility, but must not contradict the flow.
 VALID_ONBOARDING = {"qr", "manual_pairing_code", "manual_pairing_code_11",
                     "manual_pairing_code_21", "nfc"}
+VALID_COMM_FLOW = {"standard", "user_intent", "custom"}
 VALID_POWER = {"mains", "battery"}
 
 # Recognized profile keys (everything else goes to .extra).
@@ -42,6 +43,7 @@ _KNOWN_KEYS = {
     "spec_version", "device_type", "transport", "role", "ble_commissioning",
     "onboarding", "node_device_types", "is_icd", "icd_mode", "power_source",
     "im_client", "wifi_paf", "nfc_commissioning", "vendor_specific_ota",
+    "commissioning_flow", "tcp", "extended_discovery",
 }
 
 
@@ -75,6 +77,16 @@ class DeviceProfile:
     # Note Base.xml also DERIVES this as mandatory for a commissionee with no
     # OTA Requestor -- every certifiable device must be updatable somehow.
     vendor_specific_ota: bool = False
+    # Commissioning flow (spec 5.1.3, exactly one per device): standard =
+    # commissionable out of the box (11-digit code); user_intent = needs a user
+    # action first (11-digit); custom = vendor instructions required (21-digit
+    # code, VID/PID embedded).
+    commissioning_flow: str = "standard"
+    # Matter over TCP (large-payload sessions, 1.4+).
+    tcp: bool = False
+    # Extended Discovery: advertises beyond the commissioning window (decides
+    # both MCORE.DD.EXTENDED_DISCOVERY and MCORE.SC.EXTENDED_DISCOVERY).
+    extended_discovery: bool = False
     # Interaction Model role override: None = derive from the device type's
     # mandatory client clusters; True/False = the user states the device does /
     # does not act as an IM client (initiates reads/writes/invokes to others).
@@ -95,6 +107,21 @@ class DeviceProfile:
         _require_member("role", self.role, VALID_ROLES)
         _require_subset("onboarding", self.onboarding, VALID_ONBOARDING)
         _require_member("power_source", self.power_source, VALID_POWER)
+        _require_member("commissioning_flow", self.commissioning_flow, VALID_COMM_FLOW)
+        # The code form is DERIVED from the flow (spec 5.1.4: custom <=> 21-digit),
+        # so the legacy _11/_21 aliases normalize to the plain value; a suffix
+        # contradicting the flow is noted and ignored -- the flow governs.
+        for o in self.onboarding:
+            if o == "manual_pairing_code_21" and self.commissioning_flow != "custom":
+                logger.warning("manual_pairing_code_21 with %s flow: the code form "
+                               "follows the flow (11-digit); alias ignored",
+                               self.commissioning_flow)
+            if o == "manual_pairing_code_11" and self.commissioning_flow == "custom":
+                logger.warning("manual_pairing_code_11 with custom flow: the code "
+                               "form follows the flow (21-digit); alias ignored")
+        self.onboarding = list(dict.fromkeys(
+            "manual_pairing_code" if o.startswith("manual_pairing_code") else o
+            for o in self.onboarding))
         if self.icd_mode is not None:
             _require_member("icd_mode", self.icd_mode, {"sit", "lit"})
         if self.is_icd and self.icd_mode is None:

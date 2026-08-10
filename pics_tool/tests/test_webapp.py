@@ -68,7 +68,7 @@ def test_undecidable_product_facts_are_manual_not_decided():
     # product facts with no derivation path, AND composition facts the phase-1
     # UI still cannot express (bridge, device lists, ICD) -> manual
     for code in ("MCORE.DLOG.S.UTCTIMESTAMP", "MCORE.DLOG.S.TIMESINCEBOOT",
-                 "MCORE.SC.TCP", "MCORE.DD.PHYSICAL_TAMPERING",
+                 "MCORE.DD.PHYSICAL_TAMPERING",
                  "MCORE.BRIDGE", "MCORE.BRIDGECLIENT", "MCORE.DEVLIST.UseDevices",
                  "MCORE.SC.SIT_ICD"):
         assert by_code[code]["group"] == "manual", f"{code} wrongly tool-decided"
@@ -235,7 +235,7 @@ def test_items_split_into_decided_and_manual_groups():
     base = [it for it in p["items"] if it["tab"] == "base"]
     assert len(base) == 132  # each and every Base.xml item is present
     manual_base = [it for it in base if it["group"] == "manual"]
-    assert len(manual_base) == 60
+    assert len(manual_base) == 55
     assert all(it["answer"] == "no" for it in manual_base)
     assert any(it["code"] == "MCORE.DD.PHYSICAL_TAMPERING" for it in manual_base)
 
@@ -581,21 +581,39 @@ def test_nfc_commissioning_input_decides_ntl():
     assert by2["MCORE.DD.NTL"]["answer"] == "no"    # transport NOT implied by tag
 
 
-def test_manual_pairing_code_length_decides_commissioning_flow():
-    """Spec 5.1.4: an 11-digit manual code implies Standard Commissioning Flow;
-    a 21-digit code (VID/PID embedded) implies a NON-standard flow and must not
-    claim STANDARD_COMM_FLOW."""
-    p11 = webapp.generate_payload(dict(PROFILE, onboarding=["manual_pairing_code_11"]))
-    by11 = {it["code"]: it for it in p11["items"] if it["tab"] == "base"}
-    assert by11["MCORE.DD.MANUAL_PC"]["answer"] == "yes"
-    assert by11["MCORE.DD.STANDARD_COMM_FLOW"]["answer"] == "yes"
+def test_commissioning_flow_input_decides_flow_items():
+    """The commissioning flow is an explicit input (spec 5.1.3, exactly one per
+    device): it decides all three *_COMM_FLOW items, in every direction."""
+    cases = {
+        "standard": ("yes", "no", "no"),
+        "user_intent": ("no", "yes", "no"),
+        "custom": ("no", "no", "yes"),
+    }
+    for flow, (std, ui, cust) in cases.items():
+        p = webapp.generate_payload(dict(PROFILE, commissioning_flow=flow))
+        by = {it["code"]: it for it in p["items"] if it["tab"] == "base"}
+        assert by["MCORE.DD.STANDARD_COMM_FLOW"]["answer"] == std, flow
+        assert by["MCORE.DD.USER_INTENT_COMM_FLOW"]["answer"] == ui, flow
+        assert by["MCORE.DD.CUSTOM_COMM_FLOW"]["answer"] == cust, flow
+        assert by["MCORE.DD.STANDARD_COMM_FLOW"]["group"] == "decided"
+        assert by["MCORE.DD.MANUAL_PC"]["answer"] == "yes"  # code present in all flows
 
-    p21 = webapp.generate_payload(dict(PROFILE, onboarding=["manual_pairing_code_21"]))
-    by21 = {it["code"]: it for it in p21["items"] if it["tab"] == "base"}
-    assert by21["MCORE.DD.MANUAL_PC"]["answer"] == "yes"
-    assert by21["MCORE.DD.STANDARD_COMM_FLOW"]["answer"] == "no"
-    # which non-standard flow is a product fact -> manual
-    assert by21["MCORE.DD.CUSTOM_COMM_FLOW"]["group"] == "manual"
+
+def test_tcp_and_extended_discovery_inputs():
+    """Matter-over-TCP and Extended Discovery are explicit inputs; TCP also
+    parents the LargeData question (revealed only when TCP is claimed)."""
+    p = webapp.generate_payload(dict(PROFILE, tcp=True, extended_discovery=True))
+    by = {it["code"]: it for it in p["items"] if it["tab"] == "base"}
+    assert by["MCORE.SC.TCP"]["answer"] == "yes"
+    assert by["MCORE.DD.EXTENDED_DISCOVERY"]["answer"] == "yes"
+    assert by["MCORE.SC.EXTENDED_DISCOVERY"]["answer"] == "yes"
+    assert by["MCORE.IDM.S.LargeData"]["parent"] == "MCORE.SC.TCP"
+    assert by["MCORE.IDM.S.LargeData"]["group"] == "manual"  # still a product fact
+
+    p2 = webapp.generate_payload(PROFILE)
+    by2 = {it["code"]: it for it in p2["items"] if it["tab"] == "base"}
+    for c in ("MCORE.SC.TCP", "MCORE.DD.EXTENDED_DISCOVERY", "MCORE.SC.EXTENDED_DISCOVERY"):
+        assert by2[c]["group"] == "decided" and by2[c]["answer"] == "no", c
 
 
 def test_ota_input_covers_all_combinations():

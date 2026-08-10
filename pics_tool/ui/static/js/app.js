@@ -105,6 +105,9 @@ function readProfile() {
     wifi_paf: selected("commdisc").includes("wifi_paf"),
     nfc_commissioning: selected("commdisc").includes("nfc"),
     onboarding: selected("onboarding"),
+    commissioning_flow: selected("flow")[0] || "standard",
+    tcp: selected("netcaps").includes("tcp"),
+    extended_discovery: selected("netcaps").includes("extdisc"),
     role: selected("role")[0] || "commissionee",
     // IM role is always derived automatically (device type + claims)
   };
@@ -144,7 +147,22 @@ function applyProfileToForm(p) {
     o.startsWith("manual_pairing_code") ? "manual_pairing_code" : o);
   ob.push("manual_pairing_code");
   setSelected("onboarding", [...new Set(ob)]);
+  setSelected("flow", [p.commissioning_flow || "standard"]);
+  const caps = [];
+  if (p.tcp) caps.push("tcp");
+  if (p.extended_discovery) caps.push("extdisc");
+  setSelected("netcaps", caps);
   setSelected("role", [p.role || "commissionee"]);
+  updateCodeLabel();
+}
+
+// The manual code's digit form follows the commissioning flow (spec 5.1.4).
+function updateCodeLabel() {
+  const btn = document.querySelector('#onboarding .opt[data-v="manual_pairing_code"]');
+  if (btn) {
+    const custom = selected("flow")[0] === "custom";
+    btn.textContent = `Manual pairing code (${custom ? "21" : "11"})`;
+  }
 }
 
 // A profile the engine would reject never reaches the engine: say what's wrong.
@@ -904,11 +922,16 @@ function resetAll() {
 wireChips("transport", false);
 wireChips("onboarding", false);
 wireChips("commdisc", false);
+wireChips("flow", true);
+wireChips("netcaps", false);
 wireChips("ota", true);
 wireChips("role", true);
 // results update automatically on any form change — no Generate button
-["transport", "onboarding", "commdisc", "ota", "role"].forEach((id) =>
-  $(id).addEventListener("click", (e) => { if (e.target.closest(".opt")) markDirty(); }));
+["transport", "onboarding", "commdisc", "flow", "netcaps", "ota", "role"].forEach((id) =>
+  $(id).addEventListener("click", (e) => {
+    if (e.target.closest(".opt")) { updateCodeLabel(); markDirty(); }
+  }));
+updateCodeLabel();  // boot: label reflects the default flow even with no session
 $("addEndpoint").addEventListener("click", () => { addEndpointRow(); markDirty(); });
 $("generateBtn").addEventListener("click", () => generate(null, true));
 $("exportBtn").addEventListener("click", exportPICS);

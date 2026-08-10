@@ -45,11 +45,19 @@ logger = logging.getLogger(__name__)
 # (DD.11_MANUAL_PC / DD.21_MANUAL_PC are *commissioner*-side items and are
 # intentionally not seeded here.)
 _ONBOARDING_SEEDS = {
-    "qr": ["MCORE.DD.QR", "MCORE.DD.STANDARD_COMM_FLOW"],
-    "manual_pairing_code": ["MCORE.DD.MANUAL_PC", "MCORE.DD.STANDARD_COMM_FLOW"],
-    "manual_pairing_code_11": ["MCORE.DD.MANUAL_PC", "MCORE.DD.STANDARD_COMM_FLOW"],
+    "qr": ["MCORE.DD.QR"],
+    "manual_pairing_code": ["MCORE.DD.MANUAL_PC"],
+    "manual_pairing_code_11": ["MCORE.DD.MANUAL_PC"],
     "manual_pairing_code_21": ["MCORE.DD.MANUAL_PC"],
     "nfc": ["MCORE.DD.NFC"],
+}
+# The commissioning FLOW is its own input (profile.commissioning_flow): the
+# *_COMM_FLOW items follow it, and the manual code's 11/21-digit form follows
+# the flow too (spec 5.1.4) -- onboarding materials only seed what they are.
+_FLOW_SEEDS = {
+    "standard": ["MCORE.DD.STANDARD_COMM_FLOW"],
+    "user_intent": ["MCORE.DD.USER_INTENT_COMM_FLOW"],
+    "custom": ["MCORE.DD.CUSTOM_COMM_FLOW"],
 }
 
 # Cluster ids that reveal node-level facts (OTA / bridge). These are DERIVED from
@@ -135,6 +143,12 @@ def profile_seeds(profile: DeviceProfile, facts: NodeFacts,
         seeds.add("MCORE.DD.NTL")
     if profile.vendor_specific_ota:
         seeds.add("MCORE.OTA.VendorSpecific")
+    seeds.update(_FLOW_SEEDS.get(profile.commissioning_flow, []))
+    if profile.tcp:
+        seeds.add("MCORE.SC.TCP")
+    if profile.extended_discovery:
+        seeds.add("MCORE.DD.EXTENDED_DISCOVERY")
+        seeds.add("MCORE.SC.EXTENDED_DISCOVERY")
     for o in profile.onboarding:
         seeds.update(_ONBOARDING_SEEDS.get(o, []))
     # OTA / bridge are DERIVED from the enabled cluster set, not asked.
