@@ -69,7 +69,7 @@ def test_undecidable_product_facts_are_manual_not_decided():
     # UI still cannot express (bridge, device lists, ICD) -> manual
     for code in ("MCORE.DLOG.S.UTCTIMESTAMP", "MCORE.DLOG.S.TIMESINCEBOOT",
                  "MCORE.DD.PHYSICAL_TAMPERING",
-                 "MCORE.BRIDGE", "MCORE.BRIDGECLIENT", "MCORE.DEVLIST.UseDevices",
+                 "MCORE.BRIDGECLIENT", "MCORE.DEVLIST.UseDevices",
                  "MCORE.SC.SIT_ICD"):
         assert by_code[code]["group"] == "manual", f"{code} wrongly tool-decided"
         assert by_code[code]["answer"] == "no"  # conservative default until claimed
@@ -235,7 +235,7 @@ def test_items_split_into_decided_and_manual_groups():
     base = [it for it in p["items"] if it["tab"] == "base"]
     assert len(base) == 132  # each and every Base.xml item is present
     manual_base = [it for it in base if it["group"] == "manual"]
-    assert len(manual_base) == 55
+    assert len(manual_base) == 51
     assert all(it["answer"] == "no" for it in manual_base)
     assert any(it["code"] == "MCORE.DD.PHYSICAL_TAMPERING" for it in manual_base)
 
@@ -668,3 +668,25 @@ def test_bdx_not_ruled_out_by_vendor_ota():
         assert byr[c]["group"] == "decided" and byr[c]["answer"] == "yes", c
     for c in ("MCORE.BDX.Sender", "MCORE.BDX.Responder"):  # sender side: DLOG may need it
         assert byr[c]["group"] == "manual" and byr[c]["answer"] == "no", c
+
+
+def test_bridge_derived_from_device_type_identity():
+    """Bridge-ness comes from the declared composition by device-type IDENTITY
+    (Aggregator 0x000e / Bridged Node 0x0013), never name matching. With the
+    composition fully declared, bridge is decided BOTH ways: Aggregator =>
+    MCORE.BRIDGE Yes with the BRIDGE.* product questions opened; no bridge
+    device type => a decided No."""
+    p = webapp.generate_payload(dict(PROFILE, device_type="Aggregator"))
+    by = {it["code"]: it for it in p["items"] if it["tab"] == "base"}
+    assert by["MCORE.BRIDGE"]["group"] == "decided"
+    assert by["MCORE.BRIDGE"]["answer"] == "yes"
+    for c in ("MCORE.BRIDGE.BatInfo", "MCORE.BRIDGE.OtherControl",
+              "MCORE.BRIDGE.AllowDeviceRename"):
+        assert by[c]["group"] == "manual" and by[c]["answer"] == "no", c
+
+    p2 = webapp.generate_payload(PROFILE)  # plain light: input-backed No
+    by2 = {it["code"]: it for it in p2["items"] if it["tab"] == "base"}
+    assert by2["MCORE.BRIDGE"]["group"] == "decided"
+    assert by2["MCORE.BRIDGE"]["answer"] == "no"
+    assert by2["MCORE.BRIDGE.BatInfo"]["group"] == "decided"
+    assert by2["MCORE.BRIDGE.BatInfo"]["answer"] == "no"

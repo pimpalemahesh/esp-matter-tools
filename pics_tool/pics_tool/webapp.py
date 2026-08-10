@@ -500,7 +500,18 @@ def generate_payload(profile_dict: dict, claims=None) -> dict:
                                       per_endpoint_feature_seeds=per_ep_seeds)
     baseline_pics = {ep.endpoint: ep.pics for ep in baseline}
     cluster_ids = all_enabled_cluster_ids(endpoints)
-    mcore_on = compute_mcore_pics(profile, version, cluster_ids) & set(order)
+    # Bridge-ness by device-type IDENTITY (never name strings): Aggregator
+    # (0x000e) and Bridged Node (0x0013) ARE the spec's bridge device types.
+    # Cluster detection alone misses a plain Aggregator -- its Commissioner
+    # Control is mandatory only under FabricSynchronization.
+    _BRIDGE_DT_IDS = {"0x000e", "0x0013"}
+    _all_dt_names = ([dt for ep in selection.endpoints for dt in ep.device_types]
+                     + list(profile.node_device_types))
+    bridge_dt = any((d := _find_device_type(model, n)) and d.id in _BRIDGE_DT_IDS
+                    for n in _all_dt_names)
+    _bridge_seeds = {"MCORE.BRIDGE"} if bridge_dt else set()
+    mcore_on = compute_mcore_pics(profile, version, cluster_ids,
+                                  extra_seeds=_bridge_seeds) & set(order)
     # User-claimed Base atoms re-enter the cond fixpoint, exactly like feature
     # and gateway claims: claiming DD.CONCATENATED_QR_CODE makes DD.QR
     # mandatory AT GENERATION TIME, not only in the export validator. The delta
@@ -508,7 +519,7 @@ def generate_payload(profile_dict: dict, claims=None) -> dict:
     mcore_claimed: set = set()
     if mcore_claim_atoms:
         mcore_full = compute_mcore_pics(profile, version, cluster_ids,
-                                        extra_seeds=mcore_claim_atoms) & set(order)
+                                        extra_seeds=mcore_claim_atoms | _bridge_seeds) & set(order)
         mcore_claimed = mcore_full - mcore_on
     # IM role considers every application endpoint's device types (a switch on any
     # endpoint makes the node an IM client).
@@ -536,6 +547,8 @@ def generate_payload(profile_dict: dict, claims=None) -> dict:
                             for c in all_side_codes))
     role_profile = load_role_profile(profile.role)
     facts = node_facts_from_clusters(cluster_ids)
+    if bridge_dt:
+        facts.has_bridge = True  # identity-derived (see _BRIDGE_DT_IDS above)
 
     # OTA is now an explicit input (requestor / provider / vendor-specific),
     # so the whole OTA/BDX area is input-decided -- including Base.xml's own
@@ -543,8 +556,13 @@ def generate_payload(profile_dict: dict, claims=None) -> dict:
     # vendor-specific OTA. Bridge remains unasked in phase 1: unless the
     # composition declares an Aggregator, its items are unknowable -- and
     # "no information" is never a "No".
-    bridge_declared = any("aggregator" in n.lower()
-                          for n in profile.node_device_types)
+    # Bridge-ness is derived from the declared composition, by IDENTITY not
+    # name: Aggregator (0x000e) mandates Commissioner Control (0x0751) and
+    # Bridged Node (0x0013) mandates Bridged Device Basic Info (0x0039) --
+    # node_facts_from_clusters keys has_bridge on exactly those clusters. The
+    # composition is an explicit, exhaustive input now (a bridge product must
+    # statically expose these device types), so bridge is decided BOTH ways.
+    bridge_declared = True
     gate_active = {"bridge": facts.has_bridge,
                    "ota_requestor": facts.has_ota_requestor,
                    "ota_provider": facts.has_ota_provider,
