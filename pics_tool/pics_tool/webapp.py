@@ -38,8 +38,10 @@ from functools import lru_cache
 from esp_matter_datamodel import boolexpr, loader
 
 from .generate import claims
-from .generate.cluster_engine import (active_conditions, all_enabled_cluster_ids,
-                                      generate_cluster_pics, load_transport_map)
+from .generate.cluster_engine import (ROOT_NODE_DEVICE_TYPE_ID, active_conditions,
+                                      all_enabled_cluster_ids, controlled_conditions,
+                                      generate_cluster_pics, load_transport_map,
+                                      offered_cluster_sides)
 from .generate.mcore_engine import (compute_mcore_pics, gated_area,
                                     load_role_profile, node_facts_from_clusters,
                                     role_denied)
@@ -538,6 +540,16 @@ def generate_payload(profile_dict: dict, claims=None) -> dict:
     # belong in Manual selection (pre-filled Yes), not "Selected by the tool".
     im_from_claims = (im_client and not derived_im_types
                       and profile.im_client is None)
+    # Device-CONTROL client capability (narrower than im_client): the OTA
+    # Requestor node type's provider client is fixed OTA infrastructure -- it
+    # downloads firmware, it cannot browse another node's devices. Only an
+    # application device type's mandated clients, a claimed client side, an
+    # explicit override, or a commissioner/controller role make the node a
+    # client that interacts with OTHER DEVICES (what a bridge client does).
+    device_control_client = (profile.role != "commissionee"
+                             or is_im_client(model, all_app_dts)
+                             or claimed_client
+                             or profile.im_client is True)
     # Does the device send commands (client Tx)? Mandated by the device type,
     # or a spec consequence of a claimed client side -- either way,
     # IDM.C.InvokeRequest is derivable, not a guess.
@@ -549,6 +561,15 @@ def generate_payload(profile_dict: dict, claims=None) -> dict:
     facts = node_facts_from_clusters(cluster_ids)
     if bridge_dt:
         facts.has_bridge = True  # identity-derived (see _BRIDGE_DT_IDS above)
+    # Diagnostic Logs is never baseline (Root Node lists it as optional), so
+    # its presence comes from the user's cluster claim: a claimed DLOG.S puts
+    # the cluster in the declared composition, opening the MCORE.DLOG.* field
+    # questions; without the claim they are an input-backed decided No.
+    claimed_server_cids = {prefix_map.get(g.split(".", 1)[0])
+                           for sides in per_ep_side.values()
+                           for g in sides if g.endswith(".S")}
+    if "0x0032" in claimed_server_cids:
+        facts.has_diagnostic_logs = True
 
     # OTA is now an explicit input (requestor / provider / vendor-specific),
     # so the whole OTA/BDX area is input-decided -- including Base.xml's own
@@ -566,10 +587,20 @@ def generate_payload(profile_dict: dict, claims=None) -> dict:
     gate_active = {"bridge": facts.has_bridge,
                    "ota_requestor": facts.has_ota_requestor,
                    "ota_provider": facts.has_ota_provider,
-                   "icd": profile.is_icd}
+                   "icd": profile.is_icd,
+                   "diagnostic_logs": facts.has_diagnostic_logs}
+    # diagnostic_logs is declared: DLOG.S is an explicit Root Node offering,
+    # so not claiming it IS the answer (the cluster is absent).
     gate_declared = {"bridge": bridge_declared, "ota_requestor": True,
-                     "ota_provider": True, "icd": False}
+                     "ota_provider": True, "icd": False,
+                     "diagnostic_logs": True}
     _BRIDGE_NS = ("MCORE.BRIDGE", "MCORE.DEVLIST.")
+    # The bridge-CLIENT family (spec 13.1.2 "DUT client"): the DUT consumes a
+    # bridge's exposed devices -- DEVICE-CONTROL client behavior. Gated on
+    # device_control_client (narrower than im_client: OTA infrastructure
+    # clients don't count): without it these are an input-backed No; with it
+    # they are real product questions.
+    _BRIDGE_CLIENT_NS = ("MCORE.BRIDGECLIENT", "MCORE.DEVLIST.")
 
     def state(n: str, bucket: str) -> str:
         if not bridge_declared and n.startswith(_BRIDGE_NS):
@@ -606,6 +637,8 @@ def generate_payload(profile_dict: dict, claims=None) -> dict:
             return "review"
         if n in mcore_claimed:
             return "claimed"
+        if n.startswith(_BRIDGE_CLIENT_NS) and not device_control_client:
+            return "off"  # no device-control client role -> not a bridge client
         if role_denied(n, role_profile):
             # Contradicted by the chosen role: the tool CAN decide this --
             # e.g. commissioner-side scanning/CTRL questions are a defendable
@@ -625,7 +658,8 @@ def generate_payload(profile_dict: dict, claims=None) -> dict:
     def conf_of(code: str) -> str:
         return text.get(code, ("", ""))[1] or "-"
 
-    def row(code, tab, st, group, cluster, parent=None, why=None, needs_you=None):
+    def row(code, tab, st, group, cluster, parent=None, why=None, needs_you=None,
+            opt_cluster=False):
         # "needs_you" == a live decision the user must make NOW. By default it is
         # the manual group (Base product-facts the tool cannot derive). Cluster
         # items pass it explicitly: a genuine optional choice that is applicable
@@ -636,11 +670,14 @@ def generate_payload(profile_dict: dict, claims=None) -> dict:
         # "parent" is the gateway/feature this item reveals under.
         # "why" is a caller-supplied plain-language reason (MCORE items pass one);
         # cluster items fall back to the conformance-derived _why().
+        # "opt_cluster" marks items of a SPEC-OPTIONAL cluster for this endpoint:
+        # the device type lists the cluster but does not mandate it, so the
+        # whole cluster is the user's claim (the UI badges these sections).
         return {"tab": tab, "code": code, "question": q_of(code),
                 "answer": "yes" if st in ("on", "claimed") else "no",
                 "group": group, "cluster": cluster, "parent": parent,
                 "needs_you": (group == "manual") if needs_you is None else needs_you,
-                "conformance": conf_of(code),
+                "conformance": conf_of(code), "opt_cluster": opt_cluster,
                 "why": why if why is not None else _why(code, group, conf_of(code), model, prefix_map)}
 
     # Three distinct sections, shown as separate tabs: the node-level Base.xml
@@ -683,14 +720,44 @@ def generate_payload(profile_dict: dict, claims=None) -> dict:
         if st == "on":
             return f"Yes — determined by {dims}." if dims else "Mandatory for every Matter device."
         # decided No
+        if n.startswith(_BRIDGE_CLIENT_NS) and not device_control_client:
+            return ("No — the device does not control other devices (it has "
+                    "no device-control client role), so it cannot be a client "
+                    "of a bridge or maintain a device list.")
         if role_denied(n, role_profile):
             return f"No — not applicable for {_ROLE_PHRASE.get(profile.role, profile.role)}."
         area = gated_area(n, role_profile)
+        if area == "diagnostic_logs" and not gate_active.get(area):
+            return ("No — the device does not implement the Diagnostic Logs "
+                    "cluster (enable it on the Root Node tab to answer these).")
         if area and not gate_active.get(area):
             return f"No — the {area.replace('_', ' ')} feature is not enabled."
         return f"No — determined by {dims}." if dims else "No — not required for this device."
 
     known = known_item_numbers(version)
+
+    # Spec-optional cluster offerings, per endpoint: clusters the device type
+    # LISTS but does not mandate. Only template-backed gateway codes surface.
+    _tmap = load_transport_map()
+    _conditions = active_conditions(profile, _tmap)
+    _controlled = controlled_conditions(_tmap)
+    _cluster_pics = {cid: c.pics for cid, c in model.clusters.items() if c.pics}
+
+    def _ep_offerings(ep) -> dict[str, str]:
+        """{gateway code: kind} the spec offers on this endpoint."""
+        if ep.endpoint == 0:
+            dts = [model.device_types.get(ROOT_NODE_DEVICE_TYPE_ID)]
+            names = list(profile.node_device_types)
+        else:
+            dts = []
+            names = list(selection.endpoints[ep.endpoint - 1].device_types)
+        dts += [_find_device_type(model, n) for n in names]
+        offers = offered_cluster_sides(model, [d for d in dts if d is not None],
+                                       _conditions, _controlled,
+                                       ep.cluster_ids, ep.client_cluster_ids)
+        return {gw: kind for (cid, side), kind in offers.items()
+                if (gw := f"{_cluster_pics.get(cid)}.{side}") in known}
+
     # Base items with a reveal parent: LargeData rides on Matter-over-TCP.
     _BASE_PARENTS = {"MCORE.IDM.S.LargeData": "MCORE.SC.TCP"}
     items = []
@@ -713,7 +780,13 @@ def generate_payload(profile_dict: dict, claims=None) -> dict:
         # elements) is pre-filled Yes but stays in Manual selection.
         tool_here = baseline_pics.get(ep.endpoint, set()) & known
         claim_here = (ep.pics & known) - tool_here
+        offered_gws = _ep_offerings(ep)
         for gateway, claim_codes in per_ep_side.get(ep.endpoint, {}).items():
+            # A claim takes effect here when its cluster is either already
+            # exported on this endpoint or spec-offered for it.
+            if gateway in offered_gws:
+                claim_here |= claim_codes - tool_here
+                continue
             for _, codes in _template_codes(version):
                 if gateway in codes and tool_here.intersection(codes):
                     claim_here |= claim_codes - tool_here
@@ -784,6 +857,54 @@ def generate_payload(profile_dict: dict, claims=None) -> dict:
                         and (parent is None or parent in enabled_here))
                 items.append(row(code, tab, st, "manual", cluster, parent,
                                  needs_you=live))
+
+        # Spec-optional clusters for this endpoint: the device type LISTS the
+        # cluster but the baseline did not mandate it. The side's gateway
+        # (X.S / X.C) leads and EVERY sub-item reveals under it, so an
+        # unclaimed optional cluster is one question. Claiming the gateway
+        # re-enters the engine (per_ep_side) and pre-fills the side's
+        # spec-mandatory elements Yes -- exactly like any other claim. Only
+        # the offered side(s) render: a side the spec does not list for this
+        # device type stays out.
+        _OFFER_WHY = {
+            "optional": "The spec lists this cluster as optional for this "
+                        "endpoint's device type — enable it if your product "
+                        "implements it.",
+            "product_fact": "Required only for products with this capability "
+                            "(see the conformance) — only you can answer.",
+        }
+        for tname, entries in _template_entries(version):
+            t_codes = [c for c, _ in entries]
+            if tool_here.intersection(t_codes):
+                continue                       # already rendered above
+            if not any(g in t_codes for g in offered_gws):
+                continue
+            cluster = _cluster_label(tname)
+            srv: list[tuple] = []
+            cli: list[tuple] = []
+            for code, cond in entries:
+                if code in seen or code.startswith("MCORE."):
+                    continue
+                parts = code.split(".")
+                if len(parts) < 2:
+                    continue
+                gw = f"{parts[0]}.{parts[1]}"
+                if gw not in offered_gws:
+                    continue                   # side/prefix not offered here
+                seen.add(code)
+                st = "on" if code in claim_here else "off"
+                bucket = srv if parts[1] == "S" else cli
+                if len(parts) == 2:            # the gateway leads its block
+                    bucket.insert(0, (code, st, None, offered_gws[gw]))
+                else:
+                    bucket.append((code, st, _parent_of(code, cond) or gw, None))
+            for code, st, parent, kind in srv + cli:
+                live = (kind is not None
+                        or ("optional" in conf_of(code).lower()
+                            and parent in enabled_here))
+                items.append(row(code, tab, st, "manual", cluster, parent,
+                                 why=_OFFER_WHY[kind] if kind else None,
+                                 needs_you=live, opt_cluster=True))
 
     counts = {"yes": 0, "no": 0, "needs_you": 0}
     for it in items:

@@ -192,6 +192,89 @@ def all_enabled_cluster_ids(endpoints: list[EndpointPics]) -> set[str]:
     return ids
 
 
+def controlled_conditions(transport_map: dict) -> frozenset[str]:
+    """Condition names whose truth the profile inputs FULLY determine.
+
+    Transport conditions are exhaustive (the transport input decides each one
+    both ways) and the ICD flag decides SIT/LIT/Active. Any OTHER condition a
+    device-type requirement references (LanguageLocale, Simple, ...) is a
+    product fact the inputs cannot see.
+    """
+    known: set[str] = {"SIT", "LIT", "Active"}
+    for entry in transport_map.get("transports", {}).values():
+        known.update(entry.get("conditions", []))
+    return frozenset(known)
+
+
+def condition_refs(node) -> set[str]:
+    """Every ConditionRef name mentioned anywhere in a conformance tree."""
+    out: set[str] = set()
+    if node is None or isinstance(node, (str, int, float, bool)):
+        return out
+    if type(node).__name__ == "ConditionRef":
+        name = getattr(node, "name", None)
+        if isinstance(name, str):
+            out.add(name)
+        return out
+    for attr in ("condition", "items", "args", "arg", "payload", "left", "right"):
+        value = getattr(node, attr, None)
+        if isinstance(value, (list, tuple)):
+            for child in value:
+                out |= condition_refs(child)
+        elif value is not None:
+            out |= condition_refs(value)
+    return out
+
+
+def offered_cluster_sides(model: DataModel, device_types: list[DeviceType],
+                          conditions: frozenset[str], controlled: frozenset[str],
+                          enabled_server: set[str], enabled_client: set[str],
+                          ) -> dict[tuple[str, str], str]:
+    """Cluster sides the SPEC lists for these device types but the baseline
+    did not enable: the endpoint's optional-cluster offerings.
+
+    Returns {(cluster_id, side): kind} with side "S"/"C" and kind:
+
+    * ``optional``     -- the requirement evaluates Optional right now: a plain
+                          vendor choice ("O", "O if Wi-Fi" on a Wi-Fi device);
+    * ``product_fact`` -- it evaluates Not-Applicable ONLY because a condition
+                          no input controls (LanguageLocale, Simple&Client, ...)
+                          is unknown; claiming the side answers that condition,
+                          and absence of information is never a "No".
+
+    A requirement blocked purely by CONTROLLED conditions (Thread diagnostics
+    on a Wi-Fi-only device, ICD Management without the ICD flag) is a
+    defendable input-decided No and is NOT offered. Disallowed/deprecated and
+    provisional requirements are never offered.
+    """
+    from esp_matter_datamodel.model.conformance import Decision
+
+    out: dict[tuple[str, str], str] = {}
+    presence = ConformanceContext(active_conditions=conditions)
+    for side, enabled in (("S", enabled_server), ("C", enabled_client)):
+        merged = _merge_requirements(device_types, model.base_device_type,
+                                     "server" if side == "S" else "client")
+        for cid, req in merged.items():
+            if cid in enabled or model.clusters.get(cid) is None:
+                continue
+            res = evaluate(req.conformance, presence)
+            if res.decision == Decision.OPTIONAL:
+                out[(cid, side)] = "optional"
+                continue
+            if res.decision != Decision.NOT_APPLICABLE:
+                continue  # disallowed/deprecated/provisional: never offered
+            unknown = condition_refs(req.conformance) - controlled
+            if not unknown:
+                continue  # blocked purely by input-decided conditions: a real No
+            # Would it apply if the product facts held? Exact check: re-evaluate
+            # with every uncontrolled condition assumed true.
+            assumed = ConformanceContext(active_conditions=conditions | unknown)
+            if evaluate(req.conformance, assumed).decision in (
+                    Decision.MANDATORY, Decision.OPTIONAL):
+                out[(cid, side)] = "product_fact"
+    return out
+
+
 @dataclass
 class _BaselineRequirement:
     """Stand-in requirement for a USER-claimed cluster side.

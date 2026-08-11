@@ -567,6 +567,8 @@ html[data-theme="dark"] .tabs.big .tab[aria-pressed="true"] .tt { color: var(--t
 .rv-qrow.child{padding-left:32px;background:color-mix(in srgb,var(--surface-alt) 45%,transparent)}
 .rv-qmain{flex:1;min-width:0}
 .rv-qtext{font-size:13.5px}
+.rv-optcl{font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;padding:1px 7px;border-radius:99px;
+  margin-left:8px;color:var(--review);border:1px solid color-mix(in srgb,var(--review) 45%,transparent)}
 .rv-side{font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;padding:1px 6px;border-radius:5px;margin-left:8px}
 .rv-side.server{background:var(--accent-soft);color:var(--accent)}
 .rv-side.client{background:var(--surface-alt);color:var(--text-dim)}

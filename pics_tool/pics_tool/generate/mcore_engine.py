@@ -60,12 +60,14 @@ _FLOW_SEEDS = {
     "custom": ["MCORE.DD.CUSTOM_COMM_FLOW"],
 }
 
-# Cluster ids that reveal node-level facts (OTA / bridge). These are DERIVED from
-# whether the corresponding cluster is present in the generated set, not asked.
+# Cluster ids that reveal node-level facts (OTA / bridge / diagnostic logs).
+# These are DERIVED from whether the corresponding cluster is present in the
+# generated set, not asked.
 _CLUSTER_OTA_REQUESTOR = "0x002a"
 _CLUSTER_OTA_PROVIDER = "0x0029"
 _CLUSTER_BRIDGED_BASIC_INFO = "0x0039"  # on bridged child endpoints
 _CLUSTER_COMMISSIONER_CONTROL = "0x0751"  # on an Aggregator (bridge) node
+_CLUSTER_DIAGNOSTIC_LOGS = "0x0032"  # a Root Node optional-cluster offering
 
 
 def load_role_profile(role: str) -> dict:
@@ -97,6 +99,7 @@ class NodeFacts:
     has_ota_requestor: bool = False
     has_ota_provider: bool = False
     has_bridge: bool = False
+    has_diagnostic_logs: bool = False
 
 
 def node_facts_from_clusters(cluster_ids: set[str]) -> NodeFacts:
@@ -106,6 +109,7 @@ def node_facts_from_clusters(cluster_ids: set[str]) -> NodeFacts:
         has_ota_provider=_CLUSTER_OTA_PROVIDER in ids,
         has_bridge=(_CLUSTER_BRIDGED_BASIC_INFO in ids
                     or _CLUSTER_COMMISSIONER_CONTROL in ids),
+        has_diagnostic_logs=_CLUSTER_DIAGNOSTIC_LOGS in ids,
     )
 
 
@@ -184,6 +188,7 @@ def _gated_off(number: str, profile: DeviceProfile, facts: NodeFacts,
         "ota_requestor": facts.has_ota_requestor,
         "ota_provider": facts.has_ota_provider,
         "icd": profile.is_icd,
+        "diagnostic_logs": facts.has_diagnostic_logs,
     }
     for area, patterns in gates.items():
         if not active.get(area, False):

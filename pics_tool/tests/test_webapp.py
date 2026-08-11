@@ -66,13 +66,21 @@ def test_undecidable_product_facts_are_manual_not_decided():
     p = webapp.generate_payload(PROFILE)
     by_code = {it["code"]: it for it in p["items"] if it["tab"] == "base"}
     # product facts with no derivation path, AND composition facts the phase-1
-    # UI still cannot express (bridge, device lists, ICD) -> manual
-    for code in ("MCORE.DLOG.S.UTCTIMESTAMP", "MCORE.DLOG.S.TIMESINCEBOOT",
-                 "MCORE.DD.PHYSICAL_TAMPERING",
-                 "MCORE.BRIDGECLIENT", "MCORE.DEVLIST.UseDevices",
-                 "MCORE.SC.SIT_ICD"):
+    # UI still cannot express (ICD) -> manual
+    for code in ("MCORE.DD.PHYSICAL_TAMPERING", "MCORE.SC.SIT_ICD"):
         assert by_code[code]["group"] == "manual", f"{code} wrongly tool-decided"
         assert by_code[code]["answer"] == "no"  # conservative default until claimed
+    # the DLOG field questions became decidable once Diagnostic Logs turned
+    # into a declared Root Node offering: no DLOG.S claim -> the cluster is
+    # absent -> RetrieveLogsResponse is never sent -> an input-backed No
+    for code in ("MCORE.DLOG.S.UTCTIMESTAMP", "MCORE.DLOG.S.TIMESINCEBOOT"):
+        assert by_code[code]["group"] == "decided", code
+        assert by_code[code]["answer"] == "no"
+    # the bridge-CLIENT family (13.1.2 "DUT client") follows the derived IM
+    # role: an IM-server-only light can never be a client of a bridge
+    for code in ("MCORE.BRIDGECLIENT", "MCORE.DEVLIST.UseDevices"):
+        assert by_code[code]["group"] == "decided", code
+        assert by_code[code]["answer"] == "no"
     # OTA is an explicit input now: no selection = input-backed decided answers,
     # with VendorSpecific derived Yes by Base.xml's own rule (commissionee
     # without an OTA Requestor must be updatable somehow)
@@ -235,7 +243,9 @@ def test_items_split_into_decided_and_manual_groups():
     base = [it for it in p["items"] if it["tab"] == "base"]
     assert len(base) == 132  # each and every Base.xml item is present
     manual_base = [it for it in base if it["group"] == "manual"]
-    assert len(manual_base) == 51
+    # DLOG fields decided via the declared offering; the 5 bridge-client
+    # items (BRIDGECLIENT + DEVLIST.*) decided via the derived IM role
+    assert len(manual_base) == 44
     assert all(it["answer"] == "no" for it in manual_base)
     assert any(it["code"] == "MCORE.DD.PHYSICAL_TAMPERING" for it in manual_base)
 
@@ -690,3 +700,136 @@ def test_bridge_derived_from_device_type_identity():
     assert by2["MCORE.BRIDGE"]["answer"] == "no"
     assert by2["MCORE.BRIDGE.BatInfo"]["group"] == "decided"
     assert by2["MCORE.BRIDGE.BatInfo"]["answer"] == "no"
+
+
+# --- spec-optional clusters (device-type offerings) ------------------------------
+
+
+def test_spec_optional_clusters_offered_from_device_type():
+    """Clusters the device type LISTS but does not mandate surface as
+    claimable sections: the side's gateway is the one visible question and
+    every sub-item reveals under it. A side blocked purely by an
+    input-decided condition (Thread diagnostics on a Wi-Fi device, ICDM
+    without the ICD flag) is a defendable No and is NOT offered; a side
+    blocked only by a product-fact condition (LanguageLocale) IS offered --
+    absence of information is never a No."""
+    p = webapp.generate_payload(dict(PROFILE, device_type="Extended Color Light",
+                                     node_device_types=["OTA Requestor"]))
+    opt = {it["code"]: it for it in p["items"] if it["opt_cluster"]}
+
+    # plainly optional on Root Node (Wi-Fi device): Wi-Fi diag, DLOG, TimeSync
+    for gw in ("DGWIFI.S", "DLOG.S", "DGSW.S", "TIMESYNC.S", "TIMESYNC.C"):
+        it = opt[gw]
+        assert it["tab"] == "0" and it["group"] == "manual", gw
+        assert it["answer"] == "no" and it["needs_you"] and it["parent"] is None, gw
+    # product-fact conditional ("M if LanguageLocale"): offered, not decided No
+    assert "LCFG.S" in opt
+    # optional CLIENT listed on the application device type
+    assert opt["OCC.C"]["tab"] == "1"
+    # input-decided Nos and unlisted sides are never offered
+    for absent in ("DGTHREAD.S", "DGETH.S", "ICDM.S", "OCC.S"):
+        assert absent not in opt, absent
+    # unclaimed: only the gateways are top-level; all sub-items reveal under one
+    assert all(it["parent"] for c, it in opt.items() if c.count(".") >= 2)
+    # offered rows never leak into the tool-decided section
+    assert all(it["group"] == "manual" for it in opt.values())
+
+
+def test_spec_optional_offerings_follow_transport():
+    """The same Root Node offers Thread diagnostics -- and not Wi-Fi -- when
+    the transport input says Thread."""
+    p = webapp.generate_payload(dict(PROFILE, transport=["thread"]))
+    opt = {it["code"] for it in p["items"] if it["opt_cluster"]}
+    assert "DGTHREAD.S" in opt and "DGWIFI.S" not in opt
+
+
+def test_claiming_optional_cluster_prefills_spec_mandatory_elements():
+    """Claiming an offered gateway re-enters the engine: the side's
+    spec-mandatory elements pre-fill Yes, in the user's (manual) section."""
+    p = webapp.generate_payload(dict(PROFILE, claims_by_tab={"0": ["DGWIFI.S"]}))
+    dg = {it["code"]: it for it in p["items"] if it["code"].startswith("DGWIFI.")}
+    yes = {c for c, it in dg.items() if it["answer"] == "yes"}
+    assert "DGWIFI.S" in yes
+    assert {"DGWIFI.S.A0000", "DGWIFI.S.A0001", "DGWIFI.S.A0004"} <= yes
+    assert all(dg[c]["group"] == "manual" for c in yes)  # the claim stays yours
+    # the optional BeaconLostCount attribute is NOT auto-claimed
+    assert dg["DGWIFI.S.A0005"]["answer"] == "no"
+
+
+def test_claimed_optional_cluster_validates_and_exports():
+    """The export gate enforces a claimed optional cluster's mandated
+    elements, and the filled template lands in the endpoint's folder."""
+    profile = dict(PROFILE, claims_by_tab={"0": ["DGWIFI.S"]})
+    p = webapp.generate_payload(profile)
+    by_tab = {}
+    for it in p["items"]:
+        if it["answer"] == "yes":
+            by_tab.setdefault(it["tab"], []).append(it["code"])
+
+    assert not [x for x in webapp.validate_selection(profile, by_tab)
+                if "DGWIFI" in x["code"]]
+    broken = {t: [c for c in cs if c != "DGWIFI.S.A0003"] for t, cs in by_tab.items()}
+    flagged = [x for x in webapp.validate_selection(profile, broken)
+               if x["code"] == "DGWIFI.S.A0003"]
+    assert flagged and flagged[0]["severity"] == "error"
+
+    files = webapp.export_pics_files(profile, by_tab)
+    target = next(f for f in files
+                  if f.startswith("endpoint0") and "Wi-Fi Network Diagnostics" in f)
+    assert "<itemNumber>DGWIFI.S</itemNumber>" in files[target]
+
+
+def test_dlog_field_questions_follow_the_cluster_claim():
+    """MCORE.DLOG.S.* is decided BOTH ways now that Diagnostic Logs is a
+    declared Root Node offering: no claim -> the cluster is absent -> No;
+    DLOG.S claimed -> the plain-O timestamp fields become the user's live
+    questions (still never auto-Yes -- the spec leaves them optional)."""
+    fields = ("MCORE.DLOG.S.UTCTIMESTAMP", "MCORE.DLOG.S.TIMESINCEBOOT")
+
+    p = webapp.generate_payload(PROFILE)  # no claim
+    by = {it["code"]: it for it in p["items"] if it["tab"] == "base"}
+    for c in fields:
+        assert by[c]["group"] == "decided" and by[c]["answer"] == "no", c
+
+    p2 = webapp.generate_payload(dict(PROFILE, claims_by_tab={"0": ["DLOG.S"]}))
+    by2 = {it["code"]: it for it in p2["items"] if it["tab"] == "base"}
+    for c in fields:
+        assert by2[c]["group"] == "manual" and by2[c]["answer"] == "no", c
+        assert by2[c]["needs_you"], c
+
+
+def test_bridge_client_family_follows_device_control_client():
+    """MCORE.BRIDGECLIENT / MCORE.DEVLIST.* (spec 13.1.2 'DUT client') are
+    DEVICE-CONTROL client behavior: decided No unless the node controls other
+    devices. The OTA Requestor node type's provider client is fixed OTA
+    infrastructure and does NOT count -- a light with Matter OTA still gets a
+    decided No."""
+    family = ("MCORE.BRIDGECLIENT", "MCORE.DEVLIST.UseDevices",
+              "MCORE.DEVLIST.UseDeviceName", "MCORE.DEVLIST.UseDeviceState",
+              "MCORE.DEVLIST.UseBatInfo")
+
+    p = webapp.generate_payload(PROFILE)  # server-only light
+    by = {it["code"]: it for it in p["items"] if it["tab"] == "base"}
+    for c in family:
+        assert by[c]["group"] == "decided" and by[c]["answer"] == "no", c
+
+    # the UI default (Matter OTA): an IM client for OTA only -> still No
+    p_ota = webapp.generate_payload(dict(PROFILE, node_device_types=["OTA Requestor"]))
+    by_ota = {it["code"]: it for it in p_ota["items"] if it["tab"] == "base"}
+    assert by_ota["MCORE.IDM.C"]["answer"] == "yes"  # OTA download IS an IM client
+    for c in family:
+        assert by_ota[c]["group"] == "decided" and by_ota[c]["answer"] == "no", c
+
+    # Dimmer Switch mandates device-control clients -> open questions
+    p2 = webapp.generate_payload(dict(PROFILE, device_type="Dimmer Switch"))
+    by2 = {it["code"]: it for it in p2["items"] if it["tab"] == "base"}
+    for c in family:
+        assert by2[c]["group"] == "manual" and by2[c]["answer"] == "no", c
+
+    # a claimed client side / a commissioner role open them up too
+    p3 = webapp.generate_payload(dict(PROFILE, claims_by_tab={"1": ["OO.C"]}))
+    by3 = {it["code"]: it for it in p3["items"] if it["tab"] == "base"}
+    assert by3["MCORE.BRIDGECLIENT"]["group"] == "manual"
+    p4 = webapp.generate_payload(dict(PROFILE, role="commissioner"))
+    by4 = {it["code"]: it for it in p4["items"] if it["tab"] == "base"}
+    assert by4["MCORE.BRIDGECLIENT"]["group"] == "manual"

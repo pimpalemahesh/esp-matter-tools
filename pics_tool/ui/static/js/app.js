@@ -606,10 +606,14 @@ function renderRows() {
       const rows = byCl.get(cl);
       const key = `${tab}|${g}|${cl}`;
       const color = colorOf(cl);
+      // whole cluster is spec-optional for this endpoint (not in the baseline):
+      // badge the section so it reads as "yours to claim", not tool-selected
+      const optBadge = rows.some(({ it }) => it.opt_cluster)
+        ? `<span class="rv-optcl">Optional cluster</span>` : "";
       html.push(`<div class="rv-clhead ${collapsed.has(key) ? "collapsed" : ""}" data-key="${esc(key)}"
         role="button" tabindex="0" aria-expanded="${!collapsed.has(key)}">
         <span class="rv-caret" aria-hidden="true">▾</span>
-        <span class="rv-cldot" style="background:${color}"></span>${esc(cl)}<span class="cc">${rows.length}</span></div>`);
+        <span class="rv-cldot" style="background:${color}"></span>${esc(cl)}${optBadge}<span class="cc">${rows.length}</span></div>`);
       rows.forEach(({ it, i }) => {
         const a = answers[keyOf(it)];
         const roleTok = it.code.startsWith("MCORE.") ? "" : it.code.split(".")[1];

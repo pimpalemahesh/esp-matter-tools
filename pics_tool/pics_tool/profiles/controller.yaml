@@ -23,3 +23,7 @@ feature_area_gates:
     - MCORE.OTA.Provider
   icd:
     - MCORE.SC.SIT_ICD
+  # The two RetrieveLogsResponse timestamp-field questions apply only when the
+  # node hosts the Diagnostic Logs cluster -- a declared Root Node offering.
+  diagnostic_logs:
+    - MCORE.DLOG.*
