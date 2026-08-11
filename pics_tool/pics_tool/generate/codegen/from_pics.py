@@ -34,12 +34,21 @@ CMD_CODE_RE = re.compile(r"^(?P<pics>[A-Z0-9_]+)\.S\.C(?P<id>[0-9A-Fa-f]{2})(?:\
 EVENT_CODE_RE = re.compile(r"^(?P<pics>[A-Z0-9_]+)\.S\.E(?P<id>[0-9A-Fa-f]{2})$")
 
 
+def _mandatory_ids(reqs) -> set[str]:
+    # Only UNCONDITIONALLY mandatory requirements: an optional or conditional
+    # cluster (Fixed Label "O", Binding "M if Simple & Client", Root Node's
+    # Diagnostic Logs "O") is NOT built by the endpoint/node create call, so a
+    # claim for it must produce an explicit cluster::create.
+    return {cid for cid, req in reqs.items()
+            if req.conformance.type == "mandatory" and req.conformance.condition is None}
+
+
 def _baseline_cluster_ids(model: DataModel, dt) -> set[str]:
-    # endpoint::<type>::create() builds the device type's own server clusters
-    # PLUS the Base Device Type's (Descriptor, Binding, ...).
-    baseline = set(dt.server_clusters.keys())
+    # endpoint::<type>::create() builds the device type's mandatory server
+    # clusters PLUS the Base Device Type's (Descriptor, ...).
+    baseline = _mandatory_ids(dt.server_clusters)
     if model.base_device_type is not None:
-        baseline |= set(model.base_device_type.server_clusters.keys())
+        baseline |= _mandatory_ids(model.base_device_type.server_clusters)
     return baseline
 
 
@@ -117,9 +126,27 @@ def _classify(model: DataModel, claims, baseline_cluster_ids: set[str]):
     return features, attributes, commands, events, list(sides.values()), unknown
 
 
-def build_plan(selection, model: DataModel) -> DataModelPlan:
-    """Build the target-neutral plan for a PICS ``Selection``."""
+ROOT_NODE_DEVICE_TYPE_ID = "0x0016"
+
+
+def build_plan(selection, model: DataModel, root_claims=None) -> DataModelPlan:
+    """Build the target-neutral plan for a PICS ``Selection``.
+
+    ``root_claims`` are claim codes answered on the ROOT endpoint (EP0) -- the
+    optional Root Node clusters (Diagnostic Logs, Time Sync, ...) and their
+    elements. They become an ``EndpointPlan(index=0)``; the target decides what
+    its node/root construction already builds and emits only the rest.
+    """
     endpoints: list[EndpointPlan] = []
+    if root_claims:
+        root_dt = model.device_types.get(ROOT_NODE_DEVICE_TYPE_ID)
+        baseline = _baseline_cluster_ids(model, root_dt) if root_dt is not None else set()
+        feats, attrs, cmds, evts, sides, unknown = _classify(model, root_claims, baseline)
+        if feats or attrs or cmds or evts or sides or unknown:
+            endpoints.append(EndpointPlan(
+                index=0, device_types=[root_dt.name if root_dt else "Root Node"],
+                features=feats, attributes=attrs, commands=cmds, events=evts,
+                sides=sides, unknown_sides=unknown))
     for epid, ep in enumerate(selection.endpoints, start=1):
         names: list[str] = []
         baseline: set[str] = set()

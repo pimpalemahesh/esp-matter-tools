@@ -37,7 +37,7 @@ from functools import lru_cache
 
 from esp_matter_datamodel import boolexpr, loader
 
-from .generate import claims
+from .generate import claims, pics_codes
 from .generate.cluster_engine import (ROOT_NODE_DEVICE_TYPE_ID, active_conditions,
                                       all_enabled_cluster_ids, controlled_conditions,
                                       generate_cluster_pics, load_transport_map,
@@ -264,6 +264,57 @@ def _template_entries(version: str) -> tuple[tuple[str, tuple[tuple[str, str], .
                         for it in parse_pics_items(p))
         out.append((p.name, entries))
     return tuple(out)
+
+
+@lru_cache(maxsize=4)
+def _template_statuses(version: str) -> dict[str, tuple[tuple[str, str], ...]]:
+    """{code: ((status_text, cond), ...)} across every template (first wins)."""
+    from .generate.template_io import list_templates
+
+    out: dict[str, tuple[tuple[str, str], ...]] = {}
+    for p in list_templates(version):
+        for it in parse_pics_items(p):
+            out.setdefault(it.number, tuple(it.statuses))
+    return out
+
+
+@lru_cache(maxsize=4)
+def _choice_groups(version: str) -> dict[str, tuple[str, ...]]:
+    """{server feature code: (all member codes)} for EXACTLY-ONE choice groups.
+
+    The spec's ``O.a`` (more=False) choice conformance: pick exactly one of the
+    group (Network Commissioning's WI/TH/ET). Once one member is on, the others
+    are excluded -- a decided No, and enabling two is a spec violation.
+    """
+    model = _model(version)
+    out: dict[str, tuple[str, ...]] = {}
+    for cl in model.clusters.values():
+        if not cl.pics:
+            continue
+        groups: dict[str, list[str]] = {}
+        for f in cl.features.values():
+            ch = getattr(f.conformance, "choice", None)
+            if ch is not None and not ch.more:
+                groups.setdefault(ch.marker, []).append(pics_codes.feature(cl.pics, f.bit))
+        for members in groups.values():
+            if len(members) > 1:
+                for code in members:
+                    out[code] = tuple(members)
+    return out
+
+
+def _expr_atoms(expr) -> set[str]:
+    """Every atom (PICS code) mentioned in a parsed boolexpr tree."""
+    if isinstance(expr, boolexpr.Atom):
+        return {str(expr.payload)}
+    if isinstance(expr, boolexpr.Not):
+        return _expr_atoms(expr.arg)
+    if isinstance(expr, (boolexpr.And, boolexpr.Or)):
+        out: set[str] = set()
+        for a in expr.args:
+            out |= _expr_atoms(a)
+        return out
+    return set()
 
 
 _FEATURE_TOKEN_RE = re.compile(r"^F[0-9a-fA-F]{2}$")
@@ -608,14 +659,17 @@ def generate_payload(profile_dict: dict, claims=None) -> dict:
         if bucket == "auto":
             if n in mcore_on:
                 return "on"
-            if n in mcore_claimed:
-                return "claimed"
             if n.startswith("MCORE.BDX."):
                 # BDX has consumers beyond OTA (e.g. Diagnostic Logs transfers
                 # over BDX, where the DUT can even be the Sender). The OTA
                 # input derives BDX roles it NEEDS; it cannot rule the rest
                 # out -- those stay Optional Items, never a decided No.
-                return "review"
+                return "claimed" if n in mcore_claimed else "review"
+            if n in mcore_claimed and n not in mcore_claim_atoms:
+                # A DERIVED consequence of some other claim: honored. A DIRECT
+                # claim of an input-decided atom (COM.THR on a Wi-Fi device)
+                # is NOT -- the input owns the answer; change the input.
+                return "claimed"
             return "off"
         if bucket == "imrole":
             if n == "MCORE.IDM.S":
@@ -635,8 +689,9 @@ def generate_payload(profile_dict: dict, claims=None) -> dict:
             # per-message-type / per-datatype client capabilities (write Bool,
             # batch commands, subscribe events, ...): only the vendor knows.
             return "review"
-        if n in mcore_claimed:
-            return "claimed"
+        # DECIDED answers first: a claim cannot override what the declared
+        # inputs / role / composition already settle -- the remedy for "my
+        # device does support this" is changing the governing input.
         if n.startswith(_BRIDGE_CLIENT_NS) and not device_control_client:
             return "off"  # no device-control client role -> not a bridge client
         if role_denied(n, role_profile):
@@ -645,12 +700,13 @@ def generate_payload(profile_dict: dict, claims=None) -> dict:
             # No for a commissionee.
             return "off"
         area = gated_area(n, role_profile)
-        if area and not gate_active[area]:
-            # The feature area is off. That is a decision only when the user
-            # actually declared the governing input; otherwise it is unknown.
-            return "off" if gate_declared[area] else "review"
+        if area and not gate_active[area] and gate_declared[area]:
+            # The feature area is off and its governing input is declared.
+            return "off"
+        if n in mcore_claimed:
+            return "claimed"
         # manual: a real product fact no input can derive (TCP, PAF, tamper
-        # resistance, DLOG fields, ...). Never presented as tool-decided.
+        # resistance, an undeclared gate like ICD, ...). Never tool-decided.
         return "review"
 
     def q_of(code: str) -> str:
@@ -761,11 +817,21 @@ def generate_payload(profile_dict: dict, claims=None) -> dict:
     # Base items with a reveal parent: LargeData rides on Matter-over-TCP.
     _BASE_PARENTS = {"MCORE.IDM.S.LargeData": "MCORE.SC.TCP"}
     items = []
+    # Collected for the template-applicability rule below: Base atoms whose
+    # answer is SETTLED (decided either way), and everything answered Yes.
+    base_decided: set[str] = set()
+    base_yes: set[str] = set()
     for n in order:
         st = state(n, bucket_of[n])
         group = "manual" if st in ("review", "claimed") else "decided"
+        if group == "decided":
+            base_decided.add(n)
+        if st in ("on", "claimed"):
+            base_yes.add(n)
         items.append(row(n, "base", st, group, _mcore_area(n),
                          parent=_BASE_PARENTS.get(n), why=mcore_why(n, st)))
+    choice_of = _choice_groups(version)
+    statuses_of = _template_statuses(version)
     tabs = [{"id": "base", "label": "Base PICS", "caption": "Node-Wide"}]
     for ep in sorted(endpoints, key=lambda e: e.endpoint):
         tab = str(ep.endpoint)
@@ -802,6 +868,63 @@ def generate_payload(profile_dict: dict, claims=None) -> dict:
         # incl. feature-seeded mandatory dependents): used to decide which gated
         # optional items are *applicable* (a live question) right now.
         enabled_here = tool_here | claim_here
+        # Two spec-exact derivations that turn a would-be question into a
+        # decided No (both agreed with the user: spec conformance AND the CSA
+        # template conformance are honored):
+        #
+        # * choice exactness -- an EXACTLY-ONE (O.a) feature group with a
+        #   member already on excludes the rest (CNET's WI/TH/ET);
+        # * template inapplicability -- an item whose template statuses are
+        #   ALL conditional, none applies, and every referenced atom is
+        #   SETTLED (a decided Base answer or an engine-decided cluster item)
+        #   can never become applicable: its gate is input-decided, not
+        #   claimable. If any referenced atom is still claimable (an optional
+        #   feature, a gateway), the item stays a manual question -- the
+        #   reveal model, and "absence isn't No", are preserved.
+        settled = base_decided | tool_here
+        resolve_yes = base_yes | enabled_here
+
+        def _excluded_by_choice(code: str) -> str | None:
+            """The already-selected sibling excluding this feature, if any."""
+            for member in choice_of.get(code, ()):
+                if member != code and member in enabled_here:
+                    return member
+            return None
+
+        def _template_inapplicable(code: str) -> str | None:
+            """Humanized cond when the template decides this item is a No."""
+            statuses = statuses_of.get(code, ())
+            if not statuses or any(not cond for _, cond in statuses):
+                return None            # an unconditional status: a real option
+            atoms: set[str] = set()
+            for _, cond in statuses:
+                try:
+                    expr = boolexpr.parse(cond)
+                except boolexpr.ExpressionSyntaxError:
+                    return None
+                if boolexpr.evaluate(expr, lambda a: a in resolve_yes):
+                    return None        # a status applies: not inapplicable
+                atoms |= _expr_atoms(expr)
+            if atoms - settled:
+                return None            # gated by something still claimable
+            return _humanize_cond(" or ".join(c for _, c in statuses),
+                                  model, prefix_map)
+
+        def decided_no_row(code: str, cluster: str) -> dict | None:
+            """A decided-No row when either spec rule settles this item."""
+            chosen = _excluded_by_choice(code)
+            if chosen:
+                name = _short_name(chosen, model, prefix_map) or chosen
+                return row(code, tab, "off", "decided", cluster, needs_you=False,
+                           why=f"No — the spec allows exactly one of these "
+                               f"features, and {name} is already selected.")
+            cond_text = _template_inapplicable(code)
+            if cond_text:
+                return row(code, tab, "off", "decided", cluster, needs_you=False,
+                           why=f"No — applies only when {cond_text}; your "
+                               f"inputs rule that out.")
+            return None
+
         seen: set[str] = set()
         for tname, entries in _template_entries(version):
             t_codes = [c for c, _ in entries]
@@ -846,6 +969,11 @@ def generate_payload(profile_dict: dict, claims=None) -> dict:
                 ordered.extend(dep_rows)
             ordered.extend(client_rows)
             for code, st, parent in ordered:
+                if st == "off":
+                    decided = decided_no_row(code, cluster)
+                    if decided:
+                        items.append(decided)
+                        continue
                 # A live question only if the element has a genuine OPTIONAL clause
                 # AND it is applicable now (top-level, or its gating parent is
                 # enabled). A purely "Mandatory if <feature>" element is derived by
@@ -899,6 +1027,14 @@ def generate_payload(profile_dict: dict, claims=None) -> dict:
                 else:
                     bucket.append((code, st, _parent_of(code, cond) or gw, None))
             for code, st, parent, kind in srv + cli:
+                # sub-items of a CLAIMED offered cluster obey the same two
+                # decided-No rules; the gateway itself is governed by the
+                # offering (data-model) derivation, never template conds
+                if kind is None and st == "off":
+                    decided = decided_no_row(code, cluster)
+                    if decided:
+                        items.append(dict(decided, opt_cluster=True))
+                        continue
                 live = (kind is not None
                         or ("optional" in conf_of(code).lower()
                             and parent in enabled_here))
@@ -1026,20 +1162,26 @@ def generate_scaffold_files(profile_dict: dict, claims_by_tab=None) -> dict:
 
     model = _model(profile_dict.get("spec_version", "1.6"))
     selection = Selection.from_dict(profile_dict)
+    root_claims: list = []
     if isinstance(claims_by_tab, dict):
         for tab_id, codes in claims_by_tab.items():
             if not str(tab_id).isdigit():
                 continue                       # "base"/MCORE: node-level, not an endpoint
-            idx = int(tab_id) - 1              # tabs are 1-based (EP1..EPN)
+            cluster_codes = [c for c in codes if not c.startswith("MCORE.")]
+            if str(tab_id) == "0":             # root endpoint: optional Root Node clusters
+                root_claims += cluster_codes
+                continue
+            idx = int(tab_id) - 1              # app tabs are 1-based (EP1..EPN)
             if 0 <= idx < len(selection.endpoints):
                 ep = selection.endpoints[idx]
-                ep.claims = list(ep.claims) + [
-                    c for c in codes if not c.startswith("MCORE.")]
-    result = generate_scaffold(selection, model)
+                ep.claims = list(ep.claims) + cluster_codes
+    result = generate_scaffold(selection, model, root_claims=root_claims)
 
     # elements omitted from the code (no esp_matter signature) -> exclude from the
     # "added" recap so the chips reflect only what the code actually emits.
     _omitted = {(u["endpoint"], u["cluster"], u["name"], u["kind"]) for u in result.unresolved}
+
+    from .generate.codegen.targets.esp_matter.target import root_side_disposition
 
     def _optional_items(e):
         """Structured recap of the optional bits the code ADDS (resolved only)."""
@@ -1051,8 +1193,11 @@ def generate_scaffold_files(profile_dict: dict, claims_by_tab=None) -> dict:
                 for c in e.optional_commands]
         raw += [{"cluster": v.cluster_name, "name": v.name, "kind": "event"}
                 for v in e.optional_events]
+        # root clusters node::create covers (default / sdkconfig) are explained
+        # as comments in the code, not added by it -> keep them off the recap
         raw += [{"cluster": s.cluster_name, "name": s.side_text, "kind": "cluster"}
-                for s in e.optional_sides]
+                for s in e.optional_sides
+                if not (e.endpoint == 0 and root_side_disposition(s.cluster_namespace))]
         return [it for it in raw
                 if (e.endpoint, it["cluster"], it["name"], it["kind"]) not in _omitted]
 
@@ -1177,6 +1322,28 @@ def validate_selection(profile_dict: dict, enabled_codes) -> list[dict]:
                 and "MCORE.IDM.C.InvokeRequest" not in flat):
             add("MCORE.IDM.C.InvokeRequest",
                 "the device sends client commands (Tx), which are Invoke requests")
+
+    # 2c) exactly-one choice groups (spec conformance): the O.a marker means
+    #    pick exactly one -- two enabled members is a violation. Runs before
+    #    the template sweep so the specific reason wins the per-code slot.
+    choice_of = _choice_groups(version)
+    _choice_scopes = ([(t, set(codes)) for t, codes in by_tab.items() if t != "base"]
+                      if by_tab else [("all", set(flat))])
+    for scope_name, scope_enabled in _choice_scopes:
+        checked: set[tuple] = set()
+        for code in sorted(scope_enabled):
+            members = choice_of.get(code)
+            if not members or members in checked:
+                continue
+            checked.add(members)
+            on = [m for m in members if m in scope_enabled]
+            if len(on) > 1:
+                names = ", ".join(_short_name(m, model, prefix_map) or m
+                                  for m in on)
+                for m in on:
+                    add(m, "the spec allows exactly ONE feature of this group, "
+                           f"but these are enabled together: {names}",
+                        tab=scope_name)
 
     # 3) Template sweep (what the CSA validator checks): per exported scope,
     #    evaluate every item's effective status. Runs to a fixpoint so newly

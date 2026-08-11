@@ -36,6 +36,13 @@ def _normalize(name: str) -> str:
     return "".join(words).replace("DishWasher", "Dishwasher")
 
 
+# Spec names whose esp-matter namespace does not follow the generic transform
+# ("Wi-Fi" would split to wi_fi; the component uses wifi_network_diagnostics).
+_NS_OVERRIDES = {
+    "Wi-Fi Network Diagnostics": "wifi_network_diagnostics",
+}
+
+
 def to_namespace(name: str) -> str:
     """esp-matter snake_case namespace for a spec name.
 
@@ -44,6 +51,8 @@ def to_namespace(name: str) -> str:
     """
     if not name:
         return name
+    if name in _NS_OVERRIDES:
+        return _NS_OVERRIDES[name]
     name = _normalize(name)
     name = re.sub(r"\s+", "_", name)
     name = re.sub(r"[\/_|\{\}\(\)\\-]", "_", name)

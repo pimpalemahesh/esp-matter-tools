@@ -833,3 +833,62 @@ def test_bridge_client_family_follows_device_control_client():
     p4 = webapp.generate_payload(dict(PROFILE, role="commissioner"))
     by4 = {it["code"]: it for it in p4["items"] if it["tab"] == "base"}
     assert by4["MCORE.BRIDGECLIENT"]["group"] == "manual"
+
+
+# --- spec choice groups + template applicability ---------------------------------
+
+
+def test_exactly_one_choice_group_decided_by_transport():
+    """Network Commissioning's WI/TH/ET are an EXACTLY-ONE (O.a) choice group,
+    and its members are also 'M if MCORE.COM.<x>' in the CSA template: both
+    the spec conformance and the template conformance decide the unchosen
+    members No. The claimable client side stays a question -- the reveal
+    model is untouched."""
+    p = webapp.generate_payload(PROFILE)  # wifi_2g
+    by = {it["code"]: it for it in p["items"] if it["tab"] == "0"}
+    assert by["CNET.S.F00"]["group"] == "decided" and by["CNET.S.F00"]["answer"] == "yes"
+    for c in ("CNET.S.F01", "CNET.S.F02"):   # Thread / Ethernet interface
+        assert by[c]["group"] == "decided" and by[c]["answer"] == "no", c
+        assert "exactly one" in by[c]["why"]
+    # client-side feature: gated by the claimable CNET.C gateway -> still manual
+    assert by["CNET.C"]["group"] == "manual"
+    assert by["CNET.C.F01"]["group"] == "manual"
+
+    # flip the input: a Thread device decides the OTHER two No
+    p2 = webapp.generate_payload(dict(PROFILE, transport=["thread"]))
+    by2 = {it["code"]: it for it in p2["items"] if it["tab"] == "0"}
+    assert by2["CNET.S.F01"]["answer"] == "yes"
+    for c in ("CNET.S.F00", "CNET.S.F02"):
+        assert by2[c]["group"] == "decided" and by2[c]["answer"] == "no", c
+
+
+def test_validate_flags_choice_group_violation():
+    """Enabling two members of an exactly-one choice group is an export error."""
+    p = webapp.generate_payload(PROFILE)
+    yes = {}
+    for it in p["items"]:
+        if it["answer"] == "yes":
+            yes.setdefault(it["tab"], []).append(it["code"])
+    yes["0"] = yes["0"] + ["CNET.S.F01"]     # Thread alongside the derived Wi-Fi
+    probs = webapp.validate_selection(PROFILE, yes)
+    hits = [x for x in probs if x["code"] in ("CNET.S.F00", "CNET.S.F01")
+            and "exactly ONE" in x["why"]]
+    assert hits and all(x["severity"] == "error" for x in hits)
+
+
+def test_input_decided_base_items_cannot_be_claimed():
+    """A claim cannot override what a declared input already settles: the
+    remedy for 'my device also does Thread' is the transport input. Derived
+    consequences of legitimate claims, and claims of genuine questions
+    (BDX roles), keep working."""
+    claims = {"base": ["MCORE.COM.THR",       # transport-decided: blocked
+                       "MCORE.BRIDGE",        # composition-decided: blocked
+                       "MCORE.BDX.Sender"]}   # genuine question: honored
+    p = webapp.generate_payload(dict(PROFILE, claims_by_tab=claims))
+    by = {it["code"]: it for it in p["items"] if it["tab"] == "base"}
+    assert by["MCORE.COM.THR"]["group"] == "decided"
+    assert by["MCORE.COM.THR"]["answer"] == "no"
+    assert by["MCORE.BRIDGE"]["group"] == "decided"
+    assert by["MCORE.BRIDGE"]["answer"] == "no"
+    assert by["MCORE.BDX.Sender"]["group"] == "manual"
+    assert by["MCORE.BDX.Sender"]["answer"] == "yes"

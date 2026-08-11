@@ -331,10 +331,14 @@ function runGenerate(profile, keepAnswers, keepTouched, announce) {
 
   payload = JSON.parse(webapp.generate_payload_json(JSON.stringify(profile), "[]"));
 
-  // engine answers first, then the human's explicit overrides on top
+  // engine answers first, then the human's explicit overrides on top.
+  // DECIDED items are engine-owned: a stale override from an earlier session
+  // (when they were still togglable) must not stick to them, or the row would
+  // show "Yes" while the derivation says No.
   answers = {}; touched = new Set();
   payload.items.forEach((it) => { answers[keyOf(it)] = it.answer; });
   payload.items.forEach((it) => {
+    if (it.group === "decided") return;
     const k = keyOf(it);
     if (prevTouched.has(k) && prevAnswers[k] !== undefined) {
       answers[k] = prevAnswers[k];
@@ -422,6 +426,14 @@ function renderScaffold() {
   const pre = $("scaffoldCode"), note = $("scaffoldNote");
   if (!pre || !payload) return;
   scaffoldSnippet = "";
+  // Opt-out: the code is only for esp-matter users; skip the (synchronous)
+  // generation entirely when the box is unticked.
+  const gen = $("genCode");
+  const body = $("scaffoldBody");
+  if (gen && body) {
+    body.hidden = !gen.checked;
+    if (!gen.checked) return;
+  }
   try {
     const res = JSON.parse(webapp.generate_scaffold_json(
       JSON.stringify(payload.profile), JSON.stringify(optionalClaimsByTab())));
@@ -619,6 +631,19 @@ function renderRows() {
         const roleTok = it.code.startsWith("MCORE.") ? "" : it.code.split(".")[1];
         const side = roleTok === "S" ? "server" : roleTok === "C" ? "client" : "";
         const badge = side ? `<span class="rv-side ${side}">${side === "server" ? "Server" : "Client"}</span>` : "";
+        // A DECIDED answer is derived from the inputs / role / spec conformance:
+        // read-only everywhere. Node-level items change via the governing input
+        // on the Describe step; cluster items follow the spec for the declared
+        // device (an exactly-one feature group, a transport-gated feature, ...).
+        const locked = it.group === "decided";
+        // The tooltip lives on the CONTAINER (with pointer-events:none on the
+        // disabled buttons): browsers don't reliably fire hover on disabled
+        // elements, so a per-button title would often never show.
+        const lockTip = it.tab === "base"
+          ? "Locked — the tool derived this from your inputs. To change it, adjust the inputs in Step 1 (Describe)."
+          : "Locked — the spec decides this for your device. To change it, adjust the inputs or the selections that drive it.";
+        const lockWrap = locked ? ` data-tip="${esc(lockTip)}"` : "";
+        const lockAttr = locked ? " disabled" : "";
         html.push(`<div class="rv-qrow ${it.parent ? "child" : ""} ${isChanged(it) ? "changed" : ""}"
             data-i="${i}" data-tab="${esc(it.tab)}" data-group="${esc(it.group)}" data-key="${esc(key)}"
             data-code="${esc(it.code).toLowerCase()}" data-q="${esc((it.question || it.code)).toLowerCase()}">
@@ -627,9 +652,9 @@ function renderRows() {
             ${it.why ? `<div class="rv-why">${esc(it.why)}</div>` : ""}
             <div class="rv-meta"><span class="code">${esc(it.code)}</span><span>${esc(it.conformance)}</span></div>
           </div>
-          <div class="rv-yn" data-k="${esc(keyOf(it))}" data-code="${esc(it.code)}">
-            <button class="yes ${a === "yes" ? "act" : ""}" data-a="yes" aria-label="Yes: ${esc(it.code)}">Yes</button>
-            <button class="no ${a === "no" ? "act" : ""}" data-a="no" aria-label="No: ${esc(it.code)}">No</button>
+          <div class="rv-yn ${locked ? "locked" : ""}" data-k="${esc(keyOf(it))}" data-code="${esc(it.code)}"${lockWrap}>
+            <button class="yes ${a === "yes" ? "act" : ""}" data-a="yes"${lockAttr} aria-label="Yes: ${esc(it.code)}">Yes</button>
+            <button class="no ${a === "no" ? "act" : ""}" data-a="no"${lockAttr} aria-label="No: ${esc(it.code)}">No</button>
           </div></div>`);
       });
     });
@@ -941,6 +966,7 @@ $("generateBtn").addEventListener("click", () => generate(null, true));
 $("exportBtn").addEventListener("click", exportPICS);
 $("downloadCode").addEventListener("click", downloadScaffold);
 $("copyCode").addEventListener("click", copyScaffold);
+$("genCode").addEventListener("change", renderScaffold);
 $("backToReview").addEventListener("click", () => showView("review"));
 
 // stepper switches between the three screens; Review/Export need a generated payload.

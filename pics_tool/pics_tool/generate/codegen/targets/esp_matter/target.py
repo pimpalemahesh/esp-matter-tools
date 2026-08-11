@@ -126,6 +126,34 @@ class ScaffoldResult:
         return self.endpoints[0].primary.namespace if self.endpoints else ""
 
 
+# What esp-matter's node::create already builds on the ROOT endpoint (0), from
+# root_node::add in the component (data_model/legacy/esp_matter_endpoint.cpp).
+# This is TARGET knowledge: the spec engines never assume esp-matter behavior.
+_ROOT_DEFAULT_NS = {
+    "descriptor", "access_control", "basic_information", "general_commissioning",
+    "network_commissioning", "general_diagnostics", "administrator_commissioning",
+    "operational_credentials", "group_key_management",
+}
+# Root clusters node::create builds only under an sdkconfig option -- the app
+# code must not create them again; the option is the switch.
+_ROOT_KCONFIG_NS = {
+    "wifi_network_diagnostics":
+        "CONFIG_SUPPORT_WIFI_NETWORK_DIAGNOSTICS_CLUSTER (default y)",
+    "thread_network_diagnostics":
+        "CONFIG_SUPPORT_THREAD_NETWORK_DIAGNOSTICS_CLUSTER (default y)",
+    "icd_management": "CONFIG_ENABLE_ICD_SERVER",
+}
+
+
+def root_side_disposition(ns: str) -> str | None:
+    """'default' / 'kconfig' when node::create covers this root cluster, else None."""
+    if ns in _ROOT_DEFAULT_NS:
+        return "default"
+    if ns in _ROOT_KCONFIG_NS:
+        return "kconfig"
+    return None
+
+
 def _cluster_groups(ep: EndpointScaffold):
     """Group an endpoint's optional elements by cluster (order preserved), so each
     cluster is fetched once and all its features/attributes/commands/events added
@@ -222,12 +250,32 @@ class EspMatterTarget(CodeTarget):
         ]
         for ep in endpoints:
             ns, n = ep.primary.namespace, ep.endpoint
-            L.append(f"    {ns}::config_t {ns}_config_{n};")
-            L.append(f"    endpoint_t *endpoint_{n} = {ns}::create(node, &{ns}_config_{n}, ENDPOINT_FLAG_NONE, nullptr);")
-            L.append(f'    ABORT_APP_ON_FAILURE(endpoint_{n} != nullptr, ESP_LOGE(TAG, "Failed to create {ep.primary.name} endpoint"));')
-            for c in ep.composed:
-                L.append(f"    {c.namespace}::config_t {c.namespace}_config_{n};")
-                L.append(f'    ABORT_APP_ON_FAILURE({c.namespace}::add(endpoint_{n}, &{c.namespace}_config_{n}) == ESP_OK, ESP_LOGE(TAG, "Failed to add {c.name} device type"));')
+            if n == 0:
+                # The root endpoint is created by node::create above; fetch it
+                # to add the optional Root Node clusters selected in the PICS.
+                L.append("    endpoint_t *endpoint_0 = endpoint::get(node, 0); /* root endpoint, created by node::create */")
+                L.append('    ABORT_APP_ON_FAILURE(endpoint_0 != nullptr, ESP_LOGE(TAG, "Failed to get the root endpoint"));')
+            else:
+                L.append(f"    {ns}::config_t {ns}_config_{n};")
+                L.append(f"    endpoint_t *endpoint_{n} = {ns}::create(node, &{ns}_config_{n}, ENDPOINT_FLAG_NONE, nullptr);")
+                L.append(f'    ABORT_APP_ON_FAILURE(endpoint_{n} != nullptr, ESP_LOGE(TAG, "Failed to create {ep.primary.name} endpoint"));')
+                for c in ep.composed:
+                    L.append(f"    {c.namespace}::config_t {c.namespace}_config_{n};")
+                    L.append(f'    ABORT_APP_ON_FAILURE({c.namespace}::add(endpoint_{n}, &{c.namespace}_config_{n}) == ESP_OK, ESP_LOGE(TAG, "Failed to add {c.name} device type"));')
+            # Whole-cluster sides FIRST, so element calls below can cluster::get
+            # a cluster this very snippet creates.
+            for s in ep.optional_sides:
+                disp = root_side_disposition(s.cluster_namespace) if n == 0 else None
+                if disp == "default":
+                    L.append(f"    // {s.cluster_name}: already created on the root endpoint by node::create")
+                    continue
+                if disp == "kconfig":
+                    L.append(f"    // {s.cluster_name}: created by node::create when "
+                             f"{_ROOT_KCONFIG_NS[s.cluster_namespace]} is enabled in sdkconfig")
+                    continue
+                L.append("")
+                L.append(f"    cluster::{s.cluster_namespace}::config_t {s.cluster_namespace}_config_{n};")
+                L.append(f"    cluster::{s.cluster_namespace}::create(endpoint_{n}, &{s.cluster_namespace}_config_{n}, {s.flags});")
             for cns, g in _cluster_groups(ep):
                 recv = f"{cns}_cluster_{n}"
                 calls: list[str] = []
@@ -250,10 +298,6 @@ class EspMatterTarget(CodeTarget):
                         L.append(f"    cluster_t *{recv} = cluster::get(endpoint_{n}, {g['chip']}::Id);")
                         L += calls
                     L += notes
-            for s in ep.optional_sides:
-                L.append("")
-                L.append(f"    cluster::{s.cluster_namespace}::config_t {s.cluster_namespace}_config_{n};")
-                L.append(f"    cluster::{s.cluster_namespace}::create(endpoint_{n}, &{s.cluster_namespace}_config_{n}, {s.flags});")
             for u in ep.unknown_sides:
                 unresolved.append({"endpoint": n, "cluster": u, "name": u, "kind": "cluster"})
                 L.append("")
@@ -277,6 +321,10 @@ class EspMatterTarget(CodeTarget):
             for e in ep.optional_events:
                 add(e.cluster_name, e.name, "event")
             for s in ep.optional_sides:
+                # root clusters node::create covers (default or sdkconfig) are
+                # explained as comments in the code, not "added" by it
+                if ep.endpoint == 0 and root_side_disposition(s.cluster_namespace):
+                    continue
                 add(s.cluster_name, s.side_text, "cluster")
         return items
 

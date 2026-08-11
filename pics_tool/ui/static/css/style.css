@@ -558,6 +558,8 @@ html[data-theme="dark"] .tabs.big .tab[aria-pressed="true"] .tt { color: var(--t
 .rv-searchbox input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
 .rv-searchbox svg{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text-dim)}
 .rv-detail-t{display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--text-dim);cursor:pointer;white-space:nowrap}
+.scaffold-toggle{display:flex;align-items:center;gap:8px;font-size:13.5px;font-weight:600;cursor:pointer;margin:2px 0 10px}
+.scaffold-toggle input{accent-color:var(--accent)}
 
 .rv-clhead{display:flex;align-items:center;gap:9px;padding:11px 16px;background:var(--surface-alt);font-weight:650;font-size:13px;
   border-top:1px solid var(--border)}
@@ -582,6 +584,23 @@ html[data-theme="dark"] .tabs.big .tab[aria-pressed="true"] .tt { color: var(--t
 .rv-yn{flex:0 0 auto;display:inline-flex;border:1px solid var(--border-strong);border-radius:8px;overflow:hidden}
 .rv-yn button{border:none;background:var(--surface);color:var(--text-dim);padding:6px 14px;cursor:pointer;font-weight:650;font-size:12.5px}
 .rv-yn button+button{border-left:1px solid var(--border-strong)}
+/* Locked (engine-decided) toggles: disabled buttons swallow hover in some
+   browsers, so pointer-events pass through to the container, which carries a
+   lock glyph and a styled data-tip tooltip explaining WHY it is locked.
+   overflow must be visible here or the tooltip is clipped; the pill corners
+   are rounded per-button instead. */
+.rv-yn.locked{position:relative;cursor:not-allowed;overflow:visible}
+.rv-yn.locked button{pointer-events:none;opacity:.45}
+.rv-yn.locked::before{content:"🔒";font-size:11px;margin:0 6px 0 8px;opacity:.55;align-self:center}
+.rv-yn.locked button:last-of-type{border-radius:0 7px 7px 0}
+.rv-yn.locked:hover::after{
+  content:attr(data-tip); position:absolute; z-index:100;
+  right:0; bottom:calc(100% + 7px); width:300px; max-width:70vw;
+  padding:9px 12px; border-radius:10px;
+  background:var(--surface); color:var(--text);
+  border:1px solid var(--border); box-shadow:var(--shadow-lg);
+  font-size:.78rem; font-weight:400; line-height:1.5; white-space:normal;
+}
 .rv-yn button.yes.act{background:var(--on);color:#fff}
 .rv-yn button.no.act{background:var(--surface-alt);color:var(--text)}
 .rv-qrow.changed{box-shadow:inset 3px 0 0 var(--accent)}

@@ -33,16 +33,19 @@ _TARGET = EspMatterTarget()
 
 
 def generate_scaffold(selection, model, output_dir: str | Path | None = None,
-                      knowledge=None) -> ScaffoldResult:
+                      knowledge=None, root_claims=None) -> ScaffoldResult:
     """Build the esp-matter data-model construction snippet for ``selection``.
 
     ``selection`` is a :class:`pics_tool.generate.selection.Selection`. If
     ``output_dir`` is given, the snippet is also written to
     ``<output_dir>/app_data_model.cpp``. ``knowledge`` overrides the esp_matter
     signature source (e.g. a live component); ``None`` uses the bundled caps for
-    the version, or placeholders if none is shipped.
+    the version, or placeholders if none is shipped. ``root_claims`` are claim
+    codes answered on the ROOT endpoint (optional Root Node clusters); the
+    target adds them to endpoint 0, skipping whatever node::create already
+    builds.
     """
-    plan = build_plan(selection, model)
+    plan = build_plan(selection, model, root_claims=root_claims)
     if knowledge is None:
         knowledge = _TARGET.default_knowledge(plan.spec_version)
     endpoints = _TARGET.build_endpoints(plan)

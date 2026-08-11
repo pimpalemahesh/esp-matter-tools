@@ -178,3 +178,49 @@ def test_esp_name_matches_convention():
     assert esp_name("Extended Color Light") == "extended_color_light"
     assert esp_name("On/Off") == "on_off"
     assert esp_name("Temperature Sensor") == "temperature_sensor"
+
+
+def test_root_endpoint_optional_clusters():
+    """Optional Root Node clusters claimed on EP0 reach the code: the root
+    endpoint is FETCHED (node::create builds it), explicitly-creatable
+    clusters get cluster::create calls, and clusters node::create already
+    covers (always or via sdkconfig) become explanatory comments -- never a
+    duplicate create."""
+    model = loader.load_version("1.6")
+    sel = Selection.from_dict({"spec_version": "1.6", "transport": ["wifi_2g"],
+                               "device_type": "Extended Color Light"})
+    result = generate_scaffold(sel, model,
+                               root_claims=["DLOG.S", "DGWIFI.S", "FLABEL.S", "ACL.S"])
+    s = result.snippet
+
+    assert "endpoint_t *endpoint_0 = endpoint::get(node, 0);" in s
+    assert "cluster::diagnostic_logs::create(endpoint_0, &diagnostic_logs_config_0, CLUSTER_FLAG_SERVER);" in s
+    assert "cluster::fixed_label::create(endpoint_0, &fixed_label_config_0, CLUSTER_FLAG_SERVER);" in s
+    # covered by node::create -> an sdkconfig comment, never a duplicate create
+    assert "CONFIG_SUPPORT_WIFI_NETWORK_DIAGNOSTICS_CLUSTER" in s
+    assert "cluster::wifi_network_diagnostics::create" not in s
+    # a spec-mandatory root cluster (ACL) is already built: no call, no comment
+    assert "cluster::access_control::create" not in s
+    assert "access_control_config_0" not in s
+    # the app endpoint still renders after the root block
+    assert s.index("endpoint::get(node, 0)") < s.index("extended_color_light::create")
+
+
+def test_root_claims_empty_means_no_root_block():
+    model = loader.load_version("1.6")
+    sel = Selection.from_dict({"spec_version": "1.6", "transport": ["wifi_2g"],
+                               "device_type": "Extended Color Light"})
+    result = generate_scaffold(sel, model, root_claims=[])
+    assert "endpoint::get(node, 0)" not in result.snippet
+
+
+def test_optional_base_cluster_claim_on_app_endpoint():
+    """A base-device-type OPTIONAL cluster (Fixed Label) claimed on an app
+    endpoint is NOT treated as already-built: it gets a real create call
+    (regression: the old baseline treated every base-DT cluster as built)."""
+    model = loader.load_version("1.6")
+    sel = Selection.from_dict({"spec_version": "1.6", "transport": ["wifi_2g"],
+                               "endpoints": [{"device_types": ["Extended Color Light"],
+                                              "claims": ["FLABEL.S"]}]})
+    result = generate_scaffold(sel, model)
+    assert "cluster::fixed_label::create(endpoint_1, &fixed_label_config_1, CLUSTER_FLAG_SERVER);" in result.snippet

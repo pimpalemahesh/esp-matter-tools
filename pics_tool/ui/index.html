@@ -247,16 +247,27 @@
 
       <section class="card card-pad" id="scaffoldCard">
         <div class="section-title">esp-matter data model</div>
-        <h2 class="export-h">Data-model creation code</h2>
-        <p class="export-sub">Copy-paste this data-model creation code into your
-          esp-matter example (<code>app_main.cpp</code>), or download it.</p>
-        <div id="scaffoldSource" class="scaffold-src" hidden></div>
-        <div id="scaffoldNote" class="scaffold-note" hidden></div>
-        <pre id="scaffoldCode" class="scaffold-pre"><code></code></pre>
-        <div class="profile-actions">
-          <button class="btn ghost" id="copyCode">Copy</button>
-          <span style="flex:1"></span>
-          <button class="btn" id="downloadCode">Download app_data_model.cpp ↓</button>
+        <label class="scaffold-toggle">
+          <input type="checkbox" id="genCode" checked>
+          Generate esp-matter code
+          <span class="helptip" tabindex="0" aria-label="What is this code?">?
+            <span class="helptext">Compile-ready data-model construction code built with the
+              esp-matter component's APIs, matching your PICS selections. Untick this if you
+              don't build your firmware with esp-matter.</span>
+          </span>
+        </label>
+        <div id="scaffoldBody">
+          <h2 class="export-h">Data-model creation code</h2>
+          <p class="export-sub">Copy-paste this data-model creation code into your
+            esp-matter example (<code>app_main.cpp</code>), or download it.</p>
+          <div id="scaffoldSource" class="scaffold-src" hidden></div>
+          <div id="scaffoldNote" class="scaffold-note" hidden></div>
+          <pre id="scaffoldCode" class="scaffold-pre"><code></code></pre>
+          <div class="profile-actions">
+            <button class="btn ghost" id="copyCode">Copy</button>
+            <span style="flex:1"></span>
+            <button class="btn" id="downloadCode">Download app_data_model.cpp ↓</button>
+          </div>
         </div>
       </section>
     </div>
