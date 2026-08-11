@@ -76,12 +76,24 @@ def test_merge_overrides_cli_wins_and_none_ignored():
 def test_load_profile_from_yaml(tmp_path):
     f = tmp_path / "device-profile.yaml"
     f.write_text(
-        "spec_version: '1.6'\ndevice_type: On/Off Light\ntransport: [wifi_2g, thread]\n"
+        "spec_version: '1.6'\ndevice_type: On/Off Light\ntransport: [wifi_2g, wifi_5g]\n"
         "role: commissionee\n",
         encoding="utf-8",
     )
     p = load_profile(f, device_type="Dimmable Light")  # CLI override wins
     assert p.device_type == "Dimmable Light"
+    assert p.transport == ["wifi_2g", "wifi_5g"]
+
+
+def test_multiple_interface_types_accepted_at_profile_level():
+    """Two interface families are legal at the PROFILE level -- whether the
+    composition supports them (one Secondary Network Interface endpoint per
+    extra family, spec 11.9) is the Selection layer's check
+    (selection.interface_plan), since only it sees the endpoints."""
+    from pics_tool.generate.profile import DeviceProfile
+
+    p = DeviceProfile.from_dict({"spec_version": "1.6", "device_type": "X",
+                                 "transport": ["wifi_2g", "thread"]})
     assert p.transport == ["wifi_2g", "thread"]
 
 

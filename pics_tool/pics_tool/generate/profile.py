@@ -104,6 +104,11 @@ class DeviceProfile:
             raise ProfileError("device_type is required")
         self.transport = [t.lower() for t in self.transport]
         _require_subset("transport", self.transport, VALID_TRANSPORTS, allow_empty=False)
+        # Several interface FAMILIES (Wi-Fi bands are one family) are allowed
+        # only with matching Secondary Network Interface endpoints -- one
+        # Network Commissioning instance per interface, each on its own
+        # endpoint (spec 11.9). The profile cannot see the composition, so the
+        # Selection layer enforces it (selection.interface_plan).
         _require_member("role", self.role, VALID_ROLES)
         _require_subset("onboarding", self.onboarding, VALID_ONBOARDING)
         _require_member("power_source", self.power_source, VALID_POWER)

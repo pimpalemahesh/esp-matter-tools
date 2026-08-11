@@ -115,6 +115,7 @@ def generate_cluster_pics(
     extra_feature_seeds: dict[str, set[str]] | None = None,
     app_endpoints: list[list[str]] | None = None,
     per_endpoint_feature_seeds: dict[int, dict[str, set[str]]] | None = None,
+    exclude_node_seed_clusters: frozenset[str] = frozenset(),
 ) -> list[EndpointPics]:
     """Generate per-endpoint PICS.
 
@@ -129,11 +130,18 @@ def generate_cluster_pics(
     ``per_endpoint_feature_seeds`` ({endpoint_id: {cluster_id: {feature_code}}})
     forces optional features ON for ONE endpoint only, so a claim on EP1 does not
     leak to the same cluster on EP2.
+
+    ``exclude_node_seed_clusters``: cluster ids whose TRANSPORT seeds must not
+    apply node-wide -- a multi-interface node assigns each Network Commissioning
+    instance ITS interface feature via ``per_endpoint_feature_seeds`` instead
+    (see ``selection.interface_plan``).
     """
     transport_map = transport_map or load_transport_map()
     conditions = active_conditions(profile, transport_map)
     # Node-wide seeds: transport + any global extra (applies to every endpoint).
     node_seeds = transport_feature_seeds(profile, transport_map)
+    for cid in exclude_node_seed_clusters:
+        node_seeds.pop(cid, None)
     for cid, codes in (extra_feature_seeds or {}).items():
         node_seeds.setdefault(cid, set()).update(codes)
 

@@ -46,7 +46,7 @@ from .generate.mcore_engine import (compute_mcore_pics, gated_area,
                                     load_role_profile, node_facts_from_clusters,
                                     role_denied)
 from .generate.profile import DeviceProfile
-from .generate.selection import Selection
+from .generate.selection import Selection, interface_plan, merge_endpoint_seeds
 from .generate.template_io import (base_template_path, known_item_numbers,
                                    parse_pics_items)
 
@@ -544,13 +544,25 @@ def generate_payload(profile_dict: dict, claims=None) -> dict:
         _payload_inputs(profile_dict, claims)
     profile = selection.profile
 
+    # Multi-interface nodes: each Network Commissioning instance gets ITS
+    # interface feature (EP0 = primary, each Secondary Network Interface
+    # endpoint = its declared family). Input-derived, so it joins the BASELINE.
+    iface_seeds, iface_exclude, _iface_families = interface_plan(model, selection,
+                                                                 load_transport_map())
+    baseline_seeds: dict[int, dict[str, set[str]]] = {}
+    merge_endpoint_seeds(baseline_seeds, iface_seeds)
+    merge_endpoint_seeds(per_ep_seeds, iface_seeds)
+
     # Real pipeline: clusters first, then MCORE seeded by the enabled cluster set.
     # TWO runs on purpose: the baseline (profile only) defines "Answered by the
     # tool"; whatever the user's claims add on top stays in Optional Items --
     # pre-filled Yes where the spec mandates it, but it is THEIR selection.
-    baseline = generate_cluster_pics(model, profile, app_endpoints=app_endpoints)
+    baseline = generate_cluster_pics(model, profile, app_endpoints=app_endpoints,
+                                     per_endpoint_feature_seeds=baseline_seeds,
+                                     exclude_node_seed_clusters=iface_exclude)
     endpoints = generate_cluster_pics(model, profile, app_endpoints=app_endpoints,
-                                      per_endpoint_feature_seeds=per_ep_seeds)
+                                      per_endpoint_feature_seeds=per_ep_seeds,
+                                      exclude_node_seed_clusters=iface_exclude)
     baseline_pics = {ep.endpoint: ep.pics for ep in baseline}
     cluster_ids = all_enabled_cluster_ids(endpoints)
     # Bridge-ness by device-type IDENTITY (never name strings): Aggregator
@@ -799,6 +811,23 @@ def generate_payload(profile_dict: dict, claims=None) -> dict:
     _controlled = controlled_conditions(_tmap)
     _cluster_pics = {cid: c.pics for cid, c in model.clusters.items() if c.pics}
 
+    # Interface conditions are PER INSTANCE on a multi-interface node: the
+    # endpoint hosting the Wi-Fi Network Commissioning instance must not be
+    # offered Thread diagnostics -- Thread's clusters live with ITS instance
+    # (the Secondary Network Interface endpoint, which lists the diagnostics
+    # clusters itself). Family condition names come from transport_map.
+    _fam_conds: dict[str, set[str]] = {}
+    for _t, _e in _tmap.get("transports", {}).items():
+        _fam_conds.setdefault("wifi" if _t.startswith("wifi") else _t,
+                              set()).update(_e.get("conditions", []))
+
+    def _ep_conditions(epid: int) -> frozenset[str]:
+        fam = (_iface_families or {}).get(epid)
+        if fam is None:
+            return _conditions           # endpoint not tied to an interface
+        foreign = set().union(*(c for f, c in _fam_conds.items() if f != fam))
+        return frozenset(_conditions - (foreign - _fam_conds.get(fam, set())))
+
     def _ep_offerings(ep) -> dict[str, str]:
         """{gateway code: kind} the spec offers on this endpoint."""
         if ep.endpoint == 0:
@@ -809,7 +838,7 @@ def generate_payload(profile_dict: dict, claims=None) -> dict:
             names = list(selection.endpoints[ep.endpoint - 1].device_types)
         dts += [_find_device_type(model, n) for n in names]
         offers = offered_cluster_sides(model, [d for d in dts if d is not None],
-                                       _conditions, _controlled,
+                                       _ep_conditions(ep.endpoint), _controlled,
                                        ep.cluster_ids, ep.client_cluster_ids)
         return {gw: kind for (cid, side), kind in offers.items()
                 if (gw := f"{_cluster_pics.get(cid)}.{side}") in known}
@@ -1102,10 +1131,14 @@ def export_pics_files(profile_dict: dict, enabled_codes) -> dict:
     by_tab = enabled_codes if isinstance(enabled_codes, dict) else None
     flat = ([c for codes in by_tab.values() for c in codes] if by_tab
             else list(enabled_codes))
+    iface_seeds, iface_exclude, _ = interface_plan(_model(version), selection,
+                                                   load_transport_map())
     extra_seeds = _feature_seeds_from_codes(version, flat)
     endpoints = generate_cluster_pics(_model(version), profile,
                                       app_endpoints=app_endpoints,
-                                      extra_feature_seeds=extra_seeds)
+                                      extra_feature_seeds=extra_seeds,
+                                      per_endpoint_feature_seeds=iface_seeds,
+                                      exclude_node_seed_clusters=iface_exclude)
     app_ep = next((e.endpoint for e in endpoints if e.endpoint != 0), 1)
 
     by_ep: dict[int, set] = defaultdict(set)
@@ -1293,10 +1326,14 @@ def validate_selection(profile_dict: dict, enabled_codes) -> list[dict]:
 
     # 1) Engine side: re-run with the user's claims; everything the engine
     #    yields is mandatory for the claimed device.
+    iface_seeds, iface_exclude, iface_families = interface_plan(model, selection,
+                                                                load_transport_map())
     extra_seeds = _feature_seeds_from_codes(version, flat)
     endpoints = generate_cluster_pics(_model(version), profile,
                                       app_endpoints=app_endpoints,
-                                      extra_feature_seeds=extra_seeds)
+                                      extra_feature_seeds=extra_seeds,
+                                      per_endpoint_feature_seeds=iface_seeds,
+                                      exclude_node_seed_clusters=iface_exclude)
     for ep in sorted(endpoints, key=lambda e: e.endpoint):
         for code in sorted((ep.pics & known) - flat):
             add(code, f"mandatory on endpoint {ep.endpoint} for this device profile",
@@ -1352,15 +1389,32 @@ def validate_selection(profile_dict: dict, enabled_codes) -> list[dict]:
 
     parsed = {p.name: parse_pics_items(p) for p in list_templates(version)}
 
+    # Per-instance semantics for a multi-interface node: the CSA template's
+    # CNET conds ("M if CNET.S AND MCORE.COM.THR") predate Secondary Network
+    # Interface -- node-wide they'd demand every family's features on every
+    # instance. Each interface scope therefore sees only ITS OWN family's
+    # transport atoms; foreign-family atoms are filtered out of that scope.
+    _fam_atoms: dict[str, set[str]] = {}
+    for _t, _e in load_transport_map().get("transports", {}).items():
+        fam = "wifi" if _t.startswith("wifi") else _t
+        _fam_atoms.setdefault(fam, set()).update(_e.get("mcore_atoms", []))
+
+    def _scope_set(tab: str, codes: set) -> set:
+        fam = (iface_families or {}).get(int(tab)) if str(tab).isdigit() else None
+        if fam is None:
+            return codes
+        foreign = set().union(*(a for f, a in _fam_atoms.items() if f != fam))
+        return codes - foreign
+
     if by_tab:
         base_set = set(by_tab.get("base", []))
         scopes = []
         for t, codes in by_tab.items():
             if t == "base":
                 continue
-            scopes.append((t, set(codes) | base_set))
+            scopes.append((t, _scope_set(t, set(codes) | base_set)))
         if not any(t == "0" for t, _ in scopes) and base_set:
-            scopes.append(("0", set(base_set)))
+            scopes.append(("0", _scope_set("0", set(base_set))))
     else:
         scopes = [("all", set(flat))]
 

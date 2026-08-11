@@ -262,22 +262,40 @@ class EspMatterTarget(CodeTarget):
                 for c in ep.composed:
                     L.append(f"    {c.namespace}::config_t {c.namespace}_config_{n};")
                     L.append(f'    ABORT_APP_ON_FAILURE({c.namespace}::add(endpoint_{n}, &{c.namespace}_config_{n}) == ESP_OK, ESP_LOGE(TAG, "Failed to add {c.name} device type"));')
-            # Whole-cluster sides FIRST, so element calls below can cluster::get
-            # a cluster this very snippet creates.
+            # Whole-cluster sides FIRST. create() already returns the
+            # cluster_t*, so when this snippet ALSO adds elements to a cluster
+            # it creates, the pointer is captured here and the element calls
+            # below skip the redundant cluster::get (get remains only for
+            # clusters built elsewhere: the device type's or node::create's).
+            groups = _cluster_groups(ep)
+            # namespaces with at least one RESOLVABLE element call: only those
+            # need the pointer (capturing for comment-only groups would leave
+            # an unused variable behind).
+            group_ns = {cns for cns, g in groups
+                        if knowledge is not None
+                        and any(knowledge.symbol(sym)
+                                for _, sym, *_ in self._group_items(cns, g))}
+            created: dict[str, str] = {}   # cluster namespace -> captured var
             for s in ep.optional_sides:
-                disp = root_side_disposition(s.cluster_namespace) if n == 0 else None
+                cns = s.cluster_namespace
+                disp = root_side_disposition(cns) if n == 0 else None
                 if disp == "default":
                     L.append(f"    // {s.cluster_name}: already created on the root endpoint by node::create")
                     continue
                 if disp == "kconfig":
                     L.append(f"    // {s.cluster_name}: created by node::create when "
-                             f"{_ROOT_KCONFIG_NS[s.cluster_namespace]} is enabled in sdkconfig")
+                             f"{_ROOT_KCONFIG_NS[cns]} is enabled in sdkconfig")
                     continue
                 L.append("")
-                L.append(f"    cluster::{s.cluster_namespace}::config_t {s.cluster_namespace}_config_{n};")
-                L.append(f"    cluster::{s.cluster_namespace}::create(endpoint_{n}, &{s.cluster_namespace}_config_{n}, {s.flags});")
-            for cns, g in _cluster_groups(ep):
-                recv = f"{cns}_cluster_{n}"
+                L.append(f"    cluster::{cns}::config_t {cns}_config_{n};")
+                call = f"cluster::{cns}::create(endpoint_{n}, &{cns}_config_{n}, {s.flags});"
+                if cns in group_ns:            # elements follow: keep the pointer
+                    created[cns] = f"{cns}_cluster_{n}"
+                    L.append(f"    cluster_t *{created[cns]} = {call}")
+                else:
+                    L.append(f"    {call}")
+            for cns, g in groups:
+                recv = created.get(cns, f"{cns}_cluster_{n}")
                 calls: list[str] = []
                 notes: list[str] = []
                 for kind, symbol, var_base, name, cluster_name in self._group_items(cns, g):
@@ -294,8 +312,10 @@ class EspMatterTarget(CodeTarget):
                     calls.append(f"    {symbol}({recv}" + "".join(f", {a}" for a in args) + ");")
                 if calls or notes:
                     L.append("")
-                    if calls:                        # fetch the cluster only if we emit real calls
-                        L.append(f"    cluster_t *{recv} = cluster::get(endpoint_{n}, {g['chip']}::Id);")
+                    if calls:
+                        # fetch only when this snippet did not create it above
+                        if cns not in created:
+                            L.append(f"    cluster_t *{recv} = cluster::get(endpoint_{n}, {g['chip']}::Id);")
                         L += calls
                     L += notes
             for u in ep.unknown_sides:

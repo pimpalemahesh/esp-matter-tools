@@ -58,11 +58,54 @@ function wireChips(groupId, single) {
 function populateSelect(sel, chosen) {
   sel.innerHTML = "";
   // No device type is pre-selected: the user must choose one explicitly.
+  // Secondary Network Interface is infrastructure the transport section
+  // manages automatically -- never offered as an application device type.
   const pick = deviceTypeNames.includes(chosen) ? chosen : "";
   sel.add(new Option("— Choose device type —", "", pick === "", pick === ""));
-  deviceTypeNames.forEach((n) => sel.add(new Option(n, n, false, n === pick)));
+  deviceTypeNames.forEach((n) => {
+    if (n !== SNI_NAME) sel.add(new Option(n, n, false, n === pick));
+  });
   sel.value = pick;
 }
+// ---- multi-interface nodes (Secondary Network Interface, spec 11.9) ----
+// A node with several network technologies hosts one Network Commissioning
+// instance per interface, each on its own endpoint. The user only picks the
+// PRIMARY (it lives on endpoint 0); the tool appends a Secondary Network
+// Interface endpoint automatically for every other technology (readProfile),
+// so the endpoint plumbing never surfaces in the form.
+const SNI_NAME = "Secondary Network Interface";
+const IFACE_LABELS = { wifi: "Wi-Fi", thread: "Thread", ethernet: "Ethernet" };
+function transportFamilies() {
+  return [...new Set(selected("transport").map((t) => (t.startsWith("wifi") ? "wifi" : t)))];
+}
+function refreshPrimary(keep) {
+  const fams = transportFamilies();
+  const cur0 = keep || selected("primary")[0];
+  const cur = fams.includes(cur0) ? cur0 : fams[0];
+  $("primaryWrap").hidden = fams.length <= 1;
+  const group = $("primary");
+  group.innerHTML = "";
+  fams.forEach((f) => {
+    const b = document.createElement("button");
+    b.className = "opt seg-one";
+    b.dataset.v = f;
+    b.textContent = IFACE_LABELS[f] || f;
+    b.setAttribute("aria-pressed", String(f === cur));
+    group.appendChild(b);
+  });
+  updatePrimaryHint();
+}
+function updatePrimaryHint() {
+  const fams = transportFamilies();
+  const el = $("primaryHint");
+  if (fams.length <= 1) { el.textContent = ""; return; }
+  const prim = selected("primary")[0] || fams[0];
+  const others = fams.filter((f) => f !== prim).map((f) => IFACE_LABELS[f] || f);
+  el.textContent = `${IFACE_LABELS[prim] || prim} runs on the Root Node (endpoint 0); `
+    + `${others.join(", ")} get${others.length > 1 ? "" : "s"} an automatic `
+    + `Secondary Network Interface endpoint.`;
+}
+
 function renumberEndpoints() {
   const rows = [...$("endpoints").querySelectorAll(".endpoint-row")];
   rows.forEach((r, i) => { r.querySelector(".ep-num").textContent = `${i + 1}`; });
@@ -80,10 +123,12 @@ function addEndpointRow(chosen) {
   $("endpoints").appendChild(tpl);
   renumberEndpoints();
 }
-function setEndpoints(deviceTypes) {
+function setEndpoints(endpoints) {
+  // accepts [{device_types}] (profile entries) or plain name strings
   $("endpoints").innerHTML = "";
-  const list = (deviceTypes && deviceTypes.length) ? deviceTypes : [""];
-  list.forEach((name) => addEndpointRow(name));
+  const list = (endpoints && endpoints.length) ? endpoints : [""];
+  list.forEach((e) => addEndpointRow(
+    typeof e === "string" ? e : (e.device_types || [])[0] || ""));
 }
 function endpointValues() {
   return [...$("endpoints").querySelectorAll(".ep-devtype")]
@@ -95,9 +140,19 @@ function readProfile() {
   // vendor-specific is the alternative. OTA is mandatory for a commissionee
   // (OTA Provider is profile/CLI-only in phase 1).
   const ota = selected("ota")[0] || "requestor";
+  // Multi-interface node: an automatic Secondary Network Interface endpoint
+  // per non-primary technology (one Network Commissioning instance per
+  // interface, spec 11.9). The primary stays on the Root Node (EP0).
+  const eps = endpointValues();
+  const fams = transportFamilies();
+  if (fams.length > 1) {
+    const prim = selected("primary")[0] || fams[0];
+    fams.filter((f) => f !== prim).forEach((f) =>
+      eps.push({ device_types: [SNI_NAME], interface: f }));
+  }
   return {
     spec_version: $("specVersion").value,
-    endpoints: endpointValues(),        // [{device_types:[name]}] -> EP1..EPN
+    endpoints: eps,                     // [{device_types:[name]}] -> EP1..EPN
     node_device_types: ota === "requestor" ? ["OTA Requestor"] : [],
     vendor_specific_ota: ota === "vendor",
     transport: selected("transport"),
@@ -132,8 +187,16 @@ function profileDeviceTypes(p) {
 
 function applyProfileToForm(p) {
   if (!p) return;
-  setEndpoints(profileDeviceTypes(p));
+  // auto-managed SNI endpoints fold back into the primary-interface picker
+  const allEps = (p.endpoints && p.endpoints.length) ? p.endpoints : null;
+  const appEps = allEps
+    ? allEps.filter((e) => (e.device_types || [])[0] !== SNI_NAME) : null;
+  setEndpoints((appEps && appEps.length) ? appEps : profileDeviceTypes(p));
   setSelected("transport", p.transport || []);
+  const assigned = (allEps || [])
+    .filter((e) => (e.device_types || [])[0] === SNI_NAME)
+    .map((e) => e.interface).filter(Boolean);
+  refreshPrimary(transportFamilies().find((f) => !assigned.includes(f)));
   const disc = [];
   if (p.ble_commissioning !== false) disc.push("ble");
   if (p.wifi_paf) disc.push("wifi_paf");
@@ -168,9 +231,12 @@ function updateCodeLabel() {
 // A profile the engine would reject never reaches the engine: say what's wrong.
 function validateProfile(p) {
   const errs = [];
-  const dts = (p.endpoints || []).map((ep) => (ep.device_types || [])[0]).filter(Boolean);
+  const dts = (p.endpoints || []).map((ep) => (ep.device_types || [])[0])
+    .filter((n) => n && n !== SNI_NAME);   // auto SNI endpoints aren't the app
   if (!dts.length) errs.push("Add at least one application endpoint with a device type.");
   if (!p.transport.length) errs.push("Pick at least one transport.");
+  // Multi-interface composition (Secondary Network Interface endpoints) is
+  // auto-managed from Transport + Primary interface: always consistent here.
   if (p.role === "commissionee" && !p.onboarding.length)
     errs.push("A commissionee needs at least one onboarding method (QR / manual pairing code / NFC).");
   if (p.wifi_paf && !p.transport.some((t) => t.startsWith("wifi")))
@@ -608,9 +674,32 @@ function renderRows() {
     const members = payload.items
       .map((it, i) => ({ it, i }))
       .filter(({ it }) => it.tab === tab && it.group === g);
+    // Spec-optional clusters lead the Optional view as a CATALOG of toggle
+    // chips -- visible at a glance, no scrolling past every mandatory
+    // cluster's options. Their gateway rows don't repeat in the list below;
+    // an enabled cluster's section (pre-filled + questions) appears there.
+    if (g === "manual") {
+      const gws = members.filter(({ it }) => it.opt_cluster && !it.parent)
+        .sort((a, b) => chipLabel(a.it).localeCompare(chipLabel(b.it)));
+      if (gws.length) {
+        const chips = gws.map(({ it }) => {
+          const on = answers[keyOf(it)] === "yes";
+          return `<button class="oc-chip" data-k="${esc(keyOf(it))}" data-code="${esc(it.code)}"
+            aria-pressed="${on}" title="${esc(it.why || "")}">${esc(chipLabel(it))}</button>`;
+        }).join("");
+        html.push(`<div class="rv-optcat">
+          <div class="oc-head">Optional clusters
+            <span class="oc-sub">the spec allows these on this endpoint — select the ones your product implements</span></div>
+          <div class="oc-chips">${chips}</div></div>`);
+      }
+    }
     const order = [];
     const byCl = new Map();
     members.forEach((m) => {
+      // An UNSELECTED optional cluster exists only as its catalog chip. Once
+      // selected, its gateway question ALSO leads the cluster's section below
+      // (answered Yes), so every counted item is a visible row.
+      if (m.it.opt_cluster && !m.it.parent && answers[keyOf(m.it)] !== "yes") return;
       if (!byCl.has(m.it.cluster)) { byCl.set(m.it.cluster, []); order.push(m.it.cluster); }
       byCl.get(m.it.cluster).push(m);
     });
@@ -640,8 +729,8 @@ function renderRows() {
         // disabled buttons): browsers don't reliably fire hover on disabled
         // elements, so a per-button title would often never show.
         const lockTip = it.tab === "base"
-          ? "Locked — the tool derived this from your inputs. To change it, adjust the inputs in Step 1 (Describe)."
-          : "Locked — the spec decides this for your device. To change it, adjust the inputs or the selections that drive it.";
+          ? "The tool derived this from your inputs. To change it, adjust the inputs in Step 1 (Describe)."
+          : "The spec decides this for your device. To change it, adjust the inputs or the selections that drive it.";
         const lockWrap = locked ? ` data-tip="${esc(lockTip)}"` : "";
         const lockAttr = locked ? " disabled" : "";
         html.push(`<div class="rv-qrow ${it.parent ? "child" : ""} ${isChanged(it) ? "changed" : ""}"
@@ -661,6 +750,7 @@ function renderRows() {
   });
   $("tb").innerHTML = html.join("");
   wireRows();
+  wireCatalog();
   applyFilter();
 }
 
@@ -737,6 +827,39 @@ function wireRows() {
   recount();
 }
 
+// catalog chip label: cluster display name, disambiguated by side for X.C
+function chipLabel(it) {
+  let name = (it.cluster || it.code).replace(/\s+Cluster$/i, "");
+  if (it.code.endsWith(".C")) name += " (client)";
+  return name;
+}
+
+// wire the optional-cluster catalog chips: a chip IS the cluster's gateway
+// answer -- toggling it claims/withdraws the side and regenerates, exactly
+// like the old gateway row's Yes/No.
+function wireCatalog() {
+  $("tb").querySelectorAll(".oc-chip").forEach((b) => b.addEventListener("click", () => {
+    const k = b.dataset.k, code = b.dataset.code;
+    const on = b.getAttribute("aria-pressed") === "true";
+    answers[k] = on ? "no" : "yes";
+    touched.add(k);
+    b.setAttribute("aria-pressed", String(!on));
+    if (answers[k] === "no") {
+      const [t] = splitKey(k);
+      payload.items.forEach((it) => {
+        if (it.tab === t && (it.parent === code || it.code.startsWith(code + "."))) {
+          const ck = keyOf(it);
+          touched.delete(ck);
+          answers[ck] = it.answer;
+        }
+      });
+    }
+    recount();
+    saveSession();
+    scheduleGenerate();
+  }));
+}
+
 // Nested gateway model: a child item is only shown while its parent is Yes.
 // Parent lookup is scoped to the item's own endpoint tab.
 function isApplicable(it) {
@@ -753,6 +876,10 @@ function applyFilter() {
   payload.items.forEach((it) => {
     if (matches(it)) scopeHits[`${it.tab}|${it.group}`] = (scopeHits[`${it.tab}|${it.group}`] || 0) + 1;
   });
+
+  // the optional-cluster catalog belongs to the Optional (manual) view only
+  const cat = $("tb").querySelector(".rv-optcat");
+  if (cat) cat.style.display = grp === "manual" ? "" : "none";
 
   // A search overrides collapse so matches are never hidden behind a folded cluster.
   const isCollapsed = (key) => collapsed.has(key) && !q;
@@ -956,10 +1083,19 @@ wireChips("netcaps", false);
 wireChips("ota", true);
 wireChips("role", true);
 // results update automatically on any form change — no Generate button
+wireChips("primary", true);
 ["transport", "onboarding", "commdisc", "flow", "netcaps", "ota", "role"].forEach((id) =>
   $(id).addEventListener("click", (e) => {
-    if (e.target.closest(".opt")) { updateCodeLabel(); markDirty(); }
+    if (e.target.closest(".opt")) {
+      updateCodeLabel();
+      if (id === "transport") refreshPrimary();   // primary picker follows
+      markDirty();
+    }
   }));
+$("primary").addEventListener("click", (e) => {
+  if (e.target.closest(".opt")) { updatePrimaryHint(); markDirty(); }
+});
+refreshPrimary();   // boot: reflect the default transport selection
 updateCodeLabel();  // boot: label reflects the default flow even with no session
 $("addEndpoint").addEventListener("click", () => { addEndpointRow(); markDirty(); });
 $("generateBtn").addEventListener("click", () => generate(null, true));

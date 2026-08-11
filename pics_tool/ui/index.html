@@ -127,6 +127,19 @@
             <button class="opt" data-v="ethernet">Ethernet</button>
           </div>
         </div>
+        <div class="control-group" id="primaryWrap" hidden>
+          <label>Primary network interface
+            <span class="helptip" tabindex="0" aria-label="What is the primary interface?">?
+              <span class="helptext">With several network technologies, each gets its own
+                Network Commissioning instance on its own endpoint (spec 11.9). The
+                <b>primary</b> lives on the Root Node (endpoint 0); the tool adds a
+                Secondary Network Interface endpoint automatically for each additional
+                technology.</span>
+            </span>
+          </label>
+          <div class="chips" id="primary" role="group" aria-label="Primary network interface"></div>
+          <div class="hint" id="primaryHint"></div>
+        </div>
         <div class="control-group">
           <label>Commissioning discovery
             <span class="helptip" tabindex="0" aria-label="What is commissioning discovery?">?

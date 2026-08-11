@@ -892,3 +892,71 @@ def test_input_decided_base_items_cannot_be_claimed():
     assert by["MCORE.BRIDGE"]["answer"] == "no"
     assert by["MCORE.BDX.Sender"]["group"] == "manual"
     assert by["MCORE.BDX.Sender"]["answer"] == "yes"
+
+
+# --- multi-interface nodes (Secondary Network Interface) -------------------------
+
+
+def test_secondary_network_interface_dual_transport():
+    """A dual-interface node (Border Router shape): one Network Commissioning
+    instance PER interface (spec 11.9). EP0 hosts the PRIMARY (the family not
+    assigned to any Secondary Network Interface endpoint); the SNI endpoint
+    hosts its declared family. Exactly-one choice holds per instance, both
+    transport atoms are Yes node-wide, validation is clean, and the export
+    puts each instance in its own endpoint file."""
+    P = dict(PROFILE, transport=["wifi_2g", "thread"],
+             endpoints=[{"device_types": ["On/Off Light"]},
+                        {"device_types": ["Secondary Network Interface"],
+                         "interface": "thread"}])
+    P.pop("device_type", None)
+    p = webapp.generate_payload(P)
+    ep0 = {it["code"]: it for it in p["items"] if it["tab"] == "0"}
+    sni = {it["code"]: it for it in p["items"] if it["tab"] == "2"}
+    assert ep0["CNET.S.F00"]["answer"] == "yes"   # primary = the unassigned family
+    assert ep0["CNET.S.F01"]["answer"] == "no"
+    assert sni["CNET.S.F01"]["answer"] == "yes"   # declared secondary interface
+    assert sni["CNET.S.F00"]["answer"] == "no"
+    base = {it["code"]: it["answer"] for it in p["items"] if it["tab"] == "base"}
+    assert base["MCORE.COM.WIFI"] == "yes" and base["MCORE.COM.THR"] == "yes"
+
+    # diagnostics offerings are PER INSTANCE: each interface's diagnostics
+    # cluster is offered only on the endpoint hosting that interface
+    off0 = {it["code"] for it in p["items"] if it["tab"] == "0" and it["opt_cluster"]}
+    off2 = {it["code"] for it in p["items"] if it["tab"] == "2" and it["opt_cluster"]}
+    assert "DGWIFI.S" in off0 and "DGTHREAD.S" not in off0
+    assert "DGTHREAD.S" in off2 and "DGWIFI.S" not in off2
+
+    yes = {}
+    for it in p["items"]:
+        if it["answer"] == "yes":
+            yes.setdefault(it["tab"], []).append(it["code"])
+    assert not [x for x in webapp.validate_selection(P, yes)
+                if x["severity"] == "error"]
+
+    files = webapp.export_pics_files(P, yes)
+    cnet = sorted(f for f in files if "Network Commissioning" in f)
+    assert [f.split("/")[0] for f in cnet] == ["endpoint0", "endpoint2"]
+
+
+def test_secondary_network_interface_composition_errors():
+    """Two families without an SNI endpoint -- or an SNI endpoint without a
+    declared interface -- is rejected with guidance, never silently emitted."""
+    from pics_tool.generate.selection import SelectionError
+
+    base = dict(PROFILE, transport=["wifi_2g", "thread"])
+    base.pop("device_type", None)
+    with pytest.raises(SelectionError, match="Secondary Network Interface"):
+        webapp.generate_payload(dict(base,
+            endpoints=[{"device_types": ["On/Off Light"]}]))
+    with pytest.raises(SelectionError, match="interface"):
+        webapp.generate_payload(dict(base,
+            endpoints=[{"device_types": ["On/Off Light"]},
+                       {"device_types": ["Secondary Network Interface"]}]))
+    # an SNI endpoint with only one technology selected is equally wrong
+    single = dict(PROFILE)
+    single.pop("device_type", None)
+    with pytest.raises(SelectionError, match="second network"):
+        webapp.generate_payload(dict(single,
+            endpoints=[{"device_types": ["On/Off Light"]},
+                       {"device_types": ["Secondary Network Interface"],
+                        "interface": "thread"}]))

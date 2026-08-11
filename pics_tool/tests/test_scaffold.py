@@ -224,3 +224,24 @@ def test_optional_base_cluster_claim_on_app_endpoint():
                                               "claims": ["FLABEL.S"]}]})
     result = generate_scaffold(sel, model)
     assert "cluster::fixed_label::create(endpoint_1, &fixed_label_config_1, CLUSTER_FLAG_SERVER);" in result.snippet
+
+
+def test_created_cluster_pointer_reused_for_its_elements():
+    """cluster::create() returns the cluster_t*: when the snippet creates a
+    cluster AND adds elements to it, the pointer is captured from create and
+    no redundant cluster::get is emitted. Clusters created elsewhere (by the
+    device-type create) still use cluster::get."""
+    model = loader.load_version("1.6")
+    sel = Selection.from_dict({"spec_version": "1.6", "transport": ["wifi_2g"],
+                               "endpoints": [{"device_types": ["Extended Color Light"],
+                                              "claims": ["OO.S.F01"]}]})
+    result = generate_scaffold(sel, model,
+                               root_claims=["TIMESYNC.S", "TIMESYNC.S.A0002"])
+    s = result.snippet
+    assert ("cluster_t *time_synchronization_cluster_0 = "
+            "cluster::time_synchronization::create(endpoint_0, "
+            "&time_synchronization_config_0, CLUSTER_FLAG_SERVER);") in s
+    assert "cluster::get(endpoint_0, TimeSynchronization::Id)" not in s
+    assert "create_time_source(time_synchronization_cluster_0" in s
+    # a device-type-created cluster still needs the get
+    assert "cluster_t *on_off_cluster_1 = cluster::get(endpoint_1, OnOff::Id);" in s

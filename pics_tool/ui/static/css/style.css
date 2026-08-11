@@ -483,6 +483,7 @@ html[data-theme="dark"] .tabs.big .tab[aria-pressed="true"] .tt { color: var(--t
   color: var(--muted); text-align: right;
 }
 .endpoint-row .ep-devtype { flex: 1 1 auto; min-width: 0; }
+#primaryHint { font-size: 12px; color: var(--text-dim); margin-top: 7px; line-height: 1.5; }
 .endpoint-row .ep-remove {
   flex: 0 0 auto; border: 1px solid var(--border); background: var(--surface);
   color: var(--muted); border-radius: 8px; width: 30px; height: 30px;
@@ -571,6 +572,16 @@ html[data-theme="dark"] .tabs.big .tab[aria-pressed="true"] .tt { color: var(--t
 .rv-qtext{font-size:13.5px}
 .rv-optcl{font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;padding:1px 7px;border-radius:99px;
   margin-left:8px;color:var(--review);border:1px solid color-mix(in srgb,var(--review) 45%,transparent)}
+/* optional-cluster catalog: toggle chips leading the Optional Items view */
+.rv-optcat{padding:13px 16px;border-bottom:1px solid var(--border);background:var(--surface-alt)}
+.rv-optcat .oc-head{font-weight:650;font-size:13px;margin-bottom:9px}
+.rv-optcat .oc-sub{font-weight:400;color:var(--text-dim);font-size:12px;margin-left:4px}
+.rv-optcat .oc-chips{display:flex;flex-wrap:wrap;gap:7px}
+.oc-chip{border:1px solid var(--border-strong);background:var(--surface);color:var(--text);
+  border-radius:99px;padding:5px 13px;font-size:12.5px;font-weight:550;cursor:pointer}
+.oc-chip:hover{border-color:var(--accent)}
+.oc-chip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:#fff}
+.oc-chip[aria-pressed="true"]::before{content:"✓ ";font-weight:700}
 .rv-side{font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;padding:1px 6px;border-radius:5px;margin-left:8px}
 .rv-side.server{background:var(--accent-soft);color:var(--accent)}
 .rv-side.client{background:var(--surface-alt);color:var(--text-dim)}
