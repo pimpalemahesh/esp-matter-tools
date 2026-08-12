@@ -7,12 +7,19 @@ let webapp = null;            // pics_tool.webapp module proxy
 let payload = null;           // last generated payload
 let tab = "base";             // active section tab (base | endpoint id)
 let grp = "decided";          // active view: tool-decided items | manual selection
+// Review presentation mode. "simple" (default): only the optional choices, as
+// one-click chips grouped by cluster -- everything the tool decided collapses
+// into a single banner. "advanced": every question (Mandatory + Optional) as
+// full Yes/No rows, exactly the complete PICS item list.
+const MODE_KEY = "pics-view-mode-v1";
+let mode = localStorage.getItem(MODE_KEY) === "advanced" ? "advanced" : "simple";
 // answers/touched are keyed per (endpoint tab, code) -- the SAME PICS code can
 // appear on several endpoints (Descriptor, On/Off), and each must be answerable
 // independently. Key = `${tab}|${code}`.
 let answers = {};             // "tab|code" -> "yes" | "no"
 let touched = new Set();      // "tab|code" the human explicitly answered
 let searchQ = "";             // current search text (survives tab re-render)
+let revShowAll = false;       // export review: my selections (default) | all optional questions
 let deviceTypeNames = [];     // device-type names for the current spec version
 let dirty = false;            // form edited since the last Generate (results stale)
 let collapsed = new Set();    // cluster keys ("tab|group|cluster") folded shut in the review
@@ -422,7 +429,14 @@ function runGenerate(profile, keepAnswers, keepTouched, announce) {
 // ---- render (endpoint rail + plain-language rows) ----
 // The shell (summary, stats, rail, panel) is built per engine run; the row body
 // holds ONLY the active section's rows and is rebuilt on section switch.
-const VIEWS = ["describe", "review", "export"];
+// Four wizard stages. "review" (Design data model: Root Node + application
+// endpoints) and "base" (Device questions: the node-wide Base facts) SHARE the
+// review DOM -- the base stage is the same panel locked to the base section
+// with the endpoint rail hidden. Base comes AFTER the data model on purpose:
+// its claim-driven content (ICD, Diagnostic Logs, client capabilities) is
+// settled by then, so the questionnaire the user sees is final.
+const VIEWS = ["describe", "review", "base", "export"];
+let wizStep = "describe";     // current wizard stage
 function markStep(step) {
   const idx = VIEWS.indexOf(step);
   document.querySelectorAll("#stepper .rv-step").forEach((b) => {
@@ -430,19 +444,46 @@ function markStep(step) {
     b.classList.toggle("done", VIEWS.indexOf(b.dataset.step) < idx);
   });
 }
-// Review / Export are only reachable once a payload exists.
+// Later stages are only reachable once a payload exists.
 function setStepsEnabled(on) {
   document.querySelectorAll("#stepper .rv-step").forEach((b) => {
     if (b.dataset.step !== "describe")
       b.setAttribute("aria-disabled", String(!on));
   });
 }
-// Show one wizard screen at a time (Describe / Review / Export).
+// Show one wizard screen at a time. "base" renders inside #view-review.
 function showView(name) {
-  VIEWS.forEach((v) => { const el = $("view-" + v); if (el) el.hidden = v !== name; });
+  wizStep = name;
+  const dom = name === "base" ? "review" : name;
+  ["describe", "review", "export"].forEach((v) => {
+    const el = $("view-" + v);
+    if (el) el.hidden = v !== dom;
+  });
   markStep(name);
+  if ((name === "review" || name === "base") && payload) syncStage();
   if (name === "export") populateExport();
   window.scrollTo({ top: 0, behavior: "smooth" });
+}
+// Align the shared review shell with the wizard stage: the base stage locks
+// the panel to the node-wide section and hides the endpoint rail; the design
+// stage never shows the base section. Then render the rows.
+function syncStage() {
+  if (!payload) return;
+  const inBase = wizStep === "base";
+  if (inBase) {
+    tab = "base";
+  } else if (tab === "base") {
+    tab = (payload.tabs.find((t) => t.id !== "base") || payload.tabs[0]).id;
+  }
+  const container = document.querySelector(".rv-review");
+  if (container) container.classList.toggle("no-rail", inBase);
+  const rail = $("rail");
+  if (rail) rail.querySelectorAll("button").forEach((b) =>
+    b.setAttribute("aria-current", String(b.dataset.tab === tab)));
+  const toNext = $("toExport");
+  if (toNext) toNext.textContent = inBase
+    ? "Continue to Export →" : "Continue: Device questions →";
+  renderRows();
 }
 // Fill the Export screen recap: counts + the files that will be produced.
 function populateExport() {
@@ -450,7 +491,10 @@ function populateExport() {
   let yes = 0, no = 0, mine = 0;
   payload.items.forEach((it) => {
     if (answers[keyOf(it)] === "yes") yes++; else no++;
-    if (isChanged(it)) mine++;
+    // a mirrored twin follows its lead item's answer -- ONE user decision,
+    // so it never counts a second time (keeps this tile equal to the
+    // "My selections" review count below)
+    if (isChanged(it) && !it.mirror_of) mine++;
   });
   $("exportStats").innerHTML =
     `<div class="rv-stat on"><span class="v">${yes}</span><span class="l">Supported (Yes)</span></div>
@@ -466,7 +510,69 @@ function populateExport() {
   files.push({ f: "PIXIT_CHECKLIST.md", d: "test-bed values to fill in the CSA tool" });
   $("exportFiles").innerHTML = files.map((x) =>
     `<li><span class="fi">${esc(x.f)}</span><small>${esc(x.d)}</small></li>`).join("");
+  buildReviewArea();
   renderScaffold();
+}
+
+// ---- Export-stage answer review (collapsed by default) ----
+// After the data model and device questions are complete, the user can
+// double-check what they selected: "My selections" (everything they switched
+// on, plus its spec consequences) or "All optional questions" with each
+// current answer -- grouped by section, then category/cluster. Read-only:
+// changes happen on the earlier stages.
+function buildReviewArea() {
+  const area = $("reviewArea");
+  if (!area || !payload) return;
+  const wasOpen = !!area.querySelector("details[open]");
+  // the reviewable pool = every visible optional question (mirror twins fold
+  // into their lead; items not applicable right now are not questions)
+  const pool = payload.items.filter((it) =>
+    it.group === "manual" && !it.mirror_of && isApplicable(it));
+  const mine = pool.filter((it) => isChanged(it));
+  const list = revShowAll ? pool : mine;
+
+  const byTab = new Map();
+  list.forEach((it) => {
+    if (!byTab.has(it.tab)) byTab.set(it.tab, new Map());
+    const byCl = byTab.get(it.tab);
+    if (!byCl.has(it.cluster)) byCl.set(it.cluster, []);
+    byCl.get(it.cluster).push(it);
+  });
+  const secLabel = (t) => {
+    if (t === "base") return "Device questions (node-wide)";
+    const tb = payload.tabs.find((x) => x.id === t) || { label: `Endpoint ${t}` };
+    return `${tb.label} — Endpoint ${t}`;
+  };
+  const secs = [...byTab.entries()].map(([t, byCl]) => `
+    <div class="rev-sec"><div class="rev-sech">${esc(secLabel(t))}</div>
+      ${[...byCl.entries()].map(([cl, its]) => `
+        <div class="rev-cl"><span class="rev-clname">${esc(cl)}</span>
+          <span class="rev-items">${its.map((it) => `
+            <span class="rev-item ${answers[keyOf(it)] === "yes" ? "yes" : "no"}"
+              title="${esc(it.question || "")}&#10;${esc(it.code)}">${esc(it.name || it.question || it.code)}</span>`).join("")}
+          </span></div>`).join("")}
+    </div>`).join("");
+
+  area.innerHTML = `
+    <details class="rev"${wasOpen ? " open" : ""}>
+      <summary><span class="rv-caret" aria-hidden="true">▾</span> Review your answers
+        <span class="rev-cnt">${mine.length} selected by you</span></summary>
+      <div class="rev-tools">
+        <div class="rv-seg" id="revSeg">
+          <button data-a="mine" aria-pressed="${!revShowAll}">My selections (${mine.length})</button>
+          <button data-a="all" aria-pressed="${revShowAll}">All optional questions (${pool.length})</button>
+        </div>
+        <span class="rev-note">Read-only — use the earlier steps to change anything.</span>
+      </div>
+      ${secs || `<div class="rev-empty">Nothing selected — every optional question exports as “No”.</div>`}
+    </details>`;
+  area.querySelectorAll("#revSeg button").forEach((b) =>
+    b.addEventListener("click", () => {
+      revShowAll = b.dataset.a === "all";
+      buildReviewArea();
+      const d = area.querySelector("details");
+      if (d) d.open = true;
+    }));
 }
 
 // Every optional element the user explicitly switched ON (touched + yes),
@@ -613,29 +719,30 @@ function render() {
   const perTab = {};
   payload.items.forEach((it) => { perTab[it.tab] = (perTab[it.tab] || 0) + 1; });
   if (!payload.tabs.some((t) => t.id === tab)) tab = payload.tabs[0].id;
-  markStep("review");
+  if (wizStep !== "base") markStep("review");
 
-  const rail = payload.tabs.map((t) =>
+  // the rail lists only the data-model sections; the node-wide Base section
+  // is its own wizard stage (Device questions), never a rail entry
+  const rail = payload.tabs.filter((t) => t.id !== "base").map((t) =>
     `<button data-tab="${esc(t.id)}" aria-current="${t.id === tab}">
-       <span class="epi">${esc(t.id === "base" ? "N" : t.id)}</span>
+       <span class="epi">${esc(t.id)}</span>
        <span class="rt">${esc(t.label)}<small>${esc(t.caption || "")}</small></span>
        <span class="cnt">${perTab[t.id] || 0}</span>
      </button>`).join("");
 
+  // No stats tiles here: the Yes/No/Changed recap lives on the Export stage
+  // only -- mid-flow the counts churn on every claim and read as noise.
   $("resultArea").innerHTML = `
-    <div class="rv-stats">
-      <div class="rv-stat on"><span class="v" id="t-yes">0</span><span class="l">Supported (Yes)</span></div>
-      <div class="rv-stat"><span class="v" id="t-no">0</span><span class="l">Not supported (No)</span></div>
-      <div class="rv-stat mine"><span class="v" id="t-mine">0</span><span class="l">Changed by you</span></div>
-    </div>
     <div class="rv-review">
       <nav class="rv-rail" id="rail"><div class="rg">Sections</div>${rail}</nav>
       <div class="rv-panel" id="panel">
         <div class="rv-ptop">
           <h3 id="panelTitle"></h3><span style="flex:1"></span>
-          <div class="rv-seg" id="grpSeg">
-            <button data-g="decided" aria-pressed="${grp === "decided"}"><span class="sw" style="background:var(--on)"></span>Mandatory <span id="gc-decided"></span></button>
-            <button data-g="manual" aria-pressed="${grp === "manual"}"><span class="sw" style="background:var(--review)"></span>Optional <span id="gc-manual"></span></button>
+          <div class="rv-seg" id="modeSeg" role="group" aria-label="View mode">
+            <button data-m="simple" aria-pressed="${mode === "simple"}"
+              title="Only the choices that need you — quick chip selection">Simple</button>
+            <button data-m="advanced" aria-pressed="${mode === "advanced"}"
+              title="Every PICS question (Mandatory + Optional) with Yes/No answers">Advanced</button>
           </div>
         </div>
         <div class="rv-ptop" style="border-top:none">
@@ -643,7 +750,11 @@ function render() {
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
             <input id="q" type="text" placeholder="Search questions or PICS codes" aria-label="Search">
           </div>
-          <label class="rv-detail-t"><input type="checkbox" id="showDetails"> Show details</label>
+          <div class="rv-seg adv-only" id="grpSeg">
+            <button data-g="decided" aria-pressed="${grp === "decided"}"><span class="sw" style="background:var(--on)"></span>Mandatory <span id="gc-decided"></span></button>
+            <button data-g="manual" aria-pressed="${grp === "manual"}"><span class="sw" style="background:var(--review)"></span>Optional <span id="gc-manual"></span></button>
+          </div>
+          <label class="rv-detail-t adv-only"><input type="checkbox" id="showDetails"> Show details</label>
         </div>
         <div id="tb"></div>
         <div id="noMatchHint" class="rv-hint" hidden></div>
@@ -658,13 +769,18 @@ function render() {
 
   $("q").value = searchQ;
   wireShell();
-  renderRows();
+  syncStage();
 }
 
-// Row body for the ACTIVE section only (both groups; the view switch hides one).
+// Row body for the ACTIVE section only. Dispatches on the presentation mode:
+// simple = chip cards of the live optional choices; advanced = every question
+// (both groups; the Mandatory/Optional switch hides one).
 function renderRows() {
   const t = payload.tabs.find((x) => x.id === tab);
-  $("panelTitle").textContent = t ? t.label : "";
+  // user-facing name for the node-wide section ("Base PICS" is spec jargon)
+  $("panelTitle").textContent = tab === "base" ? "Device questions" : (t ? t.label : "");
+  $("panel").classList.toggle("mode-simple", mode === "simple");
+  if (mode === "simple") { renderSimpleRows(); return; }
   const clColor = {};
   let ci = 0;
   const colorOf = (cl) => (clColor[cl] ??= CLUSTER_PALETTE[ci++ % CLUSTER_PALETTE.length]);
@@ -737,7 +853,9 @@ function renderRows() {
             data-i="${i}" data-tab="${esc(it.tab)}" data-group="${esc(it.group)}" data-key="${esc(key)}"
             data-code="${esc(it.code).toLowerCase()}" data-q="${esc((it.question || it.code)).toLowerCase()}">
           <div class="rv-qmain">
-            <div class="rv-qtext">${esc(it.question || it.code)}${badge}</div>
+            <div class="rv-qtext">${esc(it.question || it.code)}${badge}${
+              it.opt_cluster && !it.parent
+                ? `<span class="rv-optcl">Optional</span>` : ""}</div>
             ${it.why ? `<div class="rv-why">${esc(it.why)}</div>` : ""}
             <div class="rv-meta"><span class="code">${esc(it.code)}</span><span>${esc(it.conformance)}</span></div>
           </div>
@@ -752,6 +870,423 @@ function renderRows() {
   wireRows();
   wireCatalog();
   applyFilter();
+}
+
+// ---- simple view: ZAP-style -- a clean cluster list, details in a dialog ----
+// First glance = one short list per section. Each cluster is ONE row showing
+// only its name, whether it is included ("Required" badge, or an Include
+// switch for spec-optional clusters) and how many optional choices it holds.
+// ALL detail lives in a per-cluster configure dialog (like ZAP's cluster
+// page): features, attributes, commands, client role -- each one a labelled
+// toggle. The Base tab is the same list with one row per question topic.
+// Toggles carry the exact same answer/claim semantics as the advanced Yes/No
+// rows: features / cluster sides / MCORE claims re-run the engine, so their
+// consequences appear immediately.
+let modalName = null;         // row whose configure dialog is open (null = none)
+let modalDetails = false;     // dialog "Show details": full question + PICS code
+
+// Build the table model for the active tab from the payload.
+// A row = a cluster (endpoint tabs) or a question topic (Base tab):
+//   required -- the tool already included this cluster (has decided items);
+//   gateway  -- the spec-optional cluster's claimable side (X.S / X.C item);
+//   items    -- the cluster's elements in payload (template) order, each
+//               {it, locked}: locked rows are engine-settled (mandatory
+//               elements, claim-derived inclusions, spec-excluded items) and
+//               display as read-only toggles; unlocked rows are the user's
+//               live optional choices.
+function simpleRowsData() {
+  const isBase = tab === "base";
+  const order = [];
+  const rows = new Map();
+  const gwRow = {};             // gateway code -> row name (routes its sub-items)
+  const rowOf = (name) => {
+    if (!rows.has(name)) {
+      rows.set(name, { name, required: false, gateway: null, items: [] });
+      order.push(name);
+    }
+    return rows.get(name);
+  };
+  const strip = (cl) => cl.replace(/\s+Cluster$/i, "");
+  const gwOf = (it) => it.code.split(".").slice(0, 2).join(".");
+  let decidedN = 0;
+  payload.items.forEach((it) => {
+    if (it.tab !== tab) return;
+    if (it.group === "decided") {
+      decidedN++;
+      if (isBase) return;   // node-wide derived answers stay in the banner
+      // Engine-settled element: shown read-only in its cluster's dialog. For
+      // a spec-optional cluster only while that cluster is actually included.
+      let name = strip(it.cluster);
+      if (it.opt_cluster) {
+        name = gwRow[gwOf(it)] || name;
+        if (answers[`${tab}|${gwOf(it)}`] !== "yes") return;
+      }
+      const r = rowOf(name);
+      if (!it.opt_cluster) r.required = true;
+      r.items.push({ it, locked: true });
+      return;
+    }
+    // the whole-cluster choice (the Include switch), never a dialog row
+    if (!isBase && it.opt_cluster && !it.parent && GATEWAY_RE.test(it.code)) {
+      const r = rowOf(chipLabel(it));
+      r.gateway = it;
+      gwRow[it.code] = r.name;
+      return;
+    }
+    if (!isApplicable(it)) return;   // revealed only under its claimed parent
+    if (it.mirror_of) return;        // mirrored twin: asked once via its lead item
+    let name = isBase ? it.cluster : strip(it.cluster);
+    if (it.opt_cluster) {   // sub-item of a claimed optional cluster: its gateway's row
+      name = gwRow[gwOf(it)] || name;
+    }
+    if (it.needs_you) {
+      // The engine pre-filled Yes as a spec consequence of ANOTHER claim
+      // (CheckInProtocol under LITS) and the user never touched it: shown
+      // read-only Required -- withdrawing the parent claim releases it.
+      const derived = it.answer === "yes" && !touched.has(keyOf(it));
+      rowOf(name).items.push({ it, locked: derived });
+    } else if (!isBase && answers[keyOf(it)] === "yes") {
+      // claim-derived mandatory element: included automatically, read-only
+      rowOf(name).items.push({ it, locked: true });
+    }
+    // manual, not live, answered No: not applicable right now -> hidden
+  });
+  // included clusters first (payload order), then the spec-optional offers A-Z
+  const req = order.filter((n) => !rows.get(n).gateway);
+  const opt = order.filter((n) => rows.get(n).gateway).sort((a, b) => a.localeCompare(b));
+  return { order: [...req, ...opt], rows, decidedN, isBase };
+}
+
+function renderSimpleRows() {
+  const { order, rows, decidedN, isBase } = simpleRowsData();
+  const clColor = {};
+  let ci = 0;
+  const colorOf = (cl) => (clColor[cl] ??= CLUSTER_PALETTE[ci++ % CLUSTER_PALETTE.length]);
+
+  const html = [];
+  let unitsTotal = 0;   // question units the table shows (a grouped family = 1)
+
+  const head = isBase
+    ? `<span>Topic</span><span>Questions</span><span>Selected</span><span></span>`
+    : `<span>Cluster</span><span>Included</span><span>Options</span><span></span>`;
+  const body = [];
+  order.forEach((name) => {
+    const r = rows.get(name);
+    const opts = r.items.filter((x) => !x.locked);
+    const autoN = r.items.length - opts.length;
+    const selN = opts.filter(({ it }) => answers[keyOf(it)] === "yes").length;
+    // everything searchable about this row rides along for the filter
+    const searchText = [name, ...r.items.map(({ it }) =>
+      `${it.name || ""} ${it.question || ""} ${it.code}`)].join(" ").toLowerCase();
+    const clickable = r.items.length > 0;
+    const pill = selN ? `<span class="st-selpill">${selN} selected</span>` : "";
+    let cells;
+    if (isBase) {
+      // a grouped family (same "ask") reads as ONE question with options
+      const families = new Set();
+      let qn = 0;
+      opts.forEach(({ it }) => { if (it.ask) families.add(it.ask); else qn++; });
+      qn += families.size;
+      unitsTotal += qn;
+      cells = `
+        <div class="st-name"><span class="rv-cldot" style="background:${colorOf(name)}"></span>${esc(name)}</div>
+        <div class="st-dim">${qn} question${qn === 1 ? "" : "s"}</div>
+        <div>${pill || `<span class="st-dash">—</span>`}</div>
+        <div class="st-chev">${clickable ? "›" : ""}</div>`;
+    } else {
+      // No gateway and no decided items happens for extra test-plan question
+      // groups of an included cluster (Group Communication rides on ACL): the
+      // template IS exported, so it reads as included -- never a switch.
+      const included = r.required || !r.gateway
+        ? `<span class="st-req">✓ Required</span>`
+        : `<span class="tgl" title="${esc(r.gateway.why || "")}">
+             <input type="checkbox" data-k="${esc(keyOf(r.gateway))}" data-code="${esc(r.gateway.code)}"
+               data-row="${esc(name)}" aria-label="Include ${esc(name)}"${answers[keyOf(r.gateway)] === "yes" ? " checked" : ""}><i></i></span>`;
+      const optTxt = opts.length
+        ? `<span class="st-dim">${opts.length} option${opts.length === 1 ? "" : "s"}</span> ${pill}`
+        : autoN
+          ? `<span class="st-dim">${autoN} element${autoN === 1 ? "" : "s"} auto-included</span>`
+          : `<span class="st-dash">—</span>`;
+      // spec-optional clusters carry an explicit text badge (same as the
+      // advanced view) -- the Include switch alone is easy to miss
+      const optBadge = r.gateway ? `<span class="rv-optcl">Optional</span>` : "";
+      cells = `
+        <div class="st-name"><span class="rv-cldot" style="background:${colorOf(name)}"></span>${esc(name)}${optBadge}</div>
+        <div>${included}</div>
+        <div>${optTxt}</div>
+        <div class="st-chev">${clickable ? "›" : ""}</div>`;
+    }
+    body.push(`<div class="st-row${clickable ? " click" : ""}" data-row="${esc(name)}"
+      data-search="${esc(searchText)}">${cells}</div>`);
+  });
+  // The banner reconciles every number on screen: total raw PICS items on
+  // this section, how many the engine answered, and how the open remainder
+  // condenses into the question units the table shows (duplicates asked once,
+  // families as one multi-select, follow-ups only when they apply).
+  const totalN = payload.items.filter((it) => it.tab === tab).length;
+  const manualN = totalN - decidedN;
+  const banner = isBase
+    ? `<b>${totalN} PICS items in this section — ${decidedN} answered automatically</b>
+       from your device description. The remaining ${manualN} are optional and condense
+       into the <b>${unitsTotal} question${unitsTotal === 1 ? "" : "s"}</b> below (the same
+       fact is asked once; follow-ups appear only when they apply). Anything left
+       unticked is exported as “No”.`
+    : `<b>${totalN} PICS items on this section — ${decidedN} answered automatically</b>
+       from your device description; the rest follow from what you include below.
+       Anything left off is exported as “No”.`;
+  html.push(`<div class="sv-banner"><span class="ic">✓</span><div>${banner}
+      <button class="linklike" id="seeAll">See every question</button></div></div>`);
+  html.push(body.length
+    ? `<div class="st"><div class="st-head">${head}</div>${body.join("")}</div>`
+    : `<div class="rv-hint">No optional choices on this section — everything
+      here was answered automatically from your inputs.</div>`);
+
+  $("tb").innerHTML = html.join("");
+  const seeAll = $("seeAll");
+  if (seeAll) seeAll.addEventListener("click", () => setMode("advanced"));
+  wireSimpleTable();
+  recount();
+  applyFilter();
+  renderClusterModal();   // refresh the open configure dialog after a re-run
+}
+
+// wire the simple list: a row opens its configure dialog; the Include switch
+// claims/withdraws the spec-optional cluster without opening it.
+function wireSimpleTable() {
+  $("tb").querySelectorAll(".st-row.click").forEach((row) =>
+    row.addEventListener("click", (e) => {
+      if (e.target.closest(".tgl")) return;   // the Include switch, not "open"
+      modalName = row.dataset.row;
+      renderClusterModal();
+    }));
+  $("tb").querySelectorAll(".st-row .tgl input").forEach((inp) =>
+    inp.addEventListener("change", () => {
+      applyToggle(inp);
+      // just included: open the cluster's options once the engine returns
+      // (renderSimpleRows -> renderClusterModal); switched off: keep it shut.
+      modalName = inp.checked ? inp.dataset.row : null;
+    }));
+}
+
+// One option/Include control flipped -- identical claim semantics to the
+// advanced rows. Returns true when the flip re-runs the engine.
+function applyToggle(inp) {
+  return applyAnswer(inp.dataset.k, inp.dataset.code, inp.checked);
+}
+function applyAnswer(k, code, on) {
+  answers[k] = on ? "yes" : "no";
+  touched.add(k);
+  // A mirrored Base fact (the same DNS-SD question in the DD and SC test
+  // plans) is asked once -- its twin code follows the answer automatically.
+  const [tb] = splitKey(k);
+  const src = payload.items.find((x) => x.tab === tb && x.code === code);
+  ((src && src.mirrors) || []).forEach((m) => {
+    const mk = `${tb}|${m}`;
+    answers[mk] = answers[k];
+    touched.add(mk);
+  });
+  // Un-claiming a parent (Include / feature -> off) withdraws everything
+  // revealed under it, on the same endpoint (mirrors the advanced rows).
+  if (answers[k] === "no") {
+    const [t] = splitKey(k);
+    payload.items.forEach((it) => {
+      if (it.tab === t && (it.parent === code
+          || (GATEWAY_RE.test(code) && it.code.startsWith(code + ".")))) {
+        const ck = keyOf(it);
+        touched.delete(ck);
+        answers[ck] = it.answer;
+      }
+    });
+  }
+  recount();
+  saveSession();
+  if (FEATURE_RE.test(code) || GATEWAY_RE.test(code) || code.startsWith("MCORE.")) {
+    scheduleGenerate();
+    return true;
+  }
+  return false;
+}
+
+// ---- the per-cluster configure dialog (ZAP's cluster page, simplified) ----
+const _SECTION_ORDER = ["Features", "Attributes", "Commands", "Events",
+                        "Other options", "Client role"];
+function sectionOf(it) {
+  if (FEATURE_RE.test(it.code)) return "Features";
+  const parts = it.code.split(".");
+  if (parts[1] === "C") return "Client role";
+  const tag = (parts[2] || "")[0];
+  return tag === "A" ? "Attributes" : tag === "C" ? "Commands"
+    : tag === "E" ? "Events" : "Other options";
+}
+
+function closeClusterModal(rerender) {
+  modalName = null;
+  const el = $("svModal");
+  if (el) el.remove();
+  if (rerender) renderSimpleRows();   // the list's counts reflect the dialog
+}
+
+function renderClusterModal() {
+  if (!modalName) { const el = $("svModal"); if (el) el.remove(); return; }
+  const { rows, isBase } = simpleRowsData();
+  const r = rows.get(modalName);
+  if (!r) { closeClusterModal(false); return; }
+  const t = payload.tabs.find((x) => x.id === tab);
+  const selN = r.items.filter((x) => !x.locked && answers[keyOf(x.it)] === "yes").length;
+
+  // Dialogs show the item's short label -- element name for cluster options,
+  // boilerplate-stripped question for Base facts; an item with no confident
+  // short label keeps the question as its label. "Show details" reveals the
+  // full question + PICS code under each row (also a hover tooltip).
+  // Locked rows are engine-settled: mandatory / claim-derived elements show a
+  // read-only ON toggle ("Required"), spec-excluded items a read-only OFF one.
+  const rowHtml = ({ it, locked }) => {
+    const on = answers[keyOf(it)] === "yes";
+    const label = it.name || it.question || it.code;
+    const detail = (it.name && it.question ? `${it.question} · ` : "") + it.code
+      + (it.mirrors ? ` · also answers ${it.mirrors.join(", ")}` : "");
+    const tag = !locked ? ""
+      : on ? `<span class="sm-tag">Required</span>`
+           : `<span class="sm-tag off">Not applicable</span>`;
+    return `
+    <label class="sm-row${locked ? " locked" : ""}"
+      title="${esc(it.question || "")}${locked && it.why ? `&#10;${esc(it.why)}` : ""}&#10;${esc(it.code)}">
+      <span class="sm-main">
+        <span class="sm-name">${esc(label)}${tag}</span>
+        <span class="sm-q">${esc(detail)}</span>
+      </span>
+      <span class="tgl"><input type="checkbox" data-k="${esc(keyOf(it))}"
+        data-code="${esc(it.code)}"${locked ? " disabled" : ""}${on ? " checked" : ""}><i></i></span>
+    </label>`;
+  };
+
+  // A parallel Base family (same "ask") folds into ONE multi-select question:
+  // a single title with one option chip per member. Each chip IS its PICS
+  // item -- selecting it answers exactly that item, nothing is inferred.
+  const groupHtml = (members) => {
+    const first = members[0].it;
+    const chips = members.map(({ it }) => {
+      const on = answers[keyOf(it)] === "yes";
+      return `<button class="sm-optchip" data-k="${esc(keyOf(it))}" data-code="${esc(it.code)}"
+        aria-pressed="${on}" title="${esc(it.question || "")}&#10;${esc(it.code)}">${esc(it.option || it.name || it.code)}</button>`;
+    }).join("");
+    let prefix = members[0].it.code;
+    members.forEach(({ it }) => {
+      while (!it.code.startsWith(prefix)) prefix = prefix.slice(0, -1);
+    });
+    return `<div class="sm-group">
+      <span class="sm-main"><span class="sm-name">${esc(first.ask)}</span>
+        <span class="sm-q">select all that apply · ${esc(prefix)}…</span></span>
+      <div class="sm-opts">${chips}</div></div>`;
+  };
+
+  let bodyHtml;
+  if (!r.items.length) {
+    bodyHtml = `<div class="sm-empty">Nothing to configure here yet.</div>`;
+  } else if (isBase) {
+    const parts = [];
+    const grouped = new Set();
+    r.items.forEach((x) => {
+      const ask = x.it.ask;
+      if (!ask) { parts.push(rowHtml(x)); return; }
+      if (grouped.has(ask)) return;   // family renders once, where it starts
+      grouped.add(ask);
+      parts.push(groupHtml(r.items.filter((y) => y.it.ask === ask)));
+    });
+    bodyHtml = parts.join("");
+  } else {
+    const sections = new Map();
+    r.items.forEach((x) => {
+      const s = sectionOf(x.it);
+      if (!sections.has(s)) sections.set(s, []);
+      sections.get(s).push(x);
+    });
+    bodyHtml = _SECTION_ORDER.filter((s) => sections.has(s)).map((s) =>
+      `<div class="sm-sect">${s}</div>` + sections.get(s).map(rowHtml).join("")).join("");
+  }
+
+  let overlay = $("svModal");
+  if (!overlay) {
+    overlay = document.createElement("div");
+    overlay.className = "modal-overlay";
+    overlay.id = "svModal";
+    document.body.appendChild(overlay);
+    overlay.addEventListener("click", (e) => { if (e.target === overlay) closeClusterModal(true); });
+  }
+  // an engine re-run re-renders the open dialog: keep the reading position
+  const prevScroll = overlay.querySelector(".sm-body")?.scrollTop || 0;
+  overlay.innerHTML = `
+    <div class="modal sm-modal${modalDetails ? " details" : ""}" role="dialog" aria-label="${esc(modalName)} options">
+      <div class="sm-head">
+        <div><h3>${esc(modalName)}${r.gateway ? ` <span class="rv-optcl">Optional cluster</span>` : ""}</h3>
+          <div class="sm-sub">${esc(t ? t.label : "")}${isBase ? "" : " — switch on what your product supports"}</div></div>
+        <span class="sm-count" id="smCount">${selN} selected</span>
+        <button class="sm-close" aria-label="Close" title="Close">✕</button>
+      </div>
+      <div class="sm-body">${bodyHtml}</div>
+      <div class="modal-actions sm-foot">
+        <label class="sm-detail"><input type="checkbox" id="smDetails"${modalDetails ? " checked" : ""}>
+          Show details</label>
+        <span style="flex:1"></span>
+        <button class="btn" id="smDone">Done</button>
+      </div>
+    </div>`;
+  overlay.querySelector(".sm-body").scrollTop = prevScroll;
+  overlay.querySelector(".sm-close").addEventListener("click", () => closeClusterModal(true));
+  overlay.querySelector("#smDone").addEventListener("click", () => closeClusterModal(true));
+  overlay.querySelector("#smDetails").addEventListener("change", (e) => {
+    modalDetails = e.target.checked;
+    overlay.querySelector(".sm-modal").classList.toggle("details", modalDetails);
+  });
+  overlay.querySelectorAll(".sm-row .tgl input").forEach((inp) =>
+    inp.addEventListener("change", () => {
+      applyToggle(inp);   // a claim re-runs the engine; this dialog refreshes
+      const n = [...overlay.querySelectorAll(".sm-row .tgl input:not(:disabled)")]
+        .filter((x) => x.checked).length
+        + overlay.querySelectorAll('.sm-optchip[aria-pressed="true"]').length;
+      const c = $("smCount");
+      if (c) c.textContent = `${n} selected`;
+    }));
+  // multi-select option chips: pressed = Yes on that chip's own PICS item
+  overlay.querySelectorAll(".sm-optchip").forEach((b) =>
+    b.addEventListener("click", () => {
+      const on = b.getAttribute("aria-pressed") === "true";
+      b.setAttribute("aria-pressed", String(!on));
+      applyAnswer(b.dataset.k, b.dataset.code, !on);
+      // MCORE claims re-run the engine; the dialog re-renders with counts
+    }));
+}
+
+// search filter for the simple list: each row carries its full searchable text
+// (name + every option label, question, and PICS code) in data-search.
+function applySimpleFilter() {
+  const q = searchQ.toLowerCase();
+  let visible = 0;
+  $("tb").querySelectorAll(".st-row").forEach((row) => {
+    const m = !q || (row.dataset.search || "").includes(q);
+    row.style.display = m ? "" : "none";
+    if (m) visible++;
+  });
+  const headEl = $("tb").querySelector(".st-head");
+  if (headEl) headEl.style.display = visible ? "" : "none";
+  const hint = $("noMatchHint");
+  if (!hint) return;
+  hint.hidden = !(q && visible === 0);
+  if (!hint.hidden) {
+    hint.textContent = "Nothing matches here — try another section, or the Advanced view "
+      + "(it includes every question, not just the optional choices).";
+  }
+}
+
+// switch between the simple (table) and advanced (all questions) presentations
+function setMode(m) {
+  if (mode === m) return;
+  mode = m;
+  localStorage.setItem(MODE_KEY, m);
+  const seg = $("modeSeg");
+  if (seg) seg.querySelectorAll("button").forEach((x) =>
+    x.setAttribute("aria-pressed", String(x.dataset.m === m)));
+  renderRows();
 }
 
 // wire the shell controls (rail, view switch, search, details, edit) -- per render
@@ -774,11 +1309,14 @@ function wireShell() {
       $("grpSeg").querySelectorAll("button").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
       applyFilter();
     }));
+  $("modeSeg").querySelectorAll("button").forEach((b) =>
+    b.addEventListener("click", () => setMode(b.dataset.m)));
   $("showDetails").addEventListener("change", (e) => $("panel").classList.toggle("show-details", e.target.checked));
   const clear = $("clearBtn");
   if (clear) clear.addEventListener("click", resetAll);
   const toExport = $("toExport");
-  if (toExport) toExport.addEventListener("click", () => showView("export"));
+  if (toExport) toExport.addEventListener("click", () =>
+    showView(wizStep === "base" ? "export" : "base"));
 }
 
 // wire the Yes/No toggles for the currently rendered rows
@@ -827,7 +1365,10 @@ function wireRows() {
   recount();
 }
 
-// catalog chip label: cluster display name, disambiguated by side for X.C
+// optional-cluster row label: cluster display name, disambiguated by side for
+// X.C. "Optional" itself is NOT part of the name -- the row carries an
+// explicit Optional badge (rv-optcl), so the name stays clean for search
+// and for the dialog title.
 function chipLabel(it) {
   let name = (it.cluster || it.code).replace(/\s+Cluster$/i, "");
   if (it.code.endsWith(".C")) name += " (client)";
@@ -869,6 +1410,7 @@ function isApplicable(it) {
 }
 
 function applyFilter() {
+  if (mode === "simple") { applySimpleFilter(); return; }
   const q = searchQ.toLowerCase();
   const scopeHits = {};   // "tab|group" -> hits (from data; only active rows in DOM)
   const matches = (it) => isApplicable(it)
@@ -927,11 +1469,13 @@ function applyFilter() {
 function switchTo(tabId, group) {
   tab = tabId;
   grp = group;
-  $("rail").querySelectorAll("button").forEach((x) =>
-    x.setAttribute("aria-current", String(x.dataset.tab === tabId)));
   $("grpSeg").querySelectorAll("button").forEach((x) =>
     x.setAttribute("aria-pressed", String(x.dataset.g === group)));
-  renderRows();
+  // a base match jumps to the Device-questions stage, an endpoint match back
+  // to the design stage; showView -> syncStage re-renders with the new tab
+  const targetStep = tabId === "base" ? "base" : "review";
+  if (targetStep !== wizStep) showView(targetStep);
+  else syncStage();
 }
 
 // "Changed by you" = differs from the PROFILE-ONLY baseline. Manual items
@@ -1103,7 +1647,7 @@ $("exportBtn").addEventListener("click", exportPICS);
 $("downloadCode").addEventListener("click", downloadScaffold);
 $("copyCode").addEventListener("click", copyScaffold);
 $("genCode").addEventListener("change", renderScaffold);
-$("backToReview").addEventListener("click", () => showView("review"));
+$("backToReview").addEventListener("click", () => showView("base"));
 
 // stepper switches between the three screens; Review/Export need a generated payload.
 document.querySelectorAll("#stepper .rv-step").forEach((b) =>

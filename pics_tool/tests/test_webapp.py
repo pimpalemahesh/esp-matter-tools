@@ -65,11 +65,14 @@ def test_undecidable_product_facts_are_manual_not_decided():
     never be presented as tool-decided."""
     p = webapp.generate_payload(PROFILE)
     by_code = {it["code"]: it for it in p["items"] if it["tab"] == "base"}
-    # product facts with no derivation path, AND composition facts the phase-1
-    # UI still cannot express (ICD) -> manual
-    for code in ("MCORE.DD.PHYSICAL_TAMPERING", "MCORE.SC.SIT_ICD"):
+    # product facts with no derivation path -> manual
+    for code in ("MCORE.DD.PHYSICAL_TAMPERING",):
         assert by_code[code]["group"] == "manual", f"{code} wrongly tool-decided"
         assert by_code[code]["answer"] == "no"  # conservative default until claimed
+    # ICD became a DECLARED gate (ICDM.S is an explicit Root Node offering,
+    # like DLOG.S): not claiming the cluster IS "not an ICD" -> a decided No
+    assert by_code["MCORE.SC.SIT_ICD"]["group"] == "decided"
+    assert by_code["MCORE.SC.SIT_ICD"]["answer"] == "no"
     # the DLOG field questions became decidable once Diagnostic Logs turned
     # into a declared Root Node offering: no DLOG.S claim -> the cluster is
     # absent -> RetrieveLogsResponse is never sent -> an input-backed No
@@ -243,9 +246,10 @@ def test_items_split_into_decided_and_manual_groups():
     base = [it for it in p["items"] if it["tab"] == "base"]
     assert len(base) == 132  # each and every Base.xml item is present
     manual_base = [it for it in base if it["group"] == "manual"]
-    # DLOG fields decided via the declared offering; the 5 bridge-client
-    # items (BRIDGECLIENT + DEVLIST.*) decided via the derived IM role
-    assert len(manual_base) == 44
+    # DLOG fields and SIT_ICD decided via the declared Root Node offerings
+    # (DLOG.S / ICDM.S); the 5 bridge-client items (BRIDGECLIENT + DEVLIST.*)
+    # decided via the derived IM role; G.MULTIENDPOINT via the composition
+    assert len(manual_base) == 42
     assert all(it["answer"] == "no" for it in manual_base)
     assert any(it["code"] == "MCORE.DD.PHYSICAL_TAMPERING" for it in manual_base)
 
@@ -314,6 +318,73 @@ def test_every_item_carries_a_cluster_label():
     assert by["MCORE.DD.QR"] == "Discovery & Onboarding"
     assert by["OO.S"] == "On-Off Cluster"
     assert by["ACL.S"].startswith("Access Control")
+
+
+def test_cluster_items_carry_short_names_for_chip_labels():
+    """The simple view renders items as compact chips: cluster elements get a
+    short human name (feature/attribute/command/side); MCORE items have none
+    (the UI falls back to the question text)."""
+    p = webapp.generate_payload(PROFILE)
+    by = {it["code"]: it for it in p["items"]}
+    assert by["OO.S"]["name"] == "On/Off (server)"
+    assert by["OO.S.F00"]["name"] == "Lighting"
+    assert by["OO.S.A4001"]["name"] == "On Time"
+    assert by["MCORE.DD.QR"]["name"] is None
+    # ".M." template items carry their name in the code itself
+    assert by["CADMIN.C.M.UserInterfaceDisplay"]["name"] == "User Interface Display"
+    # the vast majority of selectable cluster items resolve to a short name;
+    # the rest (template-only clusters, ids absent from the data model) fall
+    # back to the question text in the UI, so None is allowed but must be rare
+    manual = [it for it in p["items"]
+              if it["group"] == "manual" and not it["code"].startswith("MCORE.")]
+    unnamed = [it["code"] for it in manual if not it["name"]]
+    assert len(unnamed) < len(manual) * 0.05, f"too many unnamed: {unnamed[:10]}"
+
+
+def test_mcore_questions_get_short_labels():
+    """Base product-fact questions repeat long boilerplate (DNS-SD TXT keys,
+    'Is the device a Client and supports ...'); the simple view shows each as
+    a compact labelled toggle, so the label keeps only the distinguishing
+    part. Unrecognized shapes fall back to the question (name=None)."""
+    p = webapp.generate_payload(PROFILE)
+    by = {it["code"]: it["name"] for it in p["items"] if it["tab"] == "base"}
+    assert by["MCORE.DD.TXT_KEY_VP"] == "TXT key 'VP' — Vendor ID / Product ID"
+    assert by["MCORE.SC.SII_OP_DISCOVERY_KEY"] == "mDNS key 'SII' — operational discovery"
+    assert by["MCORE.BDX.Sender"] == "BDX Sender role"
+    assert by["MCORE.IDM.C.ReadRequest"] == "Client: send Read Request"
+    # a possessive subject is NOT the device itself: no confident label
+    assert by["MCORE.DD.CONCATENATED_QR_CODE"] is None
+    # every base item either has a label or legitimately falls back
+    manual = [it for it in p["items"] if it["tab"] == "base" and it["group"] == "manual"]
+    labeled = [it for it in manual if it["name"]]
+    assert len(labeled) >= len(manual) * 0.9, "most base questions should get short labels"
+
+
+def test_parallel_base_families_group_into_one_question():
+    """Near-identical Base questions (DNS-SD TXT keys, client attribute data
+    types, ...) carry a shared 'ask' + per-item 'option': the UI shows ONE
+    multi-select question per family. Presentation only -- every option maps
+    1:1 to its own PICS item."""
+    p = webapp.generate_payload(PROFILE)
+    by = {it["code"]: it for it in p["items"] if it["tab"] == "base"}
+    assert by["MCORE.DD.TXT_KEY_VP"]["ask"] == \
+        "Optional TXT keys in DNS-SD commissionable node discovery"
+    assert by["MCORE.DD.TXT_KEY_VP"]["option"] == "VP — Vendor ID / Product ID"
+    assert by["MCORE.SC.SII_OP_DISCOVERY_KEY"]["ask"] == \
+        "Optional mDNS keys — operational discovery"
+    assert by["MCORE.SC.SII_OP_DISCOVERY_KEY"]["option"] == "SII"
+    # commissionable vs operational mDNS keys are DIFFERENT questions
+    assert by["MCORE.SC.SII_COMM_DISCOVERY_KEY"]["ask"] != \
+        by["MCORE.SC.SII_OP_DISCOVERY_KEY"]["ask"]
+    # one family per client-capability verb, option = the data type
+    read = [it for it in p["items"] if it["ask"] ==
+            "Client: attribute data types it can read"]
+    assert {"Bool", "String", "Struct"} <= {it["option"] for it in read}
+    assert len(read) >= 8
+    # items outside any family stay individual questions
+    assert by["MCORE.DD.PHYSICAL_TAMPERING"]["ask"] is None
+    # grouping must never leak onto cluster items
+    assert all(it["ask"] is None for it in p["items"] if it["tab"] != "base")
 
 
 def test_mcore_area_grouping_is_version_driven():
@@ -709,10 +780,10 @@ def test_spec_optional_clusters_offered_from_device_type():
     """Clusters the device type LISTS but does not mandate surface as
     claimable sections: the side's gateway is the one visible question and
     every sub-item reveals under it. A side blocked purely by an
-    input-decided condition (Thread diagnostics on a Wi-Fi device, ICDM
-    without the ICD flag) is a defendable No and is NOT offered; a side
-    blocked only by a product-fact condition (LanguageLocale) IS offered --
-    absence of information is never a No."""
+    input-decided condition (Thread diagnostics on a Wi-Fi device) is a
+    defendable No and is NOT offered; a side blocked only by a claimable
+    condition (LanguageLocale, SIT/LIT) IS offered -- absence of information
+    is never a No."""
     p = webapp.generate_payload(dict(PROFILE, device_type="Extended Color Light",
                                      node_device_types=["OTA Requestor"]))
     opt = {it["code"]: it for it in p["items"] if it["opt_cluster"]}
@@ -727,12 +798,111 @@ def test_spec_optional_clusters_offered_from_device_type():
     # optional CLIENT listed on the application device type
     assert opt["OCC.C"]["tab"] == "1"
     # input-decided Nos and unlisted sides are never offered
-    for absent in ("DGTHREAD.S", "DGETH.S", "ICDM.S", "OCC.S"):
+    for absent in ("DGTHREAD.S", "DGETH.S", "OCC.S"):
         assert absent not in opt, absent
+    # ICD Management IS offered: SIT/LIT are declared via the cluster claim,
+    # not an input, so "M if SIT|LIT" is claimable -- never a silent No
+    assert opt["ICDM.S"]["tab"] == "0" and opt["ICDM.S"]["answer"] == "no"
     # unclaimed: only the gateways are top-level; all sub-items reveal under one
     assert all(it["parent"] for c, it in opt.items() if c.count(".") >= 2)
     # offered rows never leak into the tool-decided section
     assert all(it["group"] == "manual" for it in opt.values())
+
+
+def test_icd_declared_via_cluster_claim():
+    """Claiming ICD Management IS declaring "this node is an ICD" (Root Node
+    lists ICDM as mandatory iff SIT|LIT): the claim opens the cluster's
+    elements, settles SIT vs LIT from the LITS feature, and drives the Base
+    ICD answer -- no separate input, nothing guessed."""
+    # SIT: gateway claim alone -> Base SIT_ICD pre-claimed Yes (user-owned)
+    p = webapp.generate_payload(dict(PROFILE, claims_by_tab={"0": ["ICDM.S"]}))
+    by = {(it["tab"], it["code"]): it for it in p["items"]}
+    sit = by[("base", "MCORE.SC.SIT_ICD")]
+    assert sit["group"] == "manual" and sit["answer"] == "yes"
+    assert by[("0", "ICDM.S")]["answer"] == "yes"
+    assert ("0", "ICDM.S.A0000") in by      # the claimed side's elements open
+
+    # LIT: LITS feature claimed -> SIT question stays open (default No), and
+    # the spec's own conformance makes CheckInProtocol/UserActiveModeTrigger
+    # mandatory under LITS
+    p = webapp.generate_payload(dict(PROFILE,
+                                     claims_by_tab={"0": ["ICDM.S", "ICDM.S.F02"]}))
+    by = {(it["tab"], it["code"]): it for it in p["items"]}
+    lit_sit = by[("base", "MCORE.SC.SIT_ICD")]
+    assert lit_sit["group"] == "manual" and lit_sit["answer"] == "no"
+    assert by[("0", "ICDM.S.F00")]["answer"] == "yes"
+    assert by[("0", "ICDM.S.F01")]["answer"] == "yes"
+
+
+def test_mirrored_dns_sd_twins_marked():
+    """The DD and SC test plans ask the same DNS-SD facts (TXT keys,
+    commissioning subtypes): the payload links each pair so the UI asks once
+    and answers both codes -- the export stays consistent across both files."""
+    p = webapp.generate_payload(PROFILE)
+    by = {it["code"]: it for it in p["items"] if it["tab"] == "base"}
+    assert by["MCORE.DD.TXT_KEY_VP"]["mirrors"] == ["MCORE.SC.VP_KEY"]
+    assert by["MCORE.SC.VP_KEY"]["mirror_of"] == "MCORE.DD.TXT_KEY_VP"
+    assert by["MCORE.DD.COMMISSIONING_SUBTYPE_T"]["mirrors"] == ["MCORE.SC.DEVTYPE_SUBTYPE"]
+    # every declared pair is linked and both ends are open manual questions
+    for lead, twin in webapp._MCORE_MIRRORS.items():
+        assert by[lead].get("mirrors") == [twin], lead
+        assert by[twin].get("mirror_of") == lead, twin
+        assert by[lead]["group"] == "manual" and by[twin]["group"] == "manual"
+    # non-mirrored items carry no linkage
+    assert "mirrors" not in by["MCORE.DD.QR"] and "mirror_of" not in by["MCORE.DD.QR"]
+
+
+def test_multiendpoint_groups_decided_from_composition():
+    """MCORE.G.MULTIENDPOINT is read off the designed data model: >= 2
+    endpoints hosting a Groups server -> Yes; otherwise a decided No. The
+    endpoint list is exhaustive, so both directions are defendable."""
+    single = webapp.generate_payload(PROFILE)
+    it = next(x for x in single["items"] if x["code"] == "MCORE.G.MULTIENDPOINT")
+    assert it["group"] == "decided" and it["answer"] == "no"
+
+    two = webapp.generate_payload(dict(PROFILE, endpoints=[
+        {"device_types": ["On/Off Light"]}, {"device_types": ["On/Off Light"]}]))
+    it = next(x for x in two["items"] if x["code"] == "MCORE.G.MULTIENDPOINT")
+    assert it["group"] == "decided" and it["answer"] == "yes"
+    assert "Groups cluster" in it["why"]
+
+    # the CLI path derives it identically
+    from esp_matter_datamodel import loader
+
+    from pics_tool.generate.selection import Selection, build_endpoints_enabled
+    model = loader.load_version("1.6", validate=False)
+    sel = Selection.from_dict({
+        "spec_version": "1.6", "role": "commissionee", "transport": ["wifi_2g"],
+        "onboarding": ["qr", "manual_pairing_code"],
+        "endpoints": [{"device_types": ["On/Off Light"]},
+                      {"device_types": ["On/Off Light"]}]})
+    enabled = build_endpoints_enabled(model, sel)
+    assert "MCORE.G.MULTIENDPOINT" in enabled[0]
+
+
+def test_cli_selection_derives_icd_from_claims():
+    """The CLI path derives is_icd/icd_mode from an ICDM claim identically."""
+    from esp_matter_datamodel import loader
+
+    from pics_tool.generate.selection import Selection, build_endpoints_enabled
+
+    model = loader.load_version("1.6", validate=False)
+    sel = Selection.from_dict({
+        "spec_version": "1.6", "role": "commissionee", "transport": ["thread"],
+        "onboarding": ["qr", "manual_pairing_code"],
+        "endpoints": [{"device_types": ["On/Off Light"], "claims": ["ICDM.S"]}],
+    })
+    enabled = build_endpoints_enabled(model, sel)
+    assert sel.profile.is_icd and sel.profile.icd_mode == "sit"
+    assert "MCORE.SC.SIT_ICD" in enabled[0]
+    # explicit input always wins over the (absent) claim
+    sel2 = Selection.from_dict({
+        "spec_version": "1.6", "role": "commissionee", "transport": ["thread"],
+        "onboarding": ["qr", "manual_pairing_code"], "is_icd": True,
+        "icd_mode": "lit", "device_type": "On/Off Light",
+    })
+    build_endpoints_enabled(model, sel2)
+    assert sel2.profile.icd_mode == "lit"
 
 
 def test_spec_optional_offerings_follow_transport():

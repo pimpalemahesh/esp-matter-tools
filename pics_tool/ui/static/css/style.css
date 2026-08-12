@@ -637,6 +637,10 @@ details.rv-tech[open] summary::before{content:"▾ "}
 details.rv-tech .tb{padding:0 0 12px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:11.5px;color:var(--text-dim);line-height:1.7}
 .rv-benign{margin-top:12px;font-size:12px;color:var(--text-dim);background:var(--surface-alt);padding:10px 12px;border-radius:8px}
 
+/* Device-questions stage: same shell, no endpoint rail (single column) */
+.rv-review.no-rail{grid-template-columns:1fr}
+.rv-review.no-rail .rv-rail{display:none}
+
 @media (max-width:820px){ .rv-review{grid-template-columns:1fr} .rv-rail{position:static} .rv-stats{grid-template-columns:1fr} }
 
 /* ---- wizard views (Describe / Review / Export are separate screens) ---- */
@@ -652,6 +656,36 @@ details.rv-tech .tb{padding:0 0 12px;font-family:ui-monospace,SFMono-Regular,Men
 .export-files li .fi{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:var(--accent);font-weight:600}
 .export-files li small{color:var(--text-dim)}
 .rv-step[aria-disabled="true"]{opacity:.5;cursor:not-allowed}
+
+/* ---- export-stage answer review (collapsed by default) ---- */
+.rev{border:1px solid var(--border);border-radius:11px;background:var(--surface-alt);
+  margin:0 0 16px;overflow:hidden}
+.rev summary{display:flex;align-items:center;gap:9px;padding:12px 16px;cursor:pointer;
+  user-select:none;font-weight:650;font-size:13.5px;list-style:none}
+.rev summary::-webkit-details-marker{display:none}
+.rev summary:hover{background:color-mix(in srgb,var(--surface-alt) 70%,var(--accent-soft))}
+.rev:not([open]) summary .rv-caret{transform:rotate(-90deg)}
+.rev-cnt{margin-left:auto;font-size:11px;font-weight:650;color:var(--accent);
+  background:var(--accent-soft);border-radius:99px;padding:2px 9px;white-space:nowrap}
+.rev-tools{display:flex;align-items:center;gap:12px;flex-wrap:wrap;
+  padding:10px 16px;border-top:1px solid var(--border);background:var(--surface)}
+.rev-note{font-size:12px;color:var(--text-dim)}
+.rev-sec{padding:4px 16px 12px;background:var(--surface);border-top:1px solid var(--border)}
+.rev-sech{font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;
+  color:var(--text-dim);padding:10px 0 6px}
+.rev-cl{display:flex;gap:12px;align-items:baseline;padding:6px 0}
+.rev-cl+.rev-cl{border-top:1px solid color-mix(in srgb,var(--border) 60%,transparent)}
+.rev-clname{flex:0 0 auto;min-width:150px;font-size:12.5px;font-weight:650}
+.rev-items{display:flex;flex-wrap:wrap;gap:6px;min-width:0}
+.rev-item{display:inline-flex;align-items:center;gap:6px;padding:2px 10px;border-radius:99px;
+  font-size:12px;border:1px solid var(--border);background:var(--surface)}
+.rev-item.yes{color:var(--on);border-color:color-mix(in srgb,var(--on) 40%,var(--border));
+  background:var(--on-bg)}
+.rev-item.yes::before{content:"✓";font-weight:700}
+.rev-item.no{color:var(--text-dim)}
+.rev-item.no::before{content:"✕";opacity:.6}
+.rev-empty{padding:16px;background:var(--surface);border-top:1px solid var(--border);
+  color:var(--text-dim);font-size:13px}
 
 /* ---- esp-matter data-model code (scaffold) ---- */
 #scaffoldCard{margin-top:18px}
@@ -691,6 +725,101 @@ details.rv-tech .tb{padding:0 0 12px;font-family:ui-monospace,SFMono-Regular,Men
   background:var(--surface-alt);color:var(--text);font-size:12.5px;line-height:1.55;
   max-height:420px;overflow:auto;white-space:pre;-webkit-overflow-scrolling:touch}
 .scaffold-pre code{white-space:pre;background:none;border:0;padding:0;color:inherit}
+
+/* ============================================================
+   Simple view (sv-*): select-only chips, tool answers out of sight
+   ============================================================ */
+/* advanced-only controls (Mandatory/Optional switch, Show details) hide when
+   the panel is in simple mode */
+.rv-panel.mode-simple .adv-only{display:none}
+
+.sv-banner{display:flex;gap:11px;align-items:flex-start;padding:13px 16px;
+  border-bottom:1px solid var(--border);background:var(--on-bg);
+  color:var(--text);font-size:13px;line-height:1.55}
+.sv-banner .ic{flex:0 0 auto;width:20px;height:20px;border-radius:50%;display:grid;place-items:center;
+  background:var(--on);color:#fff;font-size:11px;font-weight:700;margin-top:1px}
+.sv-banner b{font-weight:650}
+.sv-banner .linklike{background:none;border:none;color:var(--accent);cursor:pointer;
+  font:inherit;padding:0;text-decoration:underline}
+
+/* the ZAP-style list: one calm row per cluster / topic, details in a dialog */
+.st-head,.st-row{display:grid;grid-template-columns:minmax(170px,1.2fr) 118px 1.6fr 26px;
+  gap:8px 14px;padding:11px 16px;align-items:center}
+.st-head{padding:8px 16px;font-size:10.5px;font-weight:700;letter-spacing:.07em;
+  text-transform:uppercase;color:var(--text-dim);background:var(--surface-alt);
+  border-bottom:1px solid var(--border)}
+.st-row{border-bottom:1px solid var(--border)}
+.st-row.click{cursor:pointer}
+.st-row.click:hover{background:color-mix(in srgb,var(--surface-alt) 70%,transparent)}
+.st-name{display:flex;align-items:center;gap:8px;font-weight:600;font-size:13px;min-width:0}
+.st-req{font-size:11px;font-weight:650;color:var(--on);background:var(--on-bg);
+  border-radius:99px;padding:2px 9px;white-space:nowrap}
+.st-dash{color:var(--text-dim)}
+.st-dim{color:var(--text-dim);font-size:12.5px}
+.st-selpill{font-size:11px;font-weight:650;color:var(--accent);background:var(--accent-soft);
+  border-radius:99px;padding:1px 8px;white-space:nowrap}
+.st-chev{color:var(--text-dim);font-size:17px;line-height:1;text-align:right}
+@media (max-width:720px){
+  .st-head{display:none}
+  .st-row{grid-template-columns:1fr auto;gap:6px}
+  .st-chev{grid-column:2;grid-row:1}
+}
+
+/* toggle switch (ZAP-style) */
+.tgl{position:relative;display:inline-block;width:36px;height:20px;flex:0 0 auto;vertical-align:middle}
+.tgl input{position:absolute;opacity:0;inset:0;margin:0;cursor:pointer;z-index:1}
+.tgl i{position:absolute;inset:0;border-radius:20px;background:var(--border-strong);transition:background .15s}
+.tgl i::before{content:"";position:absolute;width:16px;height:16px;left:2px;top:2px;border-radius:50%;
+  background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.25);transition:transform .15s}
+.tgl input:checked + i{background:var(--accent)}
+.tgl input:checked + i::before{transform:translateX(16px)}
+@media (prefers-reduced-motion:reduce){.tgl i,.tgl i::before{transition:none}}
+
+/* the per-cluster configure dialog */
+.sm-modal{max-width:680px;width:100%;padding:0;display:flex;flex-direction:column;max-height:82vh}
+.sm-head{display:flex;align-items:center;gap:12px;padding:16px 20px;border-bottom:1px solid var(--border)}
+.sm-head h3{margin:0;font-size:16px}
+.sm-sub{font-size:12px;color:var(--text-dim);margin-top:2px}
+.sm-count{margin-left:auto;font-size:11px;font-weight:650;color:var(--accent);background:var(--accent-soft);
+  border-radius:99px;padding:2px 9px;white-space:nowrap}
+.sm-close{border:none;background:transparent;color:var(--text-dim);font-size:15px;cursor:pointer;
+  padding:4px 8px;border-radius:7px;flex:0 0 auto}
+.sm-close:hover{background:var(--surface-alt);color:var(--text)}
+.sm-body{overflow-y:auto;padding:6px 10px 10px}
+.sm-sect{font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;
+  color:var(--text-dim);padding:16px 12px 6px;border-bottom:1px solid var(--border)}
+.sm-row{display:flex;align-items:center;gap:14px;padding:10px 12px;cursor:pointer}
+.sm-row:hover{background:var(--surface-alt)}
+/* a divider under every question block, so each row reads as its own unit */
+.sm-row,.sm-group{border-bottom:1px solid color-mix(in srgb,var(--border) 72%,transparent)}
+.sm-body > .sm-row:last-child,.sm-body > .sm-group:last-child{border-bottom:none}
+.sm-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
+.sm-name{font-size:13px;font-weight:550}
+/* "Show details" reveals each row's full question + PICS code */
+.sm-q{display:none;font-size:11.5px;color:var(--text-dim)}
+.sm-modal.details .sm-q{display:block}
+.sm-detail{display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--text-dim);
+  cursor:pointer;user-select:none}
+.sm-detail input{accent-color:var(--accent);margin:0}
+.sm-empty{padding:28px;text-align:center;color:var(--text-dim)}
+/* one multi-select question for a parallel family (TXT keys, data types...) */
+.sm-group{display:block;padding:11px 12px 13px}
+.sm-group:hover{background:var(--surface-alt)}
+.sm-opts{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.sm-optchip{border:1px solid var(--border-strong);background:var(--surface);color:var(--text);
+  border-radius:99px;padding:4px 12px;font-size:12px;font-weight:550;cursor:pointer;
+  transition:border-color .12s,background .12s}
+.sm-optchip:hover{border-color:var(--accent)}
+.sm-optchip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:#fff}
+.sm-optchip[aria-pressed="true"]::before{content:"✓ ";font-weight:700}
+/* engine-settled rows: read-only toggle + a small status tag */
+.sm-row.locked{cursor:default}
+.sm-row.locked .tgl{opacity:.45}
+.sm-row.locked .tgl input{cursor:default}
+.sm-tag{margin-left:8px;font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;
+  padding:1px 7px;border-radius:99px;color:var(--on);background:var(--on-bg);vertical-align:1px}
+.sm-tag.off{color:var(--text-dim);background:var(--surface-alt)}
+.sm-foot{padding:12px 20px;border-top:1px solid var(--border);justify-content:flex-end;margin:0}
 
 /* ---- collapsible cluster groups ---- */
 .rv-clhead{cursor:pointer;user-select:none}

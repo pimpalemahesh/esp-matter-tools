@@ -162,7 +162,10 @@ def profile_seeds(profile: DeviceProfile, facts: NodeFacts,
         seeds.add("MCORE.OTA.Provider")
     if facts.has_bridge:
         seeds.add("MCORE.BRIDGE")
-    if profile.is_icd:
+    # The Base question is specifically "Is the device a SHORT Idle Time ICD?"
+    # -- true for the SIT flavor only (an LIT device answers it separately,
+    # e.g. when it also supports dynamic SIT/LIT switching).
+    if profile.is_icd and profile.icd_mode != "lit":
         seeds.add("MCORE.SC.SIT_ICD")
     return seeds
 

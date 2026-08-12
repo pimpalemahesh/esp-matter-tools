@@ -36,7 +36,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from .claims import feature_seeds_from_codes, mcore_atoms, side_claims
+from .claims import (feature_seeds_from_codes, icd_from_claims, mcore_atoms,
+                     side_claims)
 from .cluster_engine import (active_conditions, all_enabled_cluster_ids,
                              generate_cluster_pics, load_transport_map)
 from .mcore_engine import compute_mcore_pics
@@ -227,6 +228,13 @@ def build_endpoints_enabled(model, selection: Selection,
     version = profile.spec_version
     known = known_item_numbers(version)
     transport_map = transport_map or load_transport_map()
+    # An ICD Management claim IS the ICD declaration (spec: ICDM is mandatory
+    # iff SIT|LIT on the Root Node); an explicit is_icd input wins.
+    if not profile.is_icd:
+        icd, mode = icd_from_claims(
+            [c for ep in selection.endpoints for c in ep.claims])
+        if icd:
+            profile.is_icd, profile.icd_mode = True, mode
     conditions = active_conditions(profile, transport_map)
     iface_seeds, iface_exclude, _families = interface_plan(model, selection, transport_map)
 
@@ -248,8 +256,14 @@ def build_endpoints_enabled(model, selection: Selection,
         exclude_node_seed_clusters=iface_exclude)
 
     cluster_ids = all_enabled_cluster_ids(endpoints)
-    mcore = compute_mcore_pics(profile, version, cluster_ids,
-                               extra_seeds=mcore_atoms(selection.mcore_claims))
+    # Composition-derived Base atom: several endpoints hosting a Groups server
+    # (engine baseline or a claimed side) answer MCORE.G.MULTIENDPOINT.
+    groups_eps = ({ep.endpoint for ep in endpoints if "G.S" in ep.pics}
+                  | {epid for epid, side in per_ep_side.items() if "G.S" in side})
+    extra = mcore_atoms(selection.mcore_claims)
+    if len(groups_eps) >= 2:
+        extra = extra | {"MCORE.G.MULTIENDPOINT"}
+    mcore = compute_mcore_pics(profile, version, cluster_ids, extra_seeds=extra)
 
     enabled = {ep.endpoint: set(ep.pics) & known for ep in endpoints}
     for epid, side in per_ep_side.items():

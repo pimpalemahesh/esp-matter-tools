@@ -204,11 +204,16 @@ def controlled_conditions(transport_map: dict) -> frozenset[str]:
     """Condition names whose truth the profile inputs FULLY determine.
 
     Transport conditions are exhaustive (the transport input decides each one
-    both ways) and the ICD flag decides SIT/LIT/Active. Any OTHER condition a
-    device-type requirement references (LanguageLocale, Simple, ...) is a
-    product fact the inputs cannot see.
+    both ways). SIT/LIT are NOT here although the ``is_icd`` input can set
+    them: the input is optional (the web UI has no ICD field), and the ICD
+    Management cluster itself is the natural declaration -- claiming ICDM.S
+    on the Root Node IS the answer "this node is an ICD" (its LITS feature
+    then settles SIT vs LIT). Keeping SIT/LIT out of the controlled set makes
+    a requirement gated on them a claimable offering instead of a silent
+    input-decided No. Any OTHER condition a device-type requirement references
+    (LanguageLocale, Simple, ...) is likewise a product fact.
     """
-    known: set[str] = {"SIT", "LIT", "Active"}
+    known: set[str] = {"Active"}
     for entry in transport_map.get("transports", {}).values():
         known.update(entry.get("conditions", []))
     return frozenset(known)

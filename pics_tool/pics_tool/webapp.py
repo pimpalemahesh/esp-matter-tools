@@ -38,6 +38,7 @@ from functools import lru_cache
 from esp_matter_datamodel import boolexpr, loader
 
 from .generate import claims, pics_codes
+from .generate.claims import icd_from_claims
 from .generate.cluster_engine import (ROOT_NODE_DEVICE_TYPE_ID, active_conditions,
                                       all_enabled_cluster_ids, controlled_conditions,
                                       generate_cluster_pics, load_transport_map,
@@ -475,6 +476,10 @@ def _short_name(code: str, model, prefix_map: dict):
     role = "server" if parts[1] == "S" else "client" if parts[1] == "C" else parts[1]
     if len(parts) == 2:
         return f"{cl.name} ({role})"
+    if parts[2] == "M" and len(parts) > 3:
+        # manufacturer/manual template items carry their name in the code
+        # itself: "CADMIN.C.M.UserInterfaceDisplay" -> "User Interface Display"
+        return _pretty(parts[3])
     tag, val = parts[2][0], parts[2][1:]
     if tag == "F":
         f = cl.features.get(int(val, 16)) if val else None
@@ -484,6 +489,177 @@ def _short_name(code: str, model, prefix_map: dict):
     if lookup is not None:
         el = lookup.get("0x" + val.lower()) or lookup.get(val.lower())
         return _pretty(el.name) if el else None
+    return None
+
+
+# ---- short labels for Base (MCORE) product-fact questions -------------------
+# Base.xml questions repeat long boilerplate ("Does the commissionee device
+# support TXT Key 'VP' (Vendor ID / Product ID) in it's DNS-SD TXT Records for
+# Commissionable Node Discovery?") where only a small part distinguishes the
+# items. The simple view shows each option as a compact labelled toggle, so
+# each family boils down to its distinguishing part; the full question stays
+# available (tooltip / advanced view). Returns None when no rule produces a
+# confident label -- the caller falls back to the question text.
+
+_TXT_KEY_Q_RE = re.compile(r"TXT Key '([A-Z]{1,4})'\s*\(([^)]+)\)", re.I)
+_MDNS_KEY_Q_RE = re.compile(
+    r"optional key ([A-Z]{1,4}) in (commissionable node|operational) discovery mDNS", re.I)
+_MDNS_SUBTYPE_Q_RE = re.compile(
+    r"optional subtype([A-Z]) in (commissionable node|operational) discovery mDNS", re.I)
+_SUBTYPE_ADV_Q_RE = re.compile(r"advertising the (.+?) Commissioning Subtype", re.I)
+_IM_ROLE_Q_RE = re.compile(
+    r"^Is the device a (client|server) and\s+(?:supports?\s+|capable of\s+)?(.+?)\s*$", re.I)
+# "Does the [Requestor] DUT/device/commissionee [device] ...". Whether the
+# match landed on the true subject is validated AFTER matching (see
+# _mcore_label): a remainder starting with a possessive ("'s Onboarding
+# Payload ..."), a conjunction ("or device packaging ...") or another subject
+# word means the sentence's subject is more than the device itself, and
+# stripping would garble it -- backtracking inside the alternation makes such
+# cases unreachable to lookaheads here.
+_GEN_PREFIX_Q_RE = re.compile(
+    r"^(?:does|do|is|can|will)?\s*(?:the\s+)?(?:requestor\s+)?"
+    r"(?:commissionee(?:\s+device)?|dut|device|node)\s*"
+    r"(?:\((server|client)\))?\s*", re.I)
+# leftover subject fragments that prove the strip cut mid-subject
+_BAD_REST_RE = re.compile(r"^(?:['’]|(?:or|and|device|dut|node)\b)", re.I)
+
+_IM_ACTION_RULES = [
+    (r"^sending a (.+?) Message$", r"send \1"),
+    (r"^sending multiple commands batched into a single Invoke Request Message$",
+     "batch multiple commands in one Invoke"),
+    (r"^Reading an attribute of DataType\s*(.+)$", r"read \1 attributes"),
+    (r"^Writing an attribute of DataType\s*(.+)$", r"write \1 attributes"),
+    (r"^subscribing to an attribute of DataType\s*(.+)$", r"subscribe to \1 attributes"),
+    (r"^subscribing to (.+)$", r"subscribe to \1"),
+    (r"^Reading (.+)$", r"read \1"),
+    (r"^generating large data which is greater than 1 MTU\s*\(1280 bytes\)$",
+     "generate data larger than 1 MTU (1280 bytes)"),
+]
+
+
+def _im_action(text: str) -> str:
+    t = " ".join(text.split())
+    for pat, rep in _IM_ACTION_RULES:
+        new = re.sub(pat, rep, t, count=1, flags=re.I)
+        if new != t:
+            return new
+    return t
+
+
+def _mcore_label(question: str) -> str | None:
+    q = " ".join((question or "").split()).rstrip("?").strip()
+    if not q:
+        return None
+    m = _TXT_KEY_Q_RE.search(q)
+    if m:
+        return f"TXT key '{m.group(1).upper()}' — {m.group(2)}"
+    m = _MDNS_KEY_Q_RE.search(q)
+    if m:
+        kind = "commissionable" if m.group(2).lower().startswith("commissionable") else "operational"
+        return f"mDNS key '{m.group(1).upper()}' — {kind} discovery"
+    m = _MDNS_SUBTYPE_Q_RE.search(q)
+    if m:
+        kind = "commissionable" if m.group(2).lower().startswith("commissionable") else "operational"
+        return f"mDNS subtype '{m.group(1).upper()}' — {kind} discovery"
+    m = _SUBTYPE_ADV_Q_RE.search(q)
+    if m:
+        return f"Advertises the {m.group(1)} commissioning subtype"
+    m = _IM_ROLE_Q_RE.match(q)
+    if m:
+        return f"{m.group(1).capitalize()}: {_im_action(m.group(2))}"
+    m = _GEN_PREFIX_Q_RE.match(q)
+    if not m:
+        return None
+    role = (m.group(1) or "").lower()
+    rest = q[m.end():]
+    if _BAD_REST_RE.match(rest):
+        return None    # cut mid-subject ("...device's X", "...DUT or packaging")
+    rest = re.sub(r"^(?:support(?:s)?|implement(?:s)?|require(?:s)?|provide(?:s)?)\s+",
+                  "", rest, count=1, flags=re.I)
+    rest = re.sub(r"^(?:the|a|an)\s+", "", rest, count=1, flags=re.I)
+    rest = re.sub(r"^sending the (.+?) message$", r"send \1", rest, count=1, flags=re.I)
+    rest = re.sub(r"^(control|contain)\b", lambda mm: mm.group(1) + "s", rest, count=1, flags=re.I)
+    rest = re.sub(r"^only function\b", "only functions", rest, count=1, flags=re.I)
+    rest = rest.strip()
+    if len(rest) < 3:
+        return None
+    label = rest[0].upper() + rest[1:]
+    return f"{role.capitalize()}: {label}" if role else label
+
+
+# The DD and SC test plans each carry an item for the SAME DNS-SD fact: the
+# optional TXT keys and commissioning subtypes of Commissionable Node
+# Discovery. The simple view asks ONCE -- the DD item leads and its SC twin
+# follows the answer automatically (both codes export, keeping the two test
+# plans consistent). The advanced view still shows both raw items.
+_MCORE_MIRRORS = {
+    "MCORE.DD.TXT_KEY_VP": "MCORE.SC.VP_KEY",
+    "MCORE.DD.TXT_KEY_DT": "MCORE.SC.DT_KEY",
+    "MCORE.DD.TXT_KEY_DN": "MCORE.SC.DN_KEY",
+    "MCORE.DD.TXT_KEY_RI": "MCORE.SC.RI_KEY",
+    "MCORE.DD.TXT_KEY_PH": "MCORE.SC.PH_KEY",
+    "MCORE.DD.TXT_KEY_PI": "MCORE.SC.PI_KEY",
+    "MCORE.DD.COMMISSIONING_SUBTYPE_V": "MCORE.SC.VENDOR_SUBTYPE",
+    "MCORE.DD.COMMISSIONING_SUBTYPE_T": "MCORE.SC.DEVTYPE_SUBTYPE",
+}
+
+
+def _annotate_mirrors(items: list[dict]) -> None:
+    """Mark mirrored Base twins: ``mirrors`` on the leading (DD) item,
+    ``mirror_of`` on the follower (SC). Only when BOTH ends are open manual
+    questions -- if a future template decides one side, the pair unlinks and
+    both render individually (never fight an engine-decided answer)."""
+    base = {it["code"]: it for it in items if it["tab"] == "base"}
+    for lead_code, twin_code in _MCORE_MIRRORS.items():
+        lead, twin = base.get(lead_code), base.get(twin_code)
+        if (lead is None or twin is None
+                or lead["group"] != "manual" or twin["group"] != "manual"):
+            continue
+        lead["mirrors"] = [twin_code]
+        twin["mirror_of"] = lead_code
+
+
+def _mcore_group(code: str, question: str):
+    """(group question, option label) when this item is one member of a
+    parallel Base.xml family -- the UI folds the family into ONE multi-select
+    question ("Optional TXT keys ..." with VP/DT/DN/... options) instead of
+    repeating a near-identical question per member. Grouping is presentation
+    only: every option still maps 1:1 to its own PICS item, and selecting it
+    answers exactly that item. Returns None for items outside any recognized
+    family (they stay individual questions)."""
+    if not code.startswith("MCORE."):
+        return None
+    q = " ".join((question or "").split()).rstrip("?").strip()
+    m = _TXT_KEY_Q_RE.search(q)
+    if m:
+        return ("Optional TXT keys in DNS-SD commissionable node discovery",
+                f"{m.group(1).upper()} — {m.group(2)}")
+    m = _MDNS_KEY_Q_RE.search(q)
+    if m:
+        kind = "commissionable" if m.group(2).lower().startswith("commissionable") else "operational"
+        return (f"Optional mDNS keys — {kind} discovery", m.group(1).upper())
+    m = _MDNS_SUBTYPE_Q_RE.search(q)
+    if m:
+        kind = "commissionable" if m.group(2).lower().startswith("commissionable") else "operational"
+        return (f"Optional mDNS subtypes — {kind} discovery", f"subtype{m.group(1).upper()}")
+    m = _SUBTYPE_ADV_Q_RE.search(q)
+    if m:
+        return ("Commissioning subtypes advertised in DNS-SD", m.group(1))
+    m = _IM_ROLE_Q_RE.match(q)
+    if m and m.group(1).lower() == "client":
+        action = m.group(2)
+        for pat, ask in (
+                (r"^Reading an attribute of DataType\s*(.+)$",
+                 "Client: attribute data types it can read"),
+                (r"^Writing an attribute of DataType\s*(.+)$",
+                 "Client: attribute data types it can write"),
+                (r"^subscribing to an attribute of DataType\s*(.+)$",
+                 "Client: attribute data types it can subscribe to"),
+                (r"^sending a (.+?) Request Message$",
+                 "Client: request messages it can send")):
+            mm = re.match(pat, action, re.I)
+            if mm:
+                return (ask, _pretty(mm.group(1)))
     return None
 
 
@@ -575,8 +751,23 @@ def generate_payload(profile_dict: dict, claims=None) -> dict:
     bridge_dt = any((d := _find_device_type(model, n)) and d.id in _BRIDGE_DT_IDS
                     for n in _all_dt_names)
     _bridge_seeds = {"MCORE.BRIDGE"} if bridge_dt else set()
+    # Composition-derived: "multiple endpoints with a Groups cluster" is read
+    # straight off the designed data model (engine baseline + claimed sides) --
+    # the endpoint list is exhaustive, so it is decided BOTH ways.
+    _groups_eps = ({ep.endpoint for ep in endpoints if "G.S" in ep.pics}
+                   | {epid for epid, sides in per_ep_side.items() if "G.S" in sides})
+    multi_groups = len(_groups_eps) >= 2
+    if multi_groups:
+        _bridge_seeds = _bridge_seeds | {"MCORE.G.MULTIENDPOINT"}
     mcore_on = compute_mcore_pics(profile, version, cluster_ids,
                                   extra_seeds=_bridge_seeds) & set(order)
+    # ICD is declared via the ICD Management cluster claim (spec: ICDM is
+    # mandatory iff SIT|LIT on the Root Node) -- or the explicit CLI input.
+    # Claiming ICDM without LITS = a Short Idle Time ICD, so the Base atom
+    # rides along as a claim consequence (pre-filled Yes, user-owned).
+    icd_claimed, icd_mode = icd_from_claims(all_claim_codes)
+    if icd_claimed and icd_mode == "sit":
+        mcore_claim_atoms = mcore_claim_atoms | {"MCORE.SC.SIT_ICD"}
     # User-claimed Base atoms re-enter the cond fixpoint, exactly like feature
     # and gateway claims: claiming DD.CONCATENATED_QR_CODE makes DD.QR
     # mandatory AT GENERATION TIME, not only in the export validator. The delta
@@ -650,12 +841,13 @@ def generate_payload(profile_dict: dict, claims=None) -> dict:
     gate_active = {"bridge": facts.has_bridge,
                    "ota_requestor": facts.has_ota_requestor,
                    "ota_provider": facts.has_ota_provider,
-                   "icd": profile.is_icd,
+                   "icd": profile.is_icd or icd_claimed,
                    "diagnostic_logs": facts.has_diagnostic_logs}
-    # diagnostic_logs is declared: DLOG.S is an explicit Root Node offering,
-    # so not claiming it IS the answer (the cluster is absent).
+    # diagnostic_logs and icd are declared: DLOG.S / ICDM.S are explicit Root
+    # Node offerings, so not claiming them IS the answer (cluster absent /
+    # the node is not an ICD).
     gate_declared = {"bridge": bridge_declared, "ota_requestor": True,
-                     "ota_provider": True, "icd": False,
+                     "ota_provider": True, "icd": True,
                      "diagnostic_logs": True}
     _BRIDGE_NS = ("MCORE.BRIDGE", "MCORE.DEVLIST.")
     # The bridge-CLIENT family (spec 13.1.2 "DUT client"): the DUT consumes a
@@ -704,6 +896,9 @@ def generate_payload(profile_dict: dict, claims=None) -> dict:
         # DECIDED answers first: a claim cannot override what the declared
         # inputs / role / composition already settle -- the remedy for "my
         # device does support this" is changing the governing input.
+        if n == "MCORE.G.MULTIENDPOINT":
+            # read off the designed data model (see multi_groups above)
+            return "on" if multi_groups else "off"
         if n.startswith(_BRIDGE_CLIENT_NS) and not device_control_client:
             return "off"  # no device-control client role -> not a bridge client
         if role_denied(n, role_profile):
@@ -726,6 +921,16 @@ def generate_payload(profile_dict: dict, claims=None) -> dict:
     def conf_of(code: str) -> str:
         return text.get(code, ("", ""))[1] or "-"
 
+    def claimable_conf(code: str) -> bool:
+        """The item's conformance leaves it to the vendor: it has a genuine
+        Optional clause, OR it is SELF-REFERENTIAL ("M if ... AND <itself>",
+        a CSA-template idiom for a pure choice -- ICDM's LITS feature): a
+        self-gated mandatory can never be engine-decided on, so it is a live
+        question exactly like an Optional one."""
+        conf = conf_of(code)
+        return ("optional" in conf.lower()
+                or re.search(rf"\b{re.escape(code)}\b", conf) is not None)
+
     def row(code, tab, st, group, cluster, parent=None, why=None, needs_you=None,
             opt_cluster=False):
         # "needs_you" == a live decision the user must make NOW. By default it is
@@ -741,7 +946,18 @@ def generate_payload(profile_dict: dict, claims=None) -> dict:
         # "opt_cluster" marks items of a SPEC-OPTIONAL cluster for this endpoint:
         # the device type lists the cluster but does not mandate it, so the
         # whole cluster is the user's claim (the UI badges these sections).
+        # "name" is the item's short human label -- data-model name for cluster
+        # elements ("Color Loop", "On Time"), boilerplate-stripped question for
+        # Base/MCORE facts ("TXT key 'VP' — Vendor ID / Product ID"). None
+        # (no confident label) falls back to the full question text in the UI.
+        # "ask"/"option" group the parallel Base families (TXT keys, client
+        # attribute data types, ...) into one multi-select question each.
+        ask, option = _mcore_group(code, q_of(code)) or (None, None)
         return {"tab": tab, "code": code, "question": q_of(code),
+                "name": (_short_name(code, model, prefix_map)
+                         or (_mcore_label(q_of(code))
+                             if code.startswith("MCORE.") else None)),
+                "ask": ask, "option": option,
                 "answer": "yes" if st in ("on", "claimed") else "no",
                 "group": group, "cluster": cluster, "parent": parent,
                 "needs_you": (group == "manual") if needs_you is None else needs_you,
@@ -784,6 +1000,11 @@ def generate_payload(profile_dict: dict, claims=None) -> dict:
             return "Yes — you turned this on."
         if st == "review":
             return "Only you can answer this — it's a product-specific detail about your device."
+        if n == "MCORE.G.MULTIENDPOINT":
+            return ("Yes — your data model has a Groups cluster on more than "
+                    "one endpoint." if st == "on" else
+                    "No — at most one endpoint in your data model hosts a "
+                    "Groups cluster.")
         dims = _dims_phrase(n)
         if st == "on":
             return f"Yes — determined by {dims}." if dims else "Mandatory for every Matter device."
@@ -798,6 +1019,9 @@ def generate_payload(profile_dict: dict, claims=None) -> dict:
         if area == "diagnostic_logs" and not gate_active.get(area):
             return ("No — the device does not implement the Diagnostic Logs "
                     "cluster (enable it on the Root Node tab to answer these).")
+        if area == "icd" and not gate_active.get(area):
+            return ("No — the device is not an Intermittently Connected Device "
+                    "(enable ICD Management on the Root Node to declare it).")
         if area and not gate_active.get(area):
             return f"No — the {area.replace('_', ' ')} feature is not enabled."
         return f"No — determined by {dims}." if dims else "No — not required for this device."
@@ -1010,7 +1234,7 @@ def generate_payload(profile_dict: dict, claims=None) -> dict:
                 # so it is never asked. (Compound conformance like "Mandatory if
                 # CC.S AND CC.S.F01 ; Optional if CC.S" still counts as optional --
                 # the substring test keeps it a question.)
-                live = ("optional" in conf_of(code).lower()
+                live = (claimable_conf(code)
                         and (parent is None or parent in enabled_here))
                 items.append(row(code, tab, st, "manual", cluster, parent,
                                  needs_you=live))
@@ -1065,12 +1289,12 @@ def generate_payload(profile_dict: dict, claims=None) -> dict:
                         items.append(dict(decided, opt_cluster=True))
                         continue
                 live = (kind is not None
-                        or ("optional" in conf_of(code).lower()
-                            and parent in enabled_here))
+                        or (claimable_conf(code) and parent in enabled_here))
                 items.append(row(code, tab, st, "manual", cluster, parent,
                                  why=_OFFER_WHY[kind] if kind else None,
                                  needs_you=live, opt_cluster=True))
 
+    _annotate_mirrors(items)
     counts = {"yes": 0, "no": 0, "needs_you": 0}
     for it in items:
         counts["yes" if it["answer"] == "yes" else "no"] += 1

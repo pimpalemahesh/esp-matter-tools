@@ -90,3 +90,25 @@ def side_claims(model: DataModel, profile: DeviceProfile, codes,
 def mcore_atoms(codes) -> set[str]:
     """The node-level Base/MCORE atoms among ``codes`` (re-enter the cond fixpoint)."""
     return {c for c in (codes or []) if c.startswith("MCORE.")}
+
+
+# ICD Management (cluster 0x0046, PICS prefix ICDM): on the Root Node the spec
+# lists it "Mandatory if (SIT | LIT)", so claiming the cluster IS declaring
+# "this node is an ICD" -- no separate input needed. Its LongIdleTimeSupport
+# feature (bit 2) settles the flavor: claimed -> LIT, otherwise SIT (an ICD
+# without LITS operates as a Short Idle Time ICD by definition).
+_ICDM_GATEWAY = "ICDM.S"
+_ICDM_LITS = "ICDM.S.F02"
+
+
+def icd_from_claims(codes) -> tuple[bool, str | None]:
+    """(is_icd, icd_mode) declared by an ICD Management claim, if any.
+
+    Returns ``(False, None)`` when ``codes`` carry no ICDM server claim; the
+    caller merges this with any explicit ``is_icd`` profile input (an explicit
+    input wins -- the claim only ever ADDS the ICD declaration).
+    """
+    codes = set(codes or [])
+    if _ICDM_GATEWAY not in codes:
+        return False, None
+    return True, ("lit" if _ICDM_LITS in codes else "sit")

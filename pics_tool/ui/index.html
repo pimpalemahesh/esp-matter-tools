@@ -52,9 +52,11 @@
     <div class="rv-stepper" id="stepper">
       <button class="rv-step" data-step="describe" aria-current="true"><span class="n">1</span> Describe device</button>
       <span class="rv-stepsep"></span>
-      <button class="rv-step" data-step="review"><span class="n">2</span> Review answers</button>
+      <button class="rv-step" data-step="review"><span class="n">2</span> Design data model</button>
       <span class="rv-stepsep"></span>
-      <button class="rv-step" data-step="export"><span class="n">3</span> Export PICS</button>
+      <button class="rv-step" data-step="base"><span class="n">3</span> Device questions</button>
+      <span class="rv-stepsep"></span>
+      <button class="rv-step" data-step="export"><span class="n">4</span> Export PICS</button>
     </div>
 
     <!-- Step 1: Describe -->
@@ -247,12 +249,13 @@
         <h2 class="export-h">Export your PICS package</h2>
         <p class="export-sub">A ZIP with one folder per endpoint, ready for the CSA PICS tool.</p>
         <div class="rv-stats" id="exportStats"></div>
+        <div id="reviewArea"></div>
         <div class="export-files-wrap">
           <div class="eyebrow">Files that will be generated</div>
           <ul id="exportFiles" class="export-files"></ul>
         </div>
         <div class="profile-actions">
-          <button class="btn ghost" id="backToReview">← Back to review</button>
+          <button class="btn ghost" id="backToReview">← Back to device questions</button>
           <span style="flex:1"></span>
           <button class="btn" id="exportBtn">Export PICS ↓</button>
         </div>
