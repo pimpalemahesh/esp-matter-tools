@@ -30,6 +30,8 @@ from pathlib import Path as _Path
 try:
     import esp_matter_datamodel  # noqa: F401
 except ImportError:
-    _sibling = _Path(__file__).resolve().parents[2] / "esp-matter-datamodel"
+    # parents[1] = the pics_tool repo directory, which contains the
+    # esp-matter-datamodel checkout as a sibling of this package.
+    _sibling = _Path(__file__).resolve().parents[1] / "esp-matter-datamodel"
     if (_sibling / "esp_matter_datamodel").is_dir():
         _sys.path.insert(0, str(_sibling))

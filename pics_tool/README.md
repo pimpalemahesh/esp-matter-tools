@@ -1,63 +1,95 @@
 # pics_tool
 
 An **offline generator for Matter PICS** (Protocol Implementation Conformance
-Statement) files. Given a spec version, an application device type, and a small
-device profile, it produces per-endpoint PICS XML with the appropriate items
-enabled — **no live device required**.
+Statement) files. Given a spec version, the application device type(s), and a
+small device profile, it produces per-endpoint PICS XML with the appropriate
+items enabled — **no live device required** — plus the matching esp-matter
+data-model construction code.
 
-It is built on the [`esp-matter-datamodel`](./esp-matter-datamodel) package —
-a PICS-neutral, versioned representation of the Matter data model. That package
-is vendored inside this tool (`pics_tool/esp-matter-datamodel/`) for now but kept
-self-contained, so it can be split back out into its own tool later; pics_tool
-owns all PICS-specific logic.
+Three interfaces drive the same engine, so identical input yields identical
+output everywhere:
+
+| Interface | For | Entry point |
+|---|---|---|
+| **Web UI** | product owners / certification engineers | `./build_tool.sh --serve` |
+| **CLI** | developers, CI | `python3 cli.py` |
+| **MCP server** | LLMs / agents | `python3 mcp_server.py` |
+
+It is built on the [`esp-matter-datamodel`](./esp-matter-datamodel) package — a
+PICS-neutral, versioned representation of the Matter data model. That package is
+vendored inside this tool (`esp-matter-datamodel/`) but kept self-contained;
+pics_tool owns all PICS-specific logic.
 
 ## How it works
 
-- **Cluster PICS** are derived from the data-model conformance: the device type
+- **Cluster PICS** are derived from the data-model conformance: each device type
   is expanded into its mandatory clusters, and within each, a feature-mask
   fixpoint + the conformance evaluator decide which
   features/attributes/commands/events are mandatory for the chosen profile.
   Device types that mandate *client* clusters (e.g. Dimmer Switch, OTA
   Requestor) also get the client-side codes (`OO.C`, `OO.C.Cxx.Tx`, ...).
-  Optional features a user switches on (web UI) re-enter the engine as seeds,
-  so everything they make mandatory is enabled consistently.
+- **Optional capabilities are claims.** A claim is a PICS code the product
+  supports — an optional feature (`OO.S.F02`), a cluster side (`DLOG.S`), or an
+  `MCORE.*` atom. Claims re-enter the engine as seeds, so everything a claim
+  makes mandatory is enabled consistently, and a claim can reveal further
+  optional choices (progressive disclosure).
 - **MCORE / node-level PICS** come from the maintained `Base.xml` template: the
-  profile seeds a few atoms (transport, role, onboarding, OTA), then a fixpoint
-  over the `cond` expressions enables everything those atoms make mandatory.
+  profile seeds atoms (transport, role, onboarding, OTA), then a fixpoint over
+  the `cond` expressions enables everything those atoms make mandatory.
   Optional leaves are never blanket-enabled; the genuinely product-specific
-  ones are flagged for explicit review in the web UI.
+  ones are surfaced as questions. Product facts the composition itself answers
+  are derived, not asked — e.g. `MCORE.G.MULTIENDPOINT` (two endpoints with a
+  Groups server) or the ICD answers (declared by claiming the ICD Management
+  cluster on the Root Node; its `LITS` feature settles SIT vs LIT). Duplicate
+  questions the DD and SC test plans both carry (DNS-SD TXT keys, commissioning
+  subtypes) are asked once and exported to both files consistently.
 - The **writer** annotates the maintained CSA templates in place (only
   `<support>` changes; comments/structure preserved) and writes one folder per
-  endpoint (`endpoint0` = Root Node + Base/MCORE, `endpoint1` = the app device
-  type).
-- The **web UI** additionally validates the final selection before export: any
-  item the spec makes mandatory given your answers but that is switched off is
-  flagged (with a one-click fix). Answers persist in the browser across reloads.
+  endpoint (`endpoint0` = Root Node + Base/MCORE, `endpoint1..N` = the
+  application endpoints).
+- A **validator** checks the final selection against the spec's dependency
+  rules before export; any item your answers make mandatory but that is
+  switched off is flagged (with a one-click fix in the web UI).
 
 ## Setup
 
 The tool runs straight from the repo checkout — no pip install of the packages
-themselves (`esp_matter_datamodel` is picked up from the bundled
-`esp-matter-datamodel/` directory automatically). Two steps:
+themselves (`esp_matter_datamodel` is picked up from the vendored
+`esp-matter-datamodel/` directory automatically). The PICS templates and the
+per-version data-model JSONs are committed, so this is the whole setup:
 
 ```bash
-# 1. third-party dependencies
 pip install -r requirements.txt
-
-# 2. build the per-version data models ONCE (derived from connectedhomeip's
-#    data_model/ and NOT tracked in git). Run this before the first pytest /
-#    serve.py / gen-pics. It clones connectedhomeip (shallow, data_model only)
-#    or reuses an existing checkout, then generates datamodel_<version>.json.
-./build_tool.sh
-#    …or point it at a checkout you already have:
-MATTER_SDK_PATH=/path/to/connectedhomeip ./build_tool.sh
 ```
 
-`build_tool.sh` is idempotent — once the JSONs exist it regenerates nothing and
-needs no checkout. The **PICS templates** (`pics_tool/templates/<version>/`) are
-committed in the repo; only the derived data-model JSONs are generated.
+## Web UI
 
-## Usage
+```bash
+./build_tool.sh --serve        # build the Pyodide bundle, serve on :8000
+```
+
+Everything runs client-side in the browser (Pyodide) — no backend, no device
+data leaves the page. The flow is a four-step wizard:
+
+1. **Describe device** — spec version, application endpoints (one device type
+   each, composable), transport, commissioning discovery, onboarding, OTA.
+2. **Design data model** — one row per cluster per endpoint, ZAP-style:
+   required clusters are pre-included, spec-optional clusters get an Include
+   switch, and each cluster opens a dialog of labelled toggles for its
+   optional features/attributes/commands. Everything derivable is answered
+   automatically and shown read-only.
+3. **Device questions** — the remaining node-wide product facts, condensed:
+   parallel families (client attribute data types, DNS-SD TXT keys) fold into
+   single multi-select questions.
+4. **Export** — a review of your answers, the spec-check, a ZIP with one folder
+   per endpoint ready for the CSA PICS tool, and the esp-matter data-model
+   code to paste into `app_main.cpp`.
+
+A **Simple/Advanced** switch on steps 2–3 toggles between the condensed view
+and the complete raw PICS item list (every question, PICS codes, conformance).
+Answers persist in the browser across reloads.
+
+## CLI
 
 From the `pics_tool` directory, with a profile file:
 
@@ -85,19 +117,20 @@ onboarding: [qr, manual_pairing_code]
 node_device_types: []                 # extra node-level device types, e.g. ["OTA Requestor"]
 ```
 
-**OTA and bridge are derived, not asked.** Instead of `ota`/`is_bridge` flags,
-list the device types the node implements in `node_device_types` (e.g.
-`"OTA Requestor"`, `"OTA Provider"`, `"Aggregator"`). Their clusters then drive
-both the cluster PICS and the node-level `MCORE.OTA.*` / `MCORE.BRIDGE.*` (and the
-BDX roles) from a single source of truth. ICD/SIT-LIT is deferred (feature-dependent).
+**OTA, bridge, and ICD are derived, not asked.** List the device types the node
+implements in `node_device_types` (e.g. `"OTA Requestor"`, `"OTA Provider"`,
+`"Aggregator"`); their clusters drive the cluster PICS and the node-level
+`MCORE.OTA.*` / `MCORE.BRIDGE.*` / BDX roles from a single source of truth.
+Declaring the node an ICD works the same way: claim the ICD Management cluster
+(`ICDM.S`) on the Root Node — with its `LongIdleTimeSupport` feature for a LIT
+ICD, without it for SIT. An explicit `is_icd` / `icd_mode` profile input is
+also accepted and wins over the claim.
 
-## Selection document (multiple endpoints + optional claims)
+### Selection document (multiple endpoints + optional claims)
 
-For products with **more than one application endpoint**, or to **enable optional
-things** (features, cluster sides, MCORE items) from the CLI the same way the web
-UI does, pass a canonical **selection** document with `--selection`. It is the
-single source of truth both the CLI and (later) the UI drive, so identical input
-gives identical output, deterministically.
+For products with **more than one application endpoint**, or to **enable
+optional capabilities** from the CLI the same way the web UI does, pass a
+canonical **selection** document with `--selection`:
 
 ```bash
 python3 cli.py gen-pics --selection selection.yaml -o pics_out
@@ -116,14 +149,13 @@ endpoints:                              # application endpoints, EP1..EPN in ord
   - device_types: ["On/Off Light", "Occupancy Sensor"]   # composed device types on one EP
 ```
 
-- Each endpoint has a **list** of device types (composed device types) and its own
-  optional **claims**. A claim is a PICS code the product supports: a feature
-  (`OO.S.F02`), a cluster side (`OO.C`), or an `MCORE.*` atom. Claims scope
-  per-endpoint, so a claim on EP1 never leaks to the same cluster on EP2.
-- The plain `--profile` / flag form is the single-endpoint shorthand (a top-level
-  `device_type` == one application endpoint on EP1).
+- Each endpoint has a **list** of device types (composed device types) and its
+  own optional **claims**. Claims scope per-endpoint, so a claim on EP1 never
+  leaks to the same cluster on EP2.
+- The plain `--profile` / flag form is the single-endpoint shorthand (a
+  top-level `device_type` == one application endpoint on EP1).
 
-## Output
+### Output
 
 ```
 pics_out/
@@ -137,12 +169,10 @@ enabled items.
 
 ## Generate the esp-matter data-model code
 
-`gen-scaffold` takes the same profile inputs as `gen-pics` and prints the
-esp-matter **data-model construction code** for that selection — the
-`node::create` / `endpoint::<device_type>::create` block a developer would
-otherwise hand-write in `app_main.cpp`. It is derived from the PICS, since the
-device type / clusters / features were already chosen when the PICS was
-generated. Paste it straight into `app_main()`.
+`gen-scaffold` takes the same inputs as `gen-pics` and prints the esp-matter
+**data-model construction code** for that selection — the `node::create` /
+`endpoint::<device_type>::create` block a developer would otherwise hand-write
+in `app_main.cpp`:
 
 ```bash
 python3 cli.py gen-scaffold \
@@ -168,40 +198,64 @@ turns optional feature / attribute / command / event / cluster-side claims into
 explicit `cluster::<x>::feature::<y>::add(...)` / `attribute::create_<z>(...)` /
 `command::create_<z>(...)` / `cluster::<x>::create(..., CLUSTER_FLAG_*)` calls.
 
-**Exact vs. placeholder arguments.** The exact call arguments (does a feature's
-`add()` take a config? what type is an attribute's value?) come from a *capability
-map* of the esp_matter component that the tool ships per version
+**Exact vs. placeholder arguments.** The exact call arguments come from a
+*capability map* of the esp_matter component that the tool ships per version
 (`codegen/targets/esp_matter/data/caps_<ver>.json`, parsed from the released
-component). When a version has a bundled map (1.4, 1.4.2, 1.5, 1.5.1), the code is
-**ready to compile** — config features declare their `config_t`, no-config
-features take none, attributes get a type-correct default value. A version with no
-released component (1.6, 1.4.1) uses the **nearest** lower version's map, so it is
-still ready to compile (only an element genuinely new to that version falls back
-to a `/* ... */` placeholder argument). The generated code carries **no comments**.
-To get exact code for any version (including `main` / a fork), point at your own
-component:
+component). When a version has a bundled map (1.4, 1.4.2, 1.5, 1.5.1), the code
+is **ready to compile**. A version with no released component (1.6, 1.4.1) uses
+the **nearest** lower version's map (only an element genuinely new to that
+version falls back to a `/* ... */` placeholder argument). To get exact code
+for any version, point at your own component:
 
 ```bash
 python3 cli.py gen-scaffold --spec-version 1.6 --device-type "Extended Color Light" \
     --esp-matter-path $ESP_MATTER_PATH        # parse the live component's data_model/
 ```
 
-Drivers, callbacks, and attribute *values* stay hand-written (PICS declares which
-elements exist, not their values; the endpoint's private-data arg is emitted as
-`nullptr` -- pass your driver handle there).
-Options:
+Drivers, callbacks, and attribute *values* stay hand-written (PICS declares
+which elements exist, not their values; the endpoint's private-data arg is
+emitted as `nullptr` — pass your driver handle there). Options:
 
 - `-o/--output` — optional: also write the snippet to `<dir>/app_data_model.cpp`.
 - `--pics-output` — where the intermediate PICS XML is written (default: `pics_out`).
 - `--esp-matter-path` — generate exact code against a local esp_matter component
   instead of the bundled capability map.
 
-No esp-matter checkout is needed to generate (the bundled capability map supplies
-the signatures); the code depends on esp-matter only at compile time.
-Multi-endpoint and composed device types are supported via `--selection`.
+**Maintainer:** refresh a bundled capability map when esp_matter ships a
+version: `python3 cli.py refresh-esp-matter-knowledge --version 1.5.1 --download`.
 
-**Maintainer:** refresh a bundled capability map when esp_matter ships a version:
-`python3 cli.py refresh-esp-matter-knowledge --version 1.5.1 --download`.
+## MCP server (for LLMs / agents)
+
+```bash
+pip install -r requirements-mcp.txt
+python3 mcp_server.py                  # stdio transport
+```
+
+Two tools, mirroring the web UI's flow:
+
+1. **`generate_baseline(selection)`** — the device description in, the complete
+   mandatory result out: PICS XML files + esp-matter code + the list of open
+   optional choices (grouped endpoint → cluster, each with its PICS code, a
+   human label, and a priority). Independent and complete — for a
+   mandatory-only package this one call is the whole job. Discovery is built
+   in: calling with missing/unknown inputs returns the valid spec versions or
+   device-type names instead of erroring.
+2. **`apply_selections(selection, selected)`** — after the *human* has answered
+   the optional choices, feed their YES codes back
+   (`{"1": ["CC.S.F00"], "base": ["MCORE.DD.TXT_KEY_VP"]}`); returns the final
+   PICS + code with every claim and its spec consequences applied. Unknown
+   codes are skipped and reported (`ignored_unknown_codes`), and the response
+   notes when claims revealed new choices worth another round.
+
+The tool docstrings instruct the model to put primary choices (optional
+clusters and features) to the human rather than deciding product facts itself.
+
+Example client registration (Claude Desktop / Claude Code):
+
+```json
+{ "mcpServers": { "esp-matter-pics": {
+    "command": "python3", "args": ["/path/to/pics_tool/mcp_server.py"] } } }
+```
 
 ## CSA PICS Validator notes
 
@@ -235,13 +289,16 @@ Expect a handful of *warnings*, which are by design:
 - `pics_tool/profiles/<role>.yaml` — per-role MCORE default capability set
   (seeds, deny list, feature-area gates).
 - `pics_tool/templates/<version>/` — the maintained CSA PICS templates.
+- `esp-matter-datamodel/.../datamodels/datamodel_<version>.json` — the
+  per-version data models (committed; regenerate from a connectedhomeip
+  checkout with the esp-matter-datamodel CLI when a new spec version lands).
 
 ## Development
 
 ```bash
 pip install -r requirements.txt pytest
-./build_tool.sh      # generate the data models first (see Setup); tests skip without them
-python3 -m pytest    # conftest.py wires up the in-repo packages
+python3 -m pytest              # conftest.py wires up the in-repo packages
+./build_tool.sh                # rebuild the web bundle after engine/UI changes
 # regenerate golden snapshots after an intended output change:
 python3 tools/update_golden.py
 ```

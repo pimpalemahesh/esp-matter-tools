@@ -493,7 +493,6 @@ def test_export_roundtrip_fidelity():
        endpoint file (tab) the user answered it on -- nothing lost or moved;
     2. every written file contains the COMPLETE template (all picsItems), and
        nothing beyond the Yes set is flipped to true."""
-    import re
     import xml.etree.ElementTree as ET
     from pics_tool.generate.template_io import list_templates, parse_pics_items
 

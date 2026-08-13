@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import xml.etree.ElementTree as ET
-from pathlib import Path
 
 from pics_tool.generate.writer import write_filled
 

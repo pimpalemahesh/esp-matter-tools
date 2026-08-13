@@ -27,7 +27,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from ...ir import DataModelPlan, EndpointPlan
+from ...ir import DataModelPlan
 from ..base import CodeTarget, GeneratedFile, GeneratedOutput
 from .knowledge import load_nearest
 from .naming import chip_cluster_name, esp_name

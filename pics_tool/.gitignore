@@ -1,10 +1,6 @@
 # Generated Pyodide bundle (rebuilt by build_tool.sh / build_web.py and in CI)
 ui/web_bundle/
 
-# Generated data models -- derived from connectedhomeip data_model/ by
-# build_tool.sh (run it once before dev/tests); not tracked in git.
-esp-matter-datamodel/esp_matter_datamodel/datamodels/*.json
-
 # Python
 __pycache__/
 *.pyc
@@ -12,10 +8,13 @@ __pycache__/
 build/
 dist/
 venv/
+.pytest_cache/
+
+# Generated PICS output directories
 pics_out*/
 
 # Local reference material (CSA template releases, hand-curated PICS)
-archieve/
+archive/
 
 # OS noise
 .DS_Store

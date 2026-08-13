@@ -299,11 +299,6 @@ function saveSession() {
 function loadSession() {
   try { return JSON.parse(localStorage.getItem(SESSION_KEY)); } catch (e) { return null; }
 }
-function clearSession() {
-  localStorage.removeItem(SESSION_KEY);
-  answers = {}; touched = new Set();
-}
-
 // ---- init ----
 async function init() {
   const status = $("initStatus");
@@ -1045,7 +1040,6 @@ function renderSimpleRows() {
   const seeAll = $("seeAll");
   if (seeAll) seeAll.addEventListener("click", () => setMode("advanced"));
   wireSimpleTable();
-  recount();
   applyFilter();
   renderClusterModal();   // refresh the open configure dialog after a re-run
 }
@@ -1098,7 +1092,6 @@ function applyAnswer(k, code, on) {
       }
     });
   }
-  recount();
   saveSession();
   if (FEATURE_RE.test(code) || GATEWAY_RE.test(code) || code.startsWith("MCORE.")) {
     scheduleGenerate();
@@ -1356,13 +1349,11 @@ function wireRows() {
           }
         });
       }
-      recount();
       saveSession();
       if (FEATURE_RE.test(code) || GATEWAY_RE.test(code) || code.startsWith("MCORE.")) scheduleGenerate();
       else applyFilter();
     }));
   });
-  recount();
 }
 
 // optional-cluster row label: cluster display name, disambiguated by side for
@@ -1395,7 +1386,6 @@ function wireCatalog() {
         }
       });
     }
-    recount();
     saveSession();
     scheduleGenerate();
   }));
@@ -1484,17 +1474,6 @@ function switchTo(tabId, group) {
 function isChanged(it) {
   return it.group === "manual" ? answers[keyOf(it)] === "yes"
                                : answers[keyOf(it)] !== it.answer;
-}
-
-// Whole-device counts (all endpoints): what the exported PICS will actually say.
-function recount() {
-  let yes = 0, no = 0, mine = 0;
-  payload.items.forEach((it) => {
-    if (answers[keyOf(it)] === "yes") yes++; else no++;
-    if (isChanged(it)) mine++;
-  });
-  const set = (id, v) => { const e = $(id); if (e) e.textContent = v; };
-  set("t-yes", yes); set("t-no", no); set("t-mine", mine);
 }
 
 // ---- export (with a spec-consistency gate) ----

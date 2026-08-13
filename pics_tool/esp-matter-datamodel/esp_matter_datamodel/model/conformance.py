@@ -166,9 +166,17 @@ EMPTY_CONTEXT = ConformanceContext()
 UnknownHandler = Callable[[Any], None]
 
 
+_warned_unknown: set[str] = set()
+
+
 def _default_unknown(payload: Any) -> None:
-    # D9: fail-closed but visible — treat as absent, keep going.
-    logger.warning("unresolvable conformance reference treated as absent: %r", payload)
+    # D9: fail-closed but visible — treat as absent, keep going. The same
+    # reference is evaluated once per element per engine run, so warn only
+    # once per distinct payload or a single generation floods the output.
+    key = repr(payload)
+    if key not in _warned_unknown:
+        _warned_unknown.add(key)
+        logger.warning("unresolvable conformance reference treated as absent: %s", key)
 
 
 _CMP_OPS = {
