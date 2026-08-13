@@ -60,6 +60,32 @@ def test_discovery_paths_return_data_not_exceptions():
     assert "Colour Light" in r["error"] and "device_types" in r
 
 
+def test_missing_version_instructs_agent_to_ask_not_default():
+    """A missing/invalid spec version returns the supported list AND an explicit
+    instruction to ask the user -- so the agent never silently defaults."""
+    r = baseline()
+    assert set(r["versions"]) >= {"1.4", "1.6"}
+    assert "ASK THE USER" in r["action"] and "version" in r["action"].lower()
+    # never nudge the agent toward a default
+    assert "latest" in r["action"].lower()  # "...not even the latest..."
+
+    r = baseline({"spec_version": "1.7"})   # plausible-but-unsupported
+    assert "1.7" in r["error"] and "ASK" in r["action"] and r["versions"]
+
+
+def test_device_type_not_in_version_is_rejected_with_valid_list():
+    """A device type valid in a newer Matter version but absent in the chosen
+    one is rejected, with the version's real device types + an ask-the-user
+    instruction (no silent substitution)."""
+    from pics_tool import service
+    newer = set(service.list_device_types("1.6")) - set(service.list_device_types("1.4"))
+    dt = sorted(newer)[0]  # e.g. "Audio Doorbell"
+    r = baseline({"spec_version": "1.4", "endpoints": [{"device_types": [dt]}]})
+    assert dt in r["error"] and "1.4" in r["error"]
+    assert dt not in r["device_types"]          # the real 1.4 list, without it
+    assert "ASK THE USER" in r["action"]
+
+
 def test_baseline_is_complete_and_lists_optional_choices():
     r = baseline(SEL)
     assert r["pics_files"] and r["code"] and r["code"]["snippet"]

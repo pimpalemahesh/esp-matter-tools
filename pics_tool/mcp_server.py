@@ -97,24 +97,53 @@ _PRIMARY = ("cluster", "feature")
 
 def _validate(selection: dict | None) -> dict | None:
     """Discovery-friendly input check: an error DICT (with the data the caller
-    needs to fix the call) instead of an exception, or None when valid."""
+    needs AND an explicit instruction to ASK THE USER rather than guess),
+    or None when valid.
+
+    The ``action`` field is a direct instruction to the calling agent: the
+    Matter spec version and device type are the user's product facts, so on a
+    missing/invalid one the agent must surface the supported options to the
+    user and let them choose -- never silently default to a version or a
+    device type.
+    """
     versions = service.list_versions()
     selection = selection or {}
     version = selection.get("spec_version")
-    if not version or version not in versions:
-        return {"error": (f"unknown spec_version {version!r}" if version
-                          else "no spec_version given"),
-                "versions": versions, "usage": _USAGE}
-    known_types = set(service.list_device_types(version))
+    if not version:
+        return {"error": "no spec_version given", "versions": versions,
+                "action": "ASK THE USER which Matter spec version to target and "
+                          "show them the supported versions listed here. Do NOT "
+                          "pick a version yourself (not even the latest) -- the "
+                          "version is the user's decision.",
+                "usage": _USAGE}
+    if version not in versions:
+        return {"error": f"unsupported spec_version {version!r}", "versions": versions,
+                "action": f"Matter {version} is not supported. Show the user the "
+                          "supported versions listed here and ASK which one to use; "
+                          "do not substitute one yourself.",
+                "usage": _USAGE}
+    known_types = sorted(service.list_device_types(version))
     named = [dt for ep in selection.get("endpoints") or []
              for dt in (ep.get("device_types") if isinstance(ep, dict) else [ep]) or []]
     if selection.get("device_type"):
         named.append(selection["device_type"])
+    if not named:
+        return {"error": "no endpoints/device types given",
+                "device_types": known_types, "spec_version": version,
+                "action": f"ASK THE USER which application device type(s) their "
+                          f"product exposes, choosing from the device types "
+                          f"supported in Matter {version} (listed here).",
+                "usage": _USAGE}
     unknown = [n for n in named if n not in known_types]
-    if not named or unknown:
-        return {"error": (f"unknown device type(s): {unknown}" if unknown
-                          else "no endpoints/device types given"),
-                "device_types": sorted(known_types), "usage": _USAGE}
+    if unknown:
+        return {"error": f"device type(s) not available in Matter {version}: {unknown}",
+                "device_types": known_types, "spec_version": version,
+                "action": f"The device type(s) {unknown} are not available in "
+                          f"Matter {version}. ASK THE USER to pick from the "
+                          f"supported device types for this version (listed here), "
+                          f"or to choose a different Matter version -- do not "
+                          f"substitute a similar-sounding device type yourself.",
+                "usage": _USAGE}
     return None
 
 
@@ -179,9 +208,15 @@ def generate_baseline(selection: dict | None = None, goal: str = "both",
     items export as "No"). If that is all the user wants, you are done after
     this one call.
 
-    DISCOVERY: call with ``selection`` omitted (or without ``spec_version``) to
-    get the supported versions; with a version but no/unknown device types to
-    get the exact device-type names for that version.
+    DISCOVERY -- ASK, DON'T GUESS: the Matter spec version and the device
+    type are the user's product facts, not yours to default. If the user has
+    not given a spec version, call this with ``selection`` omitted (or without
+    ``spec_version``); the response returns the supported ``versions`` and an
+    ``action`` telling you to ask the user which one to use -- present the list
+    and let them choose, do NOT pick a version (not even the latest) yourself.
+    With a version but no/unknown device type, the response returns the exact
+    ``device_types`` available in that version; ask the user to pick from them
+    (a device type valid in one Matter version may not exist in another).
 
     OPTIONAL CAPABILITIES: ``optional_choices`` lists every open choice,
     grouped endpoint -> cluster (plus node-wide topics), each with a PICS
@@ -197,7 +232,8 @@ def generate_baseline(selection: dict | None = None, goal: str = "both",
 
     Returns ``{"summary", "pics_files": {path: xml}, "code": {snippet, ...},
     "problems": [...], "optional_choices": {counts, groups}}`` -- or, for
-    incomplete input, ``{"error", "usage", "versions"|"device_types"}``.
+    incomplete input, ``{"error", "action", "usage", "versions"|"device_types"}``
+    where ``action`` is a direct instruction on what to ask the user.
     """
     err = _validate(selection)
     if err:
