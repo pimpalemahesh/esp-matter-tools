@@ -17,15 +17,16 @@
 
 Two tools (stdio), mirroring the web UI's flow:
 
-1. ``generate_baseline(selection)`` -- the device description in, the complete
+1. ``generate_matter_pics(selection)`` -- the device description in, the complete
    MANDATORY result out: PICS XML files + esp-matter code + the list of open
    optional choices. Independent and complete: for a mandatory-only package,
    this one call is the whole job. Discovery is built in (call with no/partial
    input to learn the valid spec versions / device-type names).
 
-2. ``apply_selections(selection, selected)`` -- after the HUMAN has answered
-   the optional choices, feed their YES codes back; returns the final PICS +
-   code with every claim (and its spec consequences) applied.
+2. ``add_optional_capabilities(selection, selected)`` -- OPTIONAL follow-up.
+   Skip it for a mandatory-only package; call it only when the HUMAN has picked
+   optional capabilities to add. Feed their YES codes back and it returns the
+   PICS + code with every claim (and its spec consequences) applied.
 
 Run (no pip install of this tool needed; only the ``mcp`` package):
 
@@ -229,7 +230,7 @@ def _run(selection: dict, selected: dict | None, goal: str, target: str) -> dict
 
 
 @mcp.tool()
-def generate_baseline(
+def generate_matter_pics(
     selection: dict | None = None, goal: str = "both", target: str = "esp_matter"
 ) -> dict:
     """STEP 1 -- generate the complete MANDATORY Matter PICS and/or esp-matter
@@ -264,7 +265,7 @@ def generate_baseline(
     mandatory-only, present the ``priority=="primary"`` choices (optional
     clusters and features) to them and ask which their device supports --
     do NOT answer on their behalf. Then pass their YES codes to
-    ``apply_selections``.
+    ``add_optional_capabilities``.
 
     ``goal``: "pics" (XML files + spec-check), "code" (data-model code only),
     or "both" (default). ``target``: code generator (default "esp_matter").
@@ -282,20 +283,24 @@ def generate_baseline(
         out["summary"]["note"] = (
             "Mandatory baseline -- complete as-is. To add optional capabilities, "
             "ask the human about the primary optional_choices and pass their YES "
-            "codes to apply_selections."
+            "codes to add_optional_capabilities."
         )
     return out
 
 
 @mcp.tool()
-def apply_selections(
+def add_optional_capabilities(
     selection: dict, selected: dict, goal: str = "both", target: str = "esp_matter"
 ) -> dict:
-    """STEP 2 -- re-generate with the HUMAN's optional answers applied: the
-    final PICS files and/or data-model code.
+    """STEP 2 (OPTIONAL) -- re-generate with the extra capabilities the human
+    chose, on top of the mandatory package from ``generate_matter_pics``.
+
+    SKIP this call entirely for a mandatory-only package -- ``generate_matter_pics``
+    is already complete on its own. Call this ONLY when the human has picked
+    optional capabilities to add.
 
     ``selection`` is the same device description passed to
-    ``generate_baseline``. ``selected`` is the human's YES answers as
+    ``generate_matter_pics``. ``selected`` is the human's YES answers as
     ``{tab: [pics_code, ...]}`` -- tab "base" = node-wide, "0" = Root Node,
     "1".. = application endpoints; the codes come from
     ``optional_choices`` (e.g. ``{"1": ["CC.S.F00", "CC.S.F02"]}``).
@@ -312,14 +317,14 @@ def apply_selections(
     codes that are not real PICS items for this version (typos) -- they were
     skipped; correct them from ``optional_choices``.
 
-    Returns the same shape as ``generate_baseline``.
+    Returns the same shape as ``generate_matter_pics``.
     """
     err = _validate(selection)
     if err:
         return err
     if not selected or not any(selected.values()):
         return {
-            "error": "no selections given -- generate_baseline already "
+            "error": "no selections given -- generate_matter_pics already "
             "returns the mandatory-only outputs; call this tool "
             "only with the human's YES codes in 'selected'",
             "usage": _USAGE,

@@ -30,8 +30,8 @@ def _fn(tool):
     return getattr(tool, "fn", None) or getattr(tool, "__wrapped__", None) or tool
 
 
-baseline = _fn(mcp_server.generate_baseline)
-apply_sel = _fn(mcp_server.apply_selections)
+baseline = _fn(mcp_server.generate_matter_pics)
+apply_sel = _fn(mcp_server.add_optional_capabilities)
 
 SEL = {
     "spec_version": "1.6",
@@ -114,7 +114,7 @@ def test_baseline_is_complete_and_lists_optional_choices():
                 )
 
 
-def test_apply_selections_threads_claims_and_consequences():
+def test_add_optional_capabilities_threads_claims_and_consequences():
     r = apply_sel(
         SEL, {"1": ["CC.S.F00"], "base": ["MCORE.DD.TXT_KEY_VP"]}, goal="pics"
     )
@@ -128,8 +128,8 @@ def test_apply_selections_threads_claims_and_consequences():
     assert _support("MCORE.SC.VP_KEY", base_xml) == "true"  # mirrored twin
 
 
-def test_apply_selections_guards():
-    assert "generate_baseline" in apply_sel(SEL, {})["error"]
+def test_add_optional_capabilities_guards():
+    assert "generate_matter_pics" in apply_sel(SEL, {})["error"]
     assert "invalid tab keys" in apply_sel(SEL, {"EP1": ["CC.S.F00"]})["error"]
     r = apply_sel(SEL, {"1": ["CC.S.F00", "CC.S.FAKE99"]})
     assert r["ignored_unknown_codes"] == ["CC.S.FAKE99"]

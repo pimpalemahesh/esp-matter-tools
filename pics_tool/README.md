@@ -233,14 +233,14 @@ python3 mcp_server.py                  # stdio transport
 
 Two tools, mirroring the web UI's flow:
 
-1. **`generate_baseline(selection)`** — the device description in, the complete
+1. **`generate_matter_pics(selection)`** — the device description in, the complete
    mandatory result out: PICS XML files + esp-matter code + the list of open
    optional choices (grouped endpoint → cluster, each with its PICS code, a
    human label, and a priority). Independent and complete — for a
    mandatory-only package this one call is the whole job. Discovery is built
    in: calling with missing/unknown inputs returns the valid spec versions or
    device-type names instead of erroring.
-2. **`apply_selections(selection, selected)`** — after the *human* has answered
+2. **`add_optional_capabilities(selection, selected)`** — after the *human* has answered
    the optional choices, feed their YES codes back
    (`{"1": ["CC.S.F00"], "base": ["MCORE.DD.TXT_KEY_VP"]}`); returns the final
    PICS + code with every claim and its spec consequences applied. Unknown
