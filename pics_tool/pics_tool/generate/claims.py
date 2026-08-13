@@ -87,9 +87,38 @@ def side_claims(model: DataModel, profile: DeviceProfile, codes,
     return out
 
 
+# The DD and SC test plans each carry an item for the SAME DNS-SD fact: the
+# optional TXT keys and commissioning subtypes of Commissionable Node
+# Discovery. One user decision answers BOTH codes -- claiming either side
+# claims the pair, so every consumer (web UI, MCP, CLI) exports the two test
+# plans consistently.
+MCORE_MIRRORS = {
+    "MCORE.DD.TXT_KEY_VP": "MCORE.SC.VP_KEY",
+    "MCORE.DD.TXT_KEY_DT": "MCORE.SC.DT_KEY",
+    "MCORE.DD.TXT_KEY_DN": "MCORE.SC.DN_KEY",
+    "MCORE.DD.TXT_KEY_RI": "MCORE.SC.RI_KEY",
+    "MCORE.DD.TXT_KEY_PH": "MCORE.SC.PH_KEY",
+    "MCORE.DD.TXT_KEY_PI": "MCORE.SC.PI_KEY",
+    "MCORE.DD.COMMISSIONING_SUBTYPE_V": "MCORE.SC.VENDOR_SUBTYPE",
+    "MCORE.DD.COMMISSIONING_SUBTYPE_T": "MCORE.SC.DEVTYPE_SUBTYPE",
+}
+_MIRROR_BACK = {v: k for k, v in MCORE_MIRRORS.items()}
+
+
+def expand_mirrors(codes) -> set[str]:
+    """``codes`` plus the mirror twin of every mirrored member (both directions)."""
+    out = set(codes or [])
+    for c in list(out):
+        twin = MCORE_MIRRORS.get(c) or _MIRROR_BACK.get(c)
+        if twin:
+            out.add(twin)
+    return out
+
+
 def mcore_atoms(codes) -> set[str]:
-    """The node-level Base/MCORE atoms among ``codes`` (re-enter the cond fixpoint)."""
-    return {c for c in (codes or []) if c.startswith("MCORE.")}
+    """The node-level Base/MCORE atoms among ``codes`` (re-enter the cond
+    fixpoint), with mirrored DNS-SD twins expanded."""
+    return expand_mirrors(c for c in (codes or []) if c.startswith("MCORE."))
 
 
 # ICD Management (cluster 0x0046, PICS prefix ICDM): on the Root Node the spec

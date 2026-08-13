@@ -55,6 +55,12 @@ def list_targets() -> list[str]:
     return _list_targets()
 
 
+def known_codes(version: str = "1.6") -> frozenset[str]:
+    """Every claimable PICS item number for ``version`` (template-backed)."""
+    from .generate.template_io import known_item_numbers
+    return known_item_numbers(version)
+
+
 # ---- helpers -------------------------------------------------------------------
 
 def _with_claims(selection: dict, selected: dict | None) -> dict:
@@ -102,19 +108,27 @@ def selection_questions(selection: dict, selected: dict | None = None) -> dict:
             "endpoint": labels.get(item["tab"], item["tab"]),
             "cluster": item.get("cluster", ""),
             "code": item["code"],
+            # short human label (element/boilerplate-stripped name); the full
+            # question rides along for context
+            "label": item.get("name") or item.get("question") or item["code"],
             "question": item.get("question") or item["code"],
             "suggested": item.get("answer", "no"),
             "why": item.get("why", ""),
             "conformance": item.get("conformance", ""),
         }
-        for item in payload["items"] if item.get("needs_you")
+        for item in payload["items"]
+        # mirrored DNS-SD twins are ONE decision: only the lead item is asked
+        # (answering it claims both codes -- see claims.MCORE_MIRRORS)
+        if item.get("needs_you") and not item.get("mirror_of")
     ]
     summary = {
         "spec_version": payload["spec_version"],
         "endpoints": [{"tab": t["id"], "label": t["label"], "caption": t["caption"]}
                       for t in payload["tabs"]],
+        # to_decide counts DECISIONS (mirrored twins fold into their lead), so
+        # it always equals len(questions)
         "counts": {"auto_included": payload["counts"]["yes"],
-                   "to_decide": payload["counts"]["needs_you"]},
+                   "to_decide": len(questions)},
     }
     return {"summary": summary, "questions": questions}
 

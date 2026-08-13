@@ -446,7 +446,10 @@ def _payload_inputs(profile_dict: dict, legacy_claims=None):
                     for epid, codes in by_ep.items()}
     per_ep_side = {epid: claims.side_claims(model, selection.profile, codes, conditions, known)
                    for epid, codes in by_ep.items()}
-    mcore_atoms = {c for c in mcore if c.startswith("MCORE.")}
+    # Mirrored DNS-SD twins expand here, at claim ingestion, so EVERY consumer
+    # (web UI, MCP, CLI selected-claims) exports the pair consistently.
+    mcore_atoms = claims.expand_mirrors(
+        c for c in mcore if c.startswith("MCORE."))
     all_claims = [c for codes in by_ep.values() for c in codes]
     return selection, app_endpoints, per_ep_seeds, per_ep_side, mcore_atoms, all_claims
 
@@ -587,21 +590,11 @@ def _mcore_label(question: str) -> str | None:
     return f"{role.capitalize()}: {label}" if role else label
 
 
-# The DD and SC test plans each carry an item for the SAME DNS-SD fact: the
-# optional TXT keys and commissioning subtypes of Commissionable Node
-# Discovery. The simple view asks ONCE -- the DD item leads and its SC twin
-# follows the answer automatically (both codes export, keeping the two test
-# plans consistent). The advanced view still shows both raw items.
-_MCORE_MIRRORS = {
-    "MCORE.DD.TXT_KEY_VP": "MCORE.SC.VP_KEY",
-    "MCORE.DD.TXT_KEY_DT": "MCORE.SC.DT_KEY",
-    "MCORE.DD.TXT_KEY_DN": "MCORE.SC.DN_KEY",
-    "MCORE.DD.TXT_KEY_RI": "MCORE.SC.RI_KEY",
-    "MCORE.DD.TXT_KEY_PH": "MCORE.SC.PH_KEY",
-    "MCORE.DD.TXT_KEY_PI": "MCORE.SC.PI_KEY",
-    "MCORE.DD.COMMISSIONING_SUBTYPE_V": "MCORE.SC.VENDOR_SUBTYPE",
-    "MCORE.DD.COMMISSIONING_SUBTYPE_T": "MCORE.SC.DEVTYPE_SUBTYPE",
-}
+# The DD and SC test plans each carry an item for the SAME DNS-SD fact (see
+# claims.MCORE_MIRRORS -- the shared table every consumer uses). The simple
+# view asks ONCE: the DD item leads, its SC twin follows the answer
+# automatically. The advanced view still shows both raw items.
+_MCORE_MIRRORS = claims.MCORE_MIRRORS
 
 
 def _annotate_mirrors(items: list[dict]) -> None:

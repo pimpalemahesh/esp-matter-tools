@@ -97,6 +97,29 @@ def test_generate_threads_optional_answers_into_code():
     assert "color_control_cluster_1" in gen["code"]["snippet"]
 
 
+def test_mirrored_dns_sd_claim_answers_both_codes():
+    """The DD/SC test plans ask the same DNS-SD fact twice; one claim on the
+    lead code exports BOTH (engine-level expansion, so MCP/CLI consumers stay
+    consistent with the web UI). The questions surface asks only once."""
+    import re
+
+    out = service.selection_questions(_ECL)
+    codes = {q["code"] for q in out["questions"]}
+    assert "MCORE.DD.TXT_KEY_VP" in codes
+    assert "MCORE.SC.VP_KEY" not in codes          # the twin is never asked
+
+    res = service.generate(_ECL, {"base": ["MCORE.DD.TXT_KEY_VP"]}, goal="pics")
+    base_xml = next(x for p, x in res["pics_files"].items() if "Base" in p)
+
+    def support(code):
+        m = re.search(rf"<itemNumber>{re.escape(code)}</itemNumber>.*?"
+                      rf"<support>(true|false)</support>", base_xml, re.S)
+        return m and m.group(1)
+
+    assert support("MCORE.DD.TXT_KEY_VP") == "true"
+    assert support("MCORE.SC.VP_KEY") == "true"
+
+
 def test_generate_rejects_unknown_target():
     with pytest.raises(ValueError, match="unknown target"):
         service.generate(_ECL, {}, target="nope")
