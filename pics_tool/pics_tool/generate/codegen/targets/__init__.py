@@ -23,11 +23,20 @@ def get_target(name: str) -> CodeTarget:
     try:
         return TARGETS[name]
     except KeyError:
-        raise ValueError(f"unknown code target {name!r}; available: {sorted(TARGETS)}") from None
+        raise ValueError(
+            f"unknown code target {name!r}; available: {sorted(TARGETS)}"
+        ) from None
 
 
 def list_targets() -> list[str]:
     return sorted(TARGETS)
 
 
-__all__ = ["CodeTarget", "GeneratedOutput", "GeneratedFile", "get_target", "list_targets", "TARGETS"]
+__all__ = [
+    "CodeTarget",
+    "GeneratedOutput",
+    "GeneratedFile",
+    "get_target",
+    "list_targets",
+    "TARGETS",
+]

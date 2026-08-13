@@ -31,7 +31,7 @@ import re
 import zipfile
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent           # .../pics_tool
+ROOT = Path(__file__).resolve().parent  # .../pics_tool
 DM_PKG = ROOT / "esp-matter-datamodel" / "esp_matter_datamodel"
 PICS_PKG = ROOT / "pics_tool"
 
@@ -44,8 +44,8 @@ KEEP_SUFFIXES = {".py", ".json", ".xml", ".yaml", ".yml"}
 SKIP_DIR_PARTS = {"__pycache__", "tests", ".pytest_cache"}
 
 OUT_DIR = ROOT / "ui" / "web_bundle"
-CORE_ZIP = OUT_DIR / "pics_bundle.zip"          # engine only (no per-version data)
-DATA_DIR = OUT_DIR / "data"                     # per-version data zips, fetched on demand
+CORE_ZIP = OUT_DIR / "pics_bundle.zip"  # engine only (no per-version data)
+DATA_DIR = OUT_DIR / "data"  # per-version data zips, fetched on demand
 MANIFEST = OUT_DIR / "versions.json"
 
 _DATAMODEL_RE = re.compile(r"datamodel_(.+)\.json$")
@@ -61,8 +61,14 @@ def _vkey(v: str) -> tuple:
 def _caps_versions() -> list[str]:
     if not CAPS_DIR.is_dir():
         return []
-    return sorted((m.group(1) for p in CAPS_DIR.glob("caps_*.json")
-                   if (m := _CAPS_RE.match(p.name))), key=_vkey)
+    return sorted(
+        (
+            m.group(1)
+            for p in CAPS_DIR.glob("caps_*.json")
+            if (m := _CAPS_RE.match(p.name))
+        ),
+        key=_vkey,
+    )
 
 
 def _included(path: Path) -> bool:
@@ -77,16 +83,25 @@ def _is_version_data(rel: Path) -> bool:
     datamodels/datamodel_<v>.json), and the esp_matter capability maps
     (.../esp_matter/data/caps_<v>.json). These are lazy-loaded, not in core."""
     parts = rel.parts
-    return ("templates" in parts or "datamodels" in parts
-            or (rel.name.startswith("caps_") and rel.suffix == ".json"))
+    return (
+        "templates" in parts
+        or "datamodels" in parts
+        or (rel.name.startswith("caps_") and rel.suffix == ".json")
+    )
 
 
 def _versions() -> list[str]:
     """Versions that have BOTH a template dir and a datamodel JSON."""
-    tmpl = {p.name for p in (PICS_PKG / "templates").iterdir() if p.is_dir()} \
-        if (PICS_PKG / "templates").is_dir() else set()
-    models = {m.group(1) for p in (DM_PKG / "datamodels").glob("*.json")
-              if (m := _DATAMODEL_RE.search(p.name))}
+    tmpl = (
+        {p.name for p in (PICS_PKG / "templates").iterdir() if p.is_dir()}
+        if (PICS_PKG / "templates").is_dir()
+        else set()
+    )
+    models = {
+        m.group(1)
+        for p in (DM_PKG / "datamodels").glob("*.json")
+        if (m := _DATAMODEL_RE.search(p.name))
+    }
     return sorted(tmpl & models)
 
 
@@ -113,10 +128,15 @@ def build() -> None:
     #    the same package paths so unpacking into /bundle drops them in place.
     versions = _versions()
     for v in versions:
-        with zipfile.ZipFile(DATA_DIR / f"{v}.zip", "w", zipfile.ZIP_DEFLATED, compresslevel=9) as zf:
+        with zipfile.ZipFile(
+            DATA_DIR / f"{v}.zip", "w", zipfile.ZIP_DEFLATED, compresslevel=9
+        ) as zf:
             for path in sorted((PICS_PKG / "templates" / v).rglob("*")):
                 if path.is_file() and _included(path):
-                    zf.write(path, f"pics_tool/templates/{v}/{path.relative_to(PICS_PKG / 'templates' / v)}")
+                    zf.write(
+                        path,
+                        f"pics_tool/templates/{v}/{path.relative_to(PICS_PKG / 'templates' / v)}",
+                    )
             dm = DM_PKG / "datamodels" / f"datamodel_{v}.json"
             zf.write(dm, f"esp_matter_datamodel/datamodels/datamodel_{v}.json")
             # esp_matter capability map. If this version has its own, ship it;
@@ -132,7 +152,9 @@ def build() -> None:
                 lower = [x for x in avail if _vkey(x) <= _vkey(v)]
                 pick = max(lower or avail, key=_vkey) if avail else None
                 if pick:
-                    data = json.loads((CAPS_DIR / f"caps_{pick}.json").read_text(encoding="utf-8"))
+                    data = json.loads(
+                        (CAPS_DIR / f"caps_{pick}.json").read_text(encoding="utf-8")
+                    )
                     data["nearest_for"] = v
                     zf.writestr(arc, json.dumps(data))
 

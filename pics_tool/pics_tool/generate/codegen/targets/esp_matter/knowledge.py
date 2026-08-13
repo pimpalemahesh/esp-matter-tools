@@ -63,9 +63,12 @@ class BundledKnowledge(Knowledge):
         s = self._symbols.get(name)
         if s is None:
             return None
-        return Signature(returns=s.get("returns", ""),
-                         params=[Param(p.get("type", ""), p.get("name", ""))
-                                 for p in s.get("params", [])])
+        return Signature(
+            returns=s.get("returns", ""),
+            params=[
+                Param(p.get("type", ""), p.get("name", "")) for p in s.get("params", [])
+            ],
+        )
 
 
 class ComponentKnowledge(BundledKnowledge):
@@ -78,6 +81,7 @@ class ComponentKnowledge(BundledKnowledge):
 
     def __init__(self, data_model_dir, version: str = "component"):
         from .caps_build import build_index
+
         index = build_index(data_model_dir, "component")
         super().__init__(version, index["symbols"], "component")
         self.source_label = f"live component ({data_model_dir})"
@@ -86,6 +90,7 @@ class ComponentKnowledge(BundledKnowledge):
 def from_component(path, version: str = "component") -> ComponentKnowledge:
     """Build ``ComponentKnowledge`` from a component/SDK path (resolves data_model/)."""
     from .caps_build import find_data_model
+
     dm = find_data_model(path)
     if dm is None:
         raise ValueError(f"no esp_matter data_model headers found under {path!r}")
@@ -118,8 +123,11 @@ def _read(version: str):
     if not res.is_file():
         return None
     data = json.loads(res.read_text(encoding="utf-8"))
-    tup = (data.get("symbols", {}), data.get("component_version", version),
-           data.get("nearest_for"))
+    tup = (
+        data.get("symbols", {}),
+        data.get("component_version", version),
+        data.get("nearest_for"),
+    )
     _CACHE[version] = tup
     return tup
 

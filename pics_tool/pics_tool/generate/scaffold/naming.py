@@ -15,6 +15,9 @@
 esp_matter code target (``codegen/targets/esp_matter/naming.py``)."""
 
 from ..codegen.targets.esp_matter.naming import (  # noqa: F401
-    chip_cluster_name, esp_name, to_namespace)
+    chip_cluster_name,
+    esp_name,
+    to_namespace,
+)
 
 __all__ = ["esp_name", "to_namespace", "chip_cluster_name"]

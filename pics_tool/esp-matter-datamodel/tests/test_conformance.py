@@ -41,8 +41,13 @@ def test_mandatory_if_feature():
 
 def test_mandatory_if_not_feature():
     conf = conformance_from_json(
-        {"type": "mandatory",
-         "condition": {"op": "not", "arg": {"op": "feature", "code": "OFFONLY", "bit": 2}}}
+        {
+            "type": "mandatory",
+            "condition": {
+                "op": "not",
+                "arg": {"op": "feature", "code": "OFFONLY", "bit": 2},
+            },
+        }
     )
     assert C.evaluate(conf, CTX_NONE).is_mandatory()
     assert C.evaluate(conf, CTX_OFFONLY).decision == Decision.NOT_APPLICABLE
@@ -60,28 +65,44 @@ def test_optional_carries_choice():
 
 def test_otherwise_first_applicable_wins():
     conf = conformance_from_json(
-        {"type": "otherwise", "items": [
-            {"type": "mandatory", "condition": {"op": "feature", "code": "FAULTEV", "bit": 3}},
-            {"type": "optional"},
-        ]}
+        {
+            "type": "otherwise",
+            "items": [
+                {
+                    "type": "mandatory",
+                    "condition": {"op": "feature", "code": "FAULTEV", "bit": 3},
+                },
+                {"type": "optional"},
+            ],
+        }
     )
     assert C.evaluate(conf, CTX_FAULTEV).is_mandatory()
     assert C.evaluate(conf, CTX_NONE).decision == Decision.OPTIONAL
 
 
 def test_disallowed_and_deprecated():
-    assert C.evaluate(conformance_from_json({"type": "disallowed"}), CTX_NONE).decision \
+    assert (
+        C.evaluate(conformance_from_json({"type": "disallowed"}), CTX_NONE).decision
         == Decision.DISALLOWED
-    assert C.evaluate(conformance_from_json({"type": "deprecated"}), CTX_NONE).decision \
+    )
+    assert (
+        C.evaluate(conformance_from_json({"type": "deprecated"}), CTX_NONE).decision
         == Decision.DISALLOWED
+    )
 
 
 def test_and_or_condition():
     conf = conformance_from_json(
-        {"type": "mandatory", "condition": {"op": "or", "args": [
-            {"op": "feature", "code": "LT", "bit": 0},
-            {"op": "feature", "code": "FAULTEV", "bit": 3},
-        ]}}
+        {
+            "type": "mandatory",
+            "condition": {
+                "op": "or",
+                "args": [
+                    {"op": "feature", "code": "LT", "bit": 0},
+                    {"op": "feature", "code": "FAULTEV", "bit": 3},
+                ],
+            },
+        }
     )
     assert C.evaluate(conf, CTX_LT).is_mandatory()
     assert C.evaluate(conf, CTX_FAULTEV).is_mandatory()
@@ -99,32 +120,51 @@ def test_condition_leaf():
 
 def test_compare_revision():
     conf = conformance_from_json(
-        {"type": "mandatory", "condition": {
-            "op": "compare", "cmp": "ge",
-            "args": [{"op": "revision"}, {"op": "literal", "value": 2}]}}
+        {
+            "type": "mandatory",
+            "condition": {
+                "op": "compare",
+                "cmp": "ge",
+                "args": [{"op": "revision"}, {"op": "literal", "value": 2}],
+            },
+        }
     )
     assert C.evaluate(conf, ConformanceContext(cluster_revision=3)).is_mandatory()
-    assert C.evaluate(conf, ConformanceContext(cluster_revision=1)).decision \
+    assert (
+        C.evaluate(conf, ConformanceContext(cluster_revision=1)).decision
         == Decision.NOT_APPLICABLE
+    )
 
 
 def test_compare_opaque_is_fail_closed():
     conf = conformance_from_json(
-        {"type": "mandatory", "condition": {
-            "op": "compare", "cmp": "eq",
-            "args": [{"op": "opaque", "detail": "SomeAttr"}, {"op": "literal", "value": 1}]}}
+        {
+            "type": "mandatory",
+            "condition": {
+                "op": "compare",
+                "cmp": "eq",
+                "args": [
+                    {"op": "opaque", "detail": "SomeAttr"},
+                    {"op": "literal", "value": 1},
+                ],
+            },
+        }
     )
     # Unresolvable operand -> not mandatory (fail-closed).
-    assert C.evaluate(conf, CTX_NONE, on_unknown=lambda p: None).decision \
+    assert (
+        C.evaluate(conf, CTX_NONE, on_unknown=lambda p: None).decision
         == Decision.NOT_APPLICABLE
+    )
 
 
 def test_unsupported_is_fail_closed():
     conf = conformance_from_json(
         {"type": "mandatory", "condition": {"op": "unsupported", "detail": "status"}}
     )
-    assert C.evaluate(conf, CTX_NONE, on_unknown=lambda p: None).decision \
+    assert (
+        C.evaluate(conf, CTX_NONE, on_unknown=lambda p: None).decision
         == Decision.NOT_APPLICABLE
+    )
 
 
 def test_json_round_trip():
@@ -132,18 +172,34 @@ def test_json_round_trip():
         {"type": "mandatory"},
         {"type": "mandatory", "condition": {"op": "feature", "code": "LT", "bit": 0}},
         {"type": "optional", "choice": {"marker": "a", "more": True}},
-        {"type": "otherwise", "items": [
-            {"type": "mandatory",
-             "condition": {"op": "and", "args": [
-                 {"op": "feature", "code": "VIS", "bit": 0},
-                 {"op": "not", "arg": {"op": "command", "name": "Foo", "id": "0x01"}},
-             ]}},
-            {"type": "optional"},
-        ]},
+        {
+            "type": "otherwise",
+            "items": [
+                {
+                    "type": "mandatory",
+                    "condition": {
+                        "op": "and",
+                        "args": [
+                            {"op": "feature", "code": "VIS", "bit": 0},
+                            {
+                                "op": "not",
+                                "arg": {"op": "command", "name": "Foo", "id": "0x01"},
+                            },
+                        ],
+                    },
+                },
+                {"type": "optional"},
+            ],
+        },
         {"type": "mandatory", "condition": {"op": "condition", "name": "Wi-Fi"}},
-        {"type": "mandatory", "condition": {
-            "op": "compare", "cmp": "ge",
-            "args": [{"op": "revision"}, {"op": "literal", "value": 2}]}},
+        {
+            "type": "mandatory",
+            "condition": {
+                "op": "compare",
+                "cmp": "ge",
+                "args": [{"op": "revision"}, {"op": "literal", "value": 2}],
+            },
+        },
         {"type": "optional", "condition": {"op": "unsupported", "detail": "status"}},
     ]
     for node in nodes:

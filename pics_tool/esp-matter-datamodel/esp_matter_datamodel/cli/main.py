@@ -36,18 +36,31 @@ def main(verbose: bool) -> None:
 
 
 @main.command("build-model")
-@click.option("--data-model-dir", required=True,
-              help="Path to connectedhomeip 'data_model' directory.")
-@click.option("--version", "spec_version", required=True, help="Spec version, e.g. 1.6.")
-@click.option("--output", type=click.Path(),
-              help="Output JSON path (default: packaged datamodels/datamodel_<ver>.json).")
-@click.option("--no-validate", is_flag=True, help="Skip schema validation of the output.")
-def build_model(data_model_dir: str, spec_version: str, output: str | None,
-                no_validate: bool) -> None:
+@click.option(
+    "--data-model-dir",
+    required=True,
+    help="Path to connectedhomeip 'data_model' directory.",
+)
+@click.option(
+    "--version", "spec_version", required=True, help="Spec version, e.g. 1.6."
+)
+@click.option(
+    "--output",
+    type=click.Path(),
+    help="Output JSON path (default: packaged datamodels/datamodel_<ver>.json).",
+)
+@click.option(
+    "--no-validate", is_flag=True, help="Skip schema validation of the output."
+)
+def build_model(
+    data_model_dir: str, spec_version: str, output: str | None, no_validate: bool
+) -> None:
     """Parse spec XML into the versioned data-model JSON."""
     model = build_data_model(data_model_dir, spec_version)
-    click.echo(f"Parsed {len(model.clusters)} clusters, {len(model.device_types)} device types"
-               f" (base_device_type={'yes' if model.base_device_type else 'no'}).")
+    click.echo(
+        f"Parsed {len(model.clusters)} clusters, {len(model.device_types)} device types"
+        f" (base_device_type={'yes' if model.base_device_type else 'no'})."
+    )
 
     if output is None:
         pkg_dir = Path(__file__).resolve().parent.parent / "datamodels"

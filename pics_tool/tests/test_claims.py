@@ -38,16 +38,21 @@ def test_feature_seeds_from_codes():
 
 def test_mcore_atoms():
     assert claims.mcore_atoms(["MCORE.DD.NFC", "OO.S.F00", "MCORE.OTA.HTTPS"]) == {
-        "MCORE.DD.NFC", "MCORE.OTA.HTTPS"}
+        "MCORE.DD.NFC",
+        "MCORE.OTA.HTTPS",
+    }
     assert claims.mcore_atoms([]) == set()
 
 
 def test_side_claims_client():
     model = _model()
     profile = DeviceProfile.from_dict(
-        {"spec_version": "1.6", "device_type": "On/Off Light", "transport": ["wifi_2g"]})
+        {"spec_version": "1.6", "device_type": "On/Off Light", "transport": ["wifi_2g"]}
+    )
     conditions = active_conditions(profile, load_transport_map())
-    out = claims.side_claims(model, profile, ["OO.C"], conditions, known_item_numbers("1.6"))
+    out = claims.side_claims(
+        model, profile, ["OO.C"], conditions, known_item_numbers("1.6")
+    )
     assert "OO.C" in out
     assert "OO.C" in out["OO.C"]  # claiming the client side yields the role code
 
@@ -57,11 +62,18 @@ def test_parity_with_webapp_internal_split():
     webapp = pytest.importorskip("pics_tool.webapp")
     model = _model()
     profile = DeviceProfile.from_dict(
-        {"spec_version": "1.6", "device_type": "Dimmer Switch", "transport": ["wifi_2g"]})
+        {
+            "spec_version": "1.6",
+            "device_type": "Dimmer Switch",
+            "transport": ["wifi_2g"],
+        }
+    )
     codes = ["OO.S.F00", "OO.C", "MCORE.DD.NFC"]
     conditions = active_conditions(profile, load_transport_map())
 
-    assert (claims.feature_seeds_from_codes(model, codes)
-            == webapp._feature_seeds_from_codes("1.6", codes))
-    assert (claims.side_claims(model, profile, codes, conditions, known_item_numbers("1.6"))
-            == webapp._gateway_claims("1.6", profile, codes))
+    assert claims.feature_seeds_from_codes(
+        model, codes
+    ) == webapp._feature_seeds_from_codes("1.6", codes)
+    assert claims.side_claims(
+        model, profile, codes, conditions, known_item_numbers("1.6")
+    ) == webapp._gateway_claims("1.6", profile, codes)

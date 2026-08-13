@@ -46,9 +46,10 @@ Load it from Python (the API consumers use):
 
 ```python
 from esp_matter_datamodel import loader
-model = loader.load_version("1.6")          # packaged JSON, validated
+
+model = loader.load_version("1.6")  # packaged JSON, validated
 model = loader.load("some/datamodel.json")  # or any schema-valid file
-cluster = model.clusters["0x0006"]          # On/Off
+cluster = model.clusters["0x0006"]  # On/Off
 ```
 
 ## JSON shape (summary)

@@ -47,13 +47,15 @@ def test_write_filled_toggles_support_and_preserves_header(tmp_path):
     assert count == 1
 
     text = dst.read_text(encoding="utf-8")
-    assert "do not lose me" in text          # header comment preserved
-    assert text.startswith("<?xml")           # xml declaration preserved
+    assert "do not lose me" in text  # header comment preserved
+    assert text.startswith("<?xml")  # xml declaration preserved
 
     # Structured check: A0000 true, A4000 still false.
     root = ET.parse(str(dst)).getroot()
-    support = {pi.find("itemNumber").text: pi.find("support").text
-              for pi in root.iter("picsItem")}
+    support = {
+        pi.find("itemNumber").text: pi.find("support").text
+        for pi in root.iter("picsItem")
+    }
     assert support["OO.S.A0000"] == "true"
     assert support["OO.S.A4000"] == "false"
 
@@ -96,14 +98,20 @@ def test_inapplicable_pixits_exported_as_na(tmp_path):
     write_pics("1.6", {1: {"OO.C", "OO.C.C00.Tx"}}, tmp_path)
     xml = (tmp_path / "endpoint1" / "On-Off Cluster Test Plan.xml").read_text()
     for num in ("PIXIT.OO.ENDPOINT", "PIXIT.OO.MaxCommunicationTurnaround"):
-        m = re.search(rf"<itemNumber>{re.escape(num)}</itemNumber>.*?<support>([^<]*)</support>",
-                      xml, re.S)
+        m = re.search(
+            rf"<itemNumber>{re.escape(num)}</itemNumber>.*?<support>([^<]*)</support>",
+            xml,
+            re.S,
+        )
         assert m and m.group(1) == "n/a", num
 
     # server On/Off: applicable -> 0x00 preserved (awaiting a manual value)
     out2 = tmp_path / "srv"
     write_pics("1.6", {1: {"OO.S", "OO.S.A0000"}}, out2)
     xml2 = (out2 / "endpoint1" / "On-Off Cluster Test Plan.xml").read_text()
-    m = re.search(r"<itemNumber>PIXIT\.OO\.ENDPOINT</itemNumber>.*?<support>([^<]*)</support>",
-                  xml2, re.S)
+    m = re.search(
+        r"<itemNumber>PIXIT\.OO\.ENDPOINT</itemNumber>.*?<support>([^<]*)</support>",
+        xml2,
+        re.S,
+    )
     assert m and m.group(1) == "0x00"

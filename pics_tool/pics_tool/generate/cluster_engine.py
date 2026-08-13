@@ -49,7 +49,9 @@ class EndpointPics:
     device_type_id: str
     device_type_name: str
     pics: set[str] = field(default_factory=set)
-    cluster_ids: set[str] = field(default_factory=set)  # ids of server clusters actually enabled
+    cluster_ids: set[str] = field(
+        default_factory=set
+    )  # ids of server clusters actually enabled
     # ids of clusters this endpoint is a mandatory CLIENT of. Kept separate from
     # cluster_ids on purpose: node facts (OTA/bridge) must reflect what the node
     # HOSTS, not what it talks to.
@@ -74,7 +76,9 @@ def active_conditions(profile: DeviceProfile, transport_map: dict) -> frozenset[
     return frozenset(conditions)
 
 
-def transport_feature_seeds(profile: DeviceProfile, transport_map: dict) -> dict[str, set[str]]:
+def transport_feature_seeds(
+    profile: DeviceProfile, transport_map: dict
+) -> dict[str, set[str]]:
     """Return {cluster_id: {feature_code, ...}} the transport forces on."""
     seeds: dict[str, set[str]] = {}
     transports = transport_map.get("transports", {})
@@ -84,8 +88,9 @@ def transport_feature_seeds(profile: DeviceProfile, transport_map: dict) -> dict
     return seeds
 
 
-def _merge_requirements(device_types: list[DeviceType], base: DeviceType | None,
-                        side: str = "server") -> dict[str, ClusterRequirement]:
+def _merge_requirements(
+    device_types: list[DeviceType], base: DeviceType | None, side: str = "server"
+) -> dict[str, ClusterRequirement]:
     """Cluster requirements for an endpoint: base + all device types, one side.
 
     On a duplicate cluster id, a mandatory requirement wins over a
@@ -97,8 +102,10 @@ def _merge_requirements(device_types: list[DeviceType], base: DeviceType | None,
         reqs = src.server_clusters if side == "server" else src.client_clusters
         for cid, req in reqs.items():
             existing = merged.get(cid)
-            if existing is None or (existing.conformance.type != "mandatory"
-                                    and req.conformance.type == "mandatory"):
+            if existing is None or (
+                existing.conformance.type != "mandatory"
+                and req.conformance.type == "mandatory"
+            ):
                 merged[cid] = req
     return merged
 
@@ -111,7 +118,9 @@ def _resolve_device_type(model: DataModel, name: str) -> DeviceType:
 
 
 def generate_cluster_pics(
-    model: DataModel, profile: DeviceProfile, transport_map: dict | None = None,
+    model: DataModel,
+    profile: DeviceProfile,
+    transport_map: dict | None = None,
     extra_feature_seeds: dict[str, set[str]] | None = None,
     app_endpoints: list[list[str]] | None = None,
     per_endpoint_feature_seeds: dict[int, dict[str, set[str]]] | None = None,
@@ -150,7 +159,9 @@ def generate_cluster_pics(
 
     if app_endpoints is None:
         app_endpoints = [[profile.device_type]]
-    resolved_app = [[_resolve_device_type(model, n) for n in dts] for dts in app_endpoints]
+    resolved_app = [
+        [_resolve_device_type(model, n) for n in dts] for dts in app_endpoints
+    ]
 
     # EP0 = Root Node + any node-level device types (OTA Requestor, Aggregator, ...);
     # EP1..EPN = the application device types. Base device type merges into all.
@@ -166,12 +177,15 @@ def generate_cluster_pics(
         seeds = _endpoint_seeds(node_seeds, per_endpoint_feature_seeds, epid)
         result = EndpointPics(epid, dts[0].id, dts[0].name)
         for cid, req in _merge_requirements(dts, model.base_device_type).items():
-            enabled = _enable_cluster(req, model.clusters.get(cid), conditions,
-                                      seeds.get(cid, set()))
+            enabled = _enable_cluster(
+                req, model.clusters.get(cid), conditions, seeds.get(cid, set())
+            )
             if enabled:
                 result.pics |= enabled
                 result.cluster_ids.add(cid)
-        for cid, req in _merge_requirements(dts, model.base_device_type, "client").items():
+        for cid, req in _merge_requirements(
+            dts, model.base_device_type, "client"
+        ).items():
             enabled = _enable_client_cluster(req, model.clusters.get(cid), conditions)
             if enabled:
                 result.pics |= enabled
@@ -180,9 +194,11 @@ def generate_cluster_pics(
     return endpoints
 
 
-def _endpoint_seeds(node_seeds: dict[str, set[str]],
-                    per_endpoint: dict[int, dict[str, set[str]]] | None,
-                    epid: int) -> dict[str, set[str]]:
+def _endpoint_seeds(
+    node_seeds: dict[str, set[str]],
+    per_endpoint: dict[int, dict[str, set[str]]] | None,
+    epid: int,
+) -> dict[str, set[str]]:
     """Node-wide seeds unioned with this endpoint's own claim seeds (no mutation)."""
     per = (per_endpoint or {}).get(epid)
     if not per:
@@ -239,10 +255,14 @@ def condition_refs(node) -> set[str]:
     return out
 
 
-def offered_cluster_sides(model: DataModel, device_types: list[DeviceType],
-                          conditions: frozenset[str], controlled: frozenset[str],
-                          enabled_server: set[str], enabled_client: set[str],
-                          ) -> dict[tuple[str, str], str]:
+def offered_cluster_sides(
+    model: DataModel,
+    device_types: list[DeviceType],
+    conditions: frozenset[str],
+    controlled: frozenset[str],
+    enabled_server: set[str],
+    enabled_client: set[str],
+) -> dict[tuple[str, str], str]:
     """Cluster sides the SPEC lists for these device types but the baseline
     did not enable: the endpoint's optional-cluster offerings.
 
@@ -265,8 +285,9 @@ def offered_cluster_sides(model: DataModel, device_types: list[DeviceType],
     out: dict[tuple[str, str], str] = {}
     presence = ConformanceContext(active_conditions=conditions)
     for side, enabled in (("S", enabled_server), ("C", enabled_client)):
-        merged = _merge_requirements(device_types, model.base_device_type,
-                                     "server" if side == "S" else "client")
+        merged = _merge_requirements(
+            device_types, model.base_device_type, "server" if side == "S" else "client"
+        )
         for cid, req in merged.items():
             if cid in enabled or model.clusters.get(cid) is None:
                 continue
@@ -283,7 +304,9 @@ def offered_cluster_sides(model: DataModel, device_types: list[DeviceType],
             # with every uncontrolled condition assumed true.
             assumed = ConformanceContext(active_conditions=conditions | unknown)
             if evaluate(req.conformance, assumed).decision in (
-                    Decision.MANDATORY, Decision.OPTIONAL):
+                Decision.MANDATORY,
+                Decision.OPTIONAL,
+            ):
                 out[(cid, side)] = "product_fact"
     return out
 
@@ -303,9 +326,13 @@ class _BaselineRequirement:
     conformance: object = None  # never evaluated (force=True)
 
 
-def claim_cluster_side(model: DataModel, cluster_id: str, side: str,
-                       conditions: frozenset[str],
-                       seed_feature_codes: set[str] | None = None) -> set[str]:
+def claim_cluster_side(
+    model: DataModel,
+    cluster_id: str,
+    side: str,
+    conditions: frozenset[str],
+    seed_feature_codes: set[str] | None = None,
+) -> set[str]:
     """PICS codes the spec mandates once the USER claims a cluster side.
 
     Option-b of the gateway model: claiming ``X.C`` (or ``X.S``) is a fact, and
@@ -318,8 +345,9 @@ def claim_cluster_side(model: DataModel, cluster_id: str, side: str,
     req = _BaselineRequirement(cluster_id)
     if side == pics_codes.CLIENT:
         return _enable_client_cluster(req, definition, conditions, force=True)
-    return _enable_cluster(req, definition, conditions,
-                           set(seed_feature_codes or ()), force=True)
+    return _enable_cluster(
+        req, definition, conditions, set(seed_feature_codes or ()), force=True
+    )
 
 
 def _enable_cluster(
@@ -336,7 +364,9 @@ def _enable_cluster(
         return set()
 
     if definition is None or not definition.pics:
-        logger.warning("cluster %s present but no definition/pics; emitting usage only", req.id)
+        logger.warning(
+            "cluster %s present but no definition/pics; emitting usage only", req.id
+        )
         return set()
 
     pics = definition.pics
@@ -357,7 +387,9 @@ def _enable_cluster(
     for cid in generated_ids:
         enabled.add(pics_codes.generated_command(pics, cid))
 
-    ctx = _ctx(mask, conditions, definition.revision, attr_ids, accepted_ids | generated_ids)
+    ctx = _ctx(
+        mask, conditions, definition.revision, attr_ids, accepted_ids | generated_ids
+    )
     for eid, ev in definition.events.items():
         if evaluate(ev.conformance, ctx).is_mandatory():
             enabled.add(pics_codes.event(pics, eid))
@@ -420,7 +452,9 @@ def _feature_mask_fixpoint(definition, req, conditions, seed_codes) -> int:
         if bit is not None:
             mask |= 1 << bit
         else:
-            logger.warning("cluster %s: seeded feature code %r not found", definition.id, code)
+            logger.warning(
+                "cluster %s: seeded feature code %r not found", definition.id, code
+            )
 
     changed = True
     while changed:  # monotone: mask only grows, bounded by #features
@@ -444,8 +478,13 @@ def _element_fixpoint(definition, req, conditions, mask):
     changed = True
     while changed:
         changed = False
-        ctx = _ctx(mask, conditions, definition.revision, attr_ids,
-                   accepted_ids | generated_ids)
+        ctx = _ctx(
+            mask,
+            conditions,
+            definition.revision,
+            attr_ids,
+            accepted_ids | generated_ids,
+        )
         for aid, attr in definition.attributes.items():
             if aid in attr_ids:
                 continue

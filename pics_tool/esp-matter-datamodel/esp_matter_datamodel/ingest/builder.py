@@ -81,7 +81,9 @@ def _parse_clusters(clusters_dir: Path) -> dict[str, Cluster]:
     for path in sorted(clusters_dir.glob("*.xml")):
         root = _root_of(path)
         if root.tag != "cluster":
-            logger.debug("skipping non-cluster XML: %s (root <%s>)", path.name, root.tag)
+            logger.debug(
+                "skipping non-cluster XML: %s (root <%s>)", path.name, root.tag
+            )
             continue
         try:
             cluster = parse_cluster(root)
@@ -100,16 +102,24 @@ def _parse_clusters(clusters_dir: Path) -> dict[str, Cluster]:
         if not cluster.id:
             continue  # abstract base cluster: template only, not a standalone entry
         classification = root.find("classification")
-        if classification is not None and classification.attrib.get("hierarchy") == "derived":
+        if (
+            classification is not None
+            and classification.attrib.get("hierarchy") == "derived"
+        ):
             base_name = classification.attrib.get("baseCluster", "")
             base = by_name.get(_normalize_cluster_name(base_name))
             if base is None:
-                logger.warning("derived cluster %s: base %r not found; no inheritance",
-                               cluster.name, base_name)
+                logger.warning(
+                    "derived cluster %s: base %r not found; no inheritance",
+                    cluster.name,
+                    base_name,
+                )
             else:
                 cluster = _merge_inherited(cluster, base)
         if cluster.id in clusters:
-            logger.warning("duplicate cluster id %s (%s); overwriting", cluster.id, cluster.name)
+            logger.warning(
+                "duplicate cluster id %s (%s); overwriting", cluster.id, cluster.name
+            )
         clusters[cluster.id] = cluster
     logger.info("parsed %d clusters", len(clusters))
     return clusters
@@ -117,6 +127,7 @@ def _parse_clusters(clusters_dir: Path) -> dict[str, Cluster]:
 
 def _merge_inherited(derived: Cluster, base: Cluster) -> Cluster:
     """Return ``derived`` with ``base``'s elements merged in (derived wins)."""
+
     def merged(base_map: dict, derived_map: dict) -> dict:
         out = dict(base_map)
         out.update(derived_map)
@@ -148,13 +159,18 @@ def _parse_device_types(
         try:
             device_type = parse_device_type(root, clusters)
         except Exception as exc:  # noqa: BLE001
-            raise IngestError(f"failed to parse device type {path.name}: {exc}") from exc
+            raise IngestError(
+                f"failed to parse device type {path.name}: {exc}"
+            ) from exc
         if device_type.name == _BASE_DEVICE_TYPE_NAME:
             base_device_type = device_type
         else:
             device_types[device_type.id] = device_type
-    logger.info("parsed %d device types (base_device_type=%s)",
-                len(device_types), base_device_type is not None)
+    logger.info(
+        "parsed %d device types (base_device_type=%s)",
+        len(device_types),
+        base_device_type is not None,
+    )
     return device_types, base_device_type
 
 

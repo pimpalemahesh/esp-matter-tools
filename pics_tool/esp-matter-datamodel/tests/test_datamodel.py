@@ -22,26 +22,58 @@ EXAMPLE = {
     "provenance": {"spec_sha": "deadbeef", "generated_from": "data_model/1.6"},
     "clusters": {
         "0x0006": {
-            "id": "0x0006", "name": "On/Off", "pics": "OO", "revision": 6,
+            "id": "0x0006",
+            "name": "On/Off",
+            "pics": "OO",
+            "revision": 6,
             "features": {
-                "0": {"bit": 0, "mask": 1, "code": "LT", "name": "Lighting",
-                      "conformance": {"type": "optional"}},
-                "2": {"bit": 2, "mask": 4, "code": "OFFONLY", "name": "OffOnly",
-                      "conformance": {"type": "optional"}},
+                "0": {
+                    "bit": 0,
+                    "mask": 1,
+                    "code": "LT",
+                    "name": "Lighting",
+                    "conformance": {"type": "optional"},
+                },
+                "2": {
+                    "bit": 2,
+                    "mask": 4,
+                    "code": "OFFONLY",
+                    "name": "OffOnly",
+                    "conformance": {"type": "optional"},
+                },
             },
             "attributes": {
-                "0x0000": {"id": "0x0000", "name": "OnOff",
-                           "conformance": {"type": "mandatory"}},
-                "0x4000": {"id": "0x4000", "name": "GlobalSceneControl",
-                           "conformance": {"type": "mandatory",
-                                           "condition": {"op": "feature", "code": "LT", "bit": 0}}},
+                "0x0000": {
+                    "id": "0x0000",
+                    "name": "OnOff",
+                    "conformance": {"type": "mandatory"},
+                },
+                "0x4000": {
+                    "id": "0x4000",
+                    "name": "GlobalSceneControl",
+                    "conformance": {
+                        "type": "mandatory",
+                        "condition": {"op": "feature", "code": "LT", "bit": 0},
+                    },
+                },
             },
             "accepted_commands": {
-                "0x00": {"id": "0x00", "name": "Off", "conformance": {"type": "mandatory"}},
-                "0x01": {"id": "0x01", "name": "On",
-                         "conformance": {"type": "mandatory",
-                                         "condition": {"op": "not",
-                                                       "arg": {"op": "feature", "code": "OFFONLY", "bit": 2}}}},
+                "0x00": {
+                    "id": "0x00",
+                    "name": "Off",
+                    "conformance": {"type": "mandatory"},
+                },
+                "0x01": {
+                    "id": "0x01",
+                    "name": "On",
+                    "conformance": {
+                        "type": "mandatory",
+                        "condition": {
+                            "op": "not",
+                            "arg": {"op": "feature", "code": "OFFONLY", "bit": 2},
+                        },
+                    },
+                },
             },
             "generated_commands": {},
             "events": {},
@@ -49,17 +81,26 @@ EXAMPLE = {
     },
     "device_types": {
         "0x0100": {
-            "id": "0x0100", "name": "On/Off Light", "revision": 3,
+            "id": "0x0100",
+            "name": "On/Off Light",
+            "revision": 3,
             "server_clusters": {
-                "0x0006": {"id": "0x0006", "name": "On/Off",
-                           "conformance": {"type": "mandatory"},
-                           "feature_overrides": {
-                               "0": {"conformance": {"type": "mandatory"}}},
-                           "attribute_overrides": {}, "command_overrides": {}},
-                "0x0008": {"id": "0x0008", "name": "Level Control",
-                           "conformance": {"type": "optional"},
-                           "feature_overrides": {}, "attribute_overrides": {},
-                           "command_overrides": {}},
+                "0x0006": {
+                    "id": "0x0006",
+                    "name": "On/Off",
+                    "conformance": {"type": "mandatory"},
+                    "feature_overrides": {"0": {"conformance": {"type": "mandatory"}}},
+                    "attribute_overrides": {},
+                    "command_overrides": {},
+                },
+                "0x0008": {
+                    "id": "0x0008",
+                    "name": "Level Control",
+                    "conformance": {"type": "optional"},
+                    "feature_overrides": {},
+                    "attribute_overrides": {},
+                    "command_overrides": {},
+                },
             },
             "client_clusters": {},
         }

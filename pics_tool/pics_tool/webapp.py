@@ -39,17 +39,30 @@ from esp_matter_datamodel import boolexpr, loader
 
 from .generate import claims, pics_codes
 from .generate.claims import icd_from_claims
-from .generate.cluster_engine import (ROOT_NODE_DEVICE_TYPE_ID, active_conditions,
-                                      all_enabled_cluster_ids, controlled_conditions,
-                                      generate_cluster_pics, load_transport_map,
-                                      offered_cluster_sides)
-from .generate.mcore_engine import (compute_mcore_pics, gated_area,
-                                    load_role_profile, node_facts_from_clusters,
-                                    role_denied)
+from .generate.cluster_engine import (
+    ROOT_NODE_DEVICE_TYPE_ID,
+    active_conditions,
+    all_enabled_cluster_ids,
+    controlled_conditions,
+    generate_cluster_pics,
+    load_transport_map,
+    offered_cluster_sides,
+)
+from .generate.mcore_engine import (
+    compute_mcore_pics,
+    gated_area,
+    load_role_profile,
+    node_facts_from_clusters,
+    role_denied,
+)
 from .generate.profile import DeviceProfile
 from .generate.selection import Selection, interface_plan, merge_endpoint_seeds
-from .generate.template_io import (base_template_path, known_item_numbers,
-                                   parse_pics_items)
+from .generate.template_io import (
+    base_template_path,
+    known_item_numbers,
+    parse_pics_items,
+)
+
 
 @lru_cache(maxsize=4)
 def _model(version: str):
@@ -73,15 +86,22 @@ def _mcore_meta(version: str):
         feat[n] = " ".join((pi.findtext("feature") or "").split())
         conds[n] = " ; ".join(
             f"{(s.text or '').strip()} if {(s.attrib.get('cond', '') or '').strip()}"
-            if (s.attrib.get("cond", "") or "").strip() else (s.text or "").strip()
-            for s in pi.findall("status"))
+            if (s.attrib.get("cond", "") or "").strip()
+            else (s.text or "").strip()
+            for s in pi.findall("status")
+        )
     return order, feat, conds
 
 
 # Spelled-out conformance statuses for the detail view: a bare "O" in a
 # monospace font reads as a zero.
-_STATUS_WORDS = {"M": "Mandatory", "O": "Optional", "X": "Prohibited",
-                 "P": "Provisional", "D": "Deprecated"}
+_STATUS_WORDS = {
+    "M": "Mandatory",
+    "O": "Optional",
+    "X": "Prohibited",
+    "P": "Provisional",
+    "D": "Deprecated",
+}
 
 
 @lru_cache(maxsize=4)
@@ -109,18 +129,23 @@ def _item_text(version: str):
             question = question.replace("_?", "?").replace(" _", "").strip()
             conf = " ; ".join(
                 f"{word(s)} if {(s.attrib.get('cond', '') or '').strip()}"
-                if (s.attrib.get("cond", "") or "").strip() else word(s)
-                for s in pi.findall("status"))
+                if (s.attrib.get("cond", "") or "").strip()
+                else word(s)
+                for s in pi.findall("status")
+            )
             out[code] = (question, conf)
     return out
 
 
 def _probe(version: str, **kw) -> set[str]:
     """Run the MCORE engine on a neutral device type, varying one input."""
-    d = {"spec_version": version, "device_type": "On/Off Light",
-         "transport": list(kw.get("transports", ("wifi_2g",))),
-         "role": kw.get("role", "commissionee"),
-         "onboarding": list(kw.get("onboarding", ("qr", "manual_pairing_code")))}
+    d = {
+        "spec_version": version,
+        "device_type": "On/Off Light",
+        "transport": list(kw.get("transports", ("wifi_2g",))),
+        "role": kw.get("role", "commissionee"),
+        "onboarding": list(kw.get("onboarding", ("qr", "manual_pairing_code"))),
+    }
     if "ble" in kw:
         d["ble_commissioning"] = kw["ble"]
     if "paf" in kw:
@@ -134,8 +159,12 @@ def _probe(version: str, **kw) -> set[str]:
     if "extdisc" in kw:
         d["extended_discovery"] = kw["extdisc"]
     items = set(_mcore_meta(version)[0])
-    return compute_mcore_pics(DeviceProfile.from_dict(d), version,
-                              set(kw.get("clusters", frozenset()))) & items
+    return (
+        compute_mcore_pics(
+            DeviceProfile.from_dict(d), version, set(kw.get("clusters", frozenset()))
+        )
+        & items
+    )
 
 
 @lru_cache(maxsize=4)
@@ -150,19 +179,37 @@ def _classify(version: str):
     order = _mcore_meta(version)[0]
     items = set(order)
     dims = {
-        "transport": [dict(transports=(t,)) for t in ("wifi_2g", "wifi_5g", "thread", "ethernet")],
+        "transport": [
+            dict(transports=(t,)) for t in ("wifi_2g", "wifi_5g", "thread", "ethernet")
+        ],
         "ble_commissioning": [dict(ble=True), dict(ble=False)],
         "wifi_paf": [dict(paf=True), dict(paf=False)],
         "nfc_commissioning": [dict(ntl=True), dict(ntl=False)],
-        "commissioning_flow": [dict(flow=f) for f in ("standard", "user_intent", "custom")],
+        "commissioning_flow": [
+            dict(flow=f) for f in ("standard", "user_intent", "custom")
+        ],
         "tcp": [dict(tcp=True), dict(tcp=False)],
         "extended_discovery": [dict(extdisc=True), dict(extdisc=False)],
         "role": [dict(role=r) for r in ("commissionee", "commissioner", "controller")],
-        "onboarding": [dict(onboarding=x) for x in
-                       ((), ("qr",), ("manual_pairing_code",),
-                        ("manual_pairing_code_21",), ("nfc",))],
-        "device_types": [dict(clusters=c) for c in (frozenset(), frozenset({"0x002a"}),
-                         frozenset({"0x0029"}), frozenset({"0x0039", "0x0751"}))],
+        "onboarding": [
+            dict(onboarding=x)
+            for x in (
+                (),
+                ("qr",),
+                ("manual_pairing_code",),
+                ("manual_pairing_code_21",),
+                ("nfc",),
+            )
+        ],
+        "device_types": [
+            dict(clusters=c)
+            for c in (
+                frozenset(),
+                frozenset({"0x002a"}),
+                frozenset({"0x0029"}),
+                frozenset({"0x0039", "0x0751"}),
+            )
+        ],
     }
     decided: dict[str, set] = defaultdict(set)
     reach: set[str] = set()
@@ -220,8 +267,11 @@ def list_versions() -> list[str]:
     """
     from importlib.resources import files as _files
 
-    tmpl = {p.name for p in _files("pics_tool").joinpath("templates").iterdir()
-            if p.is_dir()}
+    tmpl = {
+        p.name
+        for p in _files("pics_tool").joinpath("templates").iterdir()
+        if p.is_dir()
+    }
     models = set()
     for p in _files("esp_matter_datamodel").joinpath("datamodels").iterdir():
         m = re.match(r"datamodel_(.+)\.json$", p.name)
@@ -250,19 +300,25 @@ def _pics_to_cluster(version: str) -> dict[str, str]:
 @lru_cache(maxsize=4)
 def _template_codes(version: str) -> tuple[tuple[str, tuple[str, ...]], ...]:
     """((template file name, (itemNumber, ...)), ...) for every template."""
-    return tuple((tname, tuple(code for code, _ in entries))
-                 for tname, entries in _template_entries(version))
+    return tuple(
+        (tname, tuple(code for code, _ in entries))
+        for tname, entries in _template_entries(version)
+    )
 
 
 @lru_cache(maxsize=4)
-def _template_entries(version: str) -> tuple[tuple[str, tuple[tuple[str, str], ...]], ...]:
+def _template_entries(
+    version: str,
+) -> tuple[tuple[str, tuple[tuple[str, str], ...]], ...]:
     """((template name, ((itemNumber, joined cond text), ...)), ...)."""
     from .generate.template_io import list_templates
 
     out = []
     for p in list_templates(version):
-        entries = tuple((it.number, " ".join(c for _, c in it.statuses if c))
-                        for it in parse_pics_items(p))
+        entries = tuple(
+            (it.number, " ".join(c for _, c in it.statuses if c))
+            for it in parse_pics_items(p)
+        )
         out.append((p.name, entries))
     return tuple(out)
 
@@ -296,7 +352,9 @@ def _choice_groups(version: str) -> dict[str, tuple[str, ...]]:
         for f in cl.features.values():
             ch = getattr(f.conformance, "choice", None)
             if ch is not None and not ch.more:
-                groups.setdefault(ch.marker, []).append(pics_codes.feature(cl.pics, f.bit))
+                groups.setdefault(ch.marker, []).append(
+                    pics_codes.feature(cl.pics, f.bit)
+                )
         for members in groups.values():
             if len(members) > 1:
                 for code in members:
@@ -345,7 +403,7 @@ def _parent_of(code: str, cond: str) -> str | None:
         # A NEGATED reference ("M if NOT (OO.S.F02)") means the item applies
         # when the feature is OFF -- nesting it under the feature would reveal
         # it backwards, so a negated ref never makes a parent.
-        lead = (cond or "")[max(0, m.start() - 8):m.start()]
+        lead = (cond or "")[max(0, m.start() - 8) : m.start()]
         if "NOT" in lead.upper() or "!" in lead:
             continue
         return ref
@@ -355,7 +413,7 @@ def _parent_of(code: str, cond: str) -> str | None:
 def _cluster_label(template_name: str) -> str:
     """'On-Off Cluster Test Plan.xml' -> 'On-Off Cluster'."""
     name = template_name.rsplit(".", 1)[0]
-    return name[:-len(" Test Plan")] if name.endswith(" Test Plan") else name
+    return name[: -len(" Test Plan")] if name.endswith(" Test Plan") else name
 
 
 # Friendly display names for the KNOWN MCORE namespaces. This is presentation
@@ -364,12 +422,21 @@ def _cluster_label(template_name: str) -> str:
 # this map (e.g. one a future spec version introduces) automatically becomes
 # its own group under its raw token name; it is never lumped into "General".
 _MCORE_AREAS = {
-    "COM": "Radio & Transport", "DD": "Discovery & Onboarding",
-    "SC": "Secure Channel & mDNS", "IDM": "Interaction Model",
-    "BDX": "Bulk Data Exchange", "OTA": "OTA Software Update",
-    "BRIDGE": "Bridge", "BRIDGECLIENT": "Bridge", "DEVLIST": "Bridge",
-    "ROLE": "Device Role", "DLOG": "Diagnostic Logs", "ACL": "Access Control",
-    "G": "Groups", "FS": "Fabric Synchronization", "DT_SW_COMP": "General",
+    "COM": "Radio & Transport",
+    "DD": "Discovery & Onboarding",
+    "SC": "Secure Channel & mDNS",
+    "IDM": "Interaction Model",
+    "BDX": "Bulk Data Exchange",
+    "OTA": "OTA Software Update",
+    "BRIDGE": "Bridge",
+    "BRIDGECLIENT": "Bridge",
+    "DEVLIST": "Bridge",
+    "ROLE": "Device Role",
+    "DLOG": "Diagnostic Logs",
+    "ACL": "Access Control",
+    "G": "Groups",
+    "FS": "Fabric Synchronization",
+    "DT_SW_COMP": "General",
 }
 
 
@@ -385,13 +452,20 @@ def _feature_seeds_from_codes(version: str, codes) -> dict[str, set[str]]:
     return claims.feature_seeds_from_codes(_model(version), codes or [])
 
 
-def _gateway_claims(version: str, profile: DeviceProfile, claim_codes) -> dict[str, set[str]]:
+def _gateway_claims(
+    version: str, profile: DeviceProfile, claim_codes
+) -> dict[str, set[str]]:
     """{gateway code: spec-mandated codes for that claimed side} (shared layer)."""
     from .generate.cluster_engine import active_conditions, load_transport_map
 
     conditions = active_conditions(profile, load_transport_map())
-    return claims.side_claims(_model(version), profile, claim_codes or [],
-                              conditions, known_item_numbers(version))
+    return claims.side_claims(
+        _model(version),
+        profile,
+        claim_codes or [],
+        conditions,
+        known_item_numbers(version),
+    )
 
 
 def _selection_of(profile_dict: dict, claim_codes=None) -> Selection:
@@ -404,9 +478,11 @@ def _selection_of(profile_dict: dict, claim_codes=None) -> Selection:
     selection = Selection.from_dict(profile_dict)
     if claim_codes:
         selection.endpoints[0].claims = list(selection.endpoints[0].claims) + [
-            c for c in claim_codes if not c.startswith("MCORE.")]
+            c for c in claim_codes if not c.startswith("MCORE.")
+        ]
         selection.mcore_claims = list(selection.mcore_claims) + [
-            c for c in claim_codes if c.startswith("MCORE.")]
+            c for c in claim_codes if c.startswith("MCORE.")
+        ]
     return selection
 
 
@@ -438,18 +514,23 @@ def _payload_inputs(profile_dict: dict, legacy_claims=None):
             elif str(t).isdigit():
                 by_ep.setdefault(int(t), []).extend(codes)
     if legacy_claims:
-        by_ep.setdefault(1, []).extend([c for c in legacy_claims if not c.startswith("MCORE.")])
+        by_ep.setdefault(1, []).extend(
+            [c for c in legacy_claims if not c.startswith("MCORE.")]
+        )
         mcore += [c for c in legacy_claims if c.startswith("MCORE.")]
 
     app_endpoints = [ep.device_types for ep in selection.endpoints]
-    per_ep_seeds = {epid: claims.feature_seeds_from_codes(model, codes)
-                    for epid, codes in by_ep.items()}
-    per_ep_side = {epid: claims.side_claims(model, selection.profile, codes, conditions, known)
-                   for epid, codes in by_ep.items()}
+    per_ep_seeds = {
+        epid: claims.feature_seeds_from_codes(model, codes)
+        for epid, codes in by_ep.items()
+    }
+    per_ep_side = {
+        epid: claims.side_claims(model, selection.profile, codes, conditions, known)
+        for epid, codes in by_ep.items()
+    }
     # Mirrored DNS-SD twins expand here, at claim ingestion, so EVERY consumer
     # (web UI, MCP, CLI selected-claims) exports the pair consistently.
-    mcore_atoms = claims.expand_mirrors(
-        c for c in mcore if c.startswith("MCORE."))
+    mcore_atoms = claims.expand_mirrors(c for c in mcore if c.startswith("MCORE."))
     all_claims = [c for codes in by_ep.values() for c in codes]
     return selection, app_endpoints, per_ep_seeds, per_ep_side, mcore_atoms, all_claims
 
@@ -458,7 +539,7 @@ _CODE_TOKEN = re.compile(r"[A-Z0-9_]+\.[SC](?:\.[A-Za-z0-9]+)*|MCORE\.[A-Za-z0-9
 
 
 def _pretty(name: str) -> str:
-    """Split a camelCase element name for reading: 'OccupiedHeatingSetpoint' -> 'Occupied Heating Setpoint'."""
+    """Split a camelCase element name for reading: 'OccupiedHeatingSetpoint' -> 'Occupied Heating Setpoint'."""  # noqa: E501
     return re.sub(r"([a-z0-9])([A-Z])", r"\1 \2", name or "").strip()
 
 
@@ -487,8 +568,11 @@ def _short_name(code: str, model, prefix_map: dict):
     if tag == "F":
         f = cl.features.get(int(val, 16)) if val else None
         return _pretty(f.name) if f else None
-    lookup = {"A": cl.attributes, "C": {**cl.accepted_commands, **cl.generated_commands},
-              "E": cl.events}.get(tag)
+    lookup = {
+        "A": cl.attributes,
+        "C": {**cl.accepted_commands, **cl.generated_commands},
+        "E": cl.events,
+    }.get(tag)
     if lookup is not None:
         el = lookup.get("0x" + val.lower()) or lookup.get(val.lower())
         return _pretty(el.name) if el else None
@@ -506,12 +590,17 @@ def _short_name(code: str, model, prefix_map: dict):
 
 _TXT_KEY_Q_RE = re.compile(r"TXT Key '([A-Z]{1,4})'\s*\(([^)]+)\)", re.I)
 _MDNS_KEY_Q_RE = re.compile(
-    r"optional key ([A-Z]{1,4}) in (commissionable node|operational) discovery mDNS", re.I)
+    r"optional key ([A-Z]{1,4}) in (commissionable node|operational) discovery mDNS",
+    re.I,
+)
 _MDNS_SUBTYPE_Q_RE = re.compile(
-    r"optional subtype([A-Z]) in (commissionable node|operational) discovery mDNS", re.I)
+    r"optional subtype([A-Z]) in (commissionable node|operational) discovery mDNS", re.I
+)
 _SUBTYPE_ADV_Q_RE = re.compile(r"advertising the (.+?) Commissioning Subtype", re.I)
 _IM_ROLE_Q_RE = re.compile(
-    r"^Is the device a (client|server) and\s+(?:supports?\s+|capable of\s+)?(.+?)\s*$", re.I)
+    r"^Is the device a (client|server) and\s+(?:supports?\s+|capable of\s+)?(.+?)\s*$",
+    re.I,
+)
 # "Does the [Requestor] DUT/device/commissionee [device] ...". Whether the
 # match landed on the true subject is validated AFTER matching (see
 # _mcore_label): a remainder starting with a possessive ("'s Onboarding
@@ -522,21 +611,30 @@ _IM_ROLE_Q_RE = re.compile(
 _GEN_PREFIX_Q_RE = re.compile(
     r"^(?:does|do|is|can|will)?\s*(?:the\s+)?(?:requestor\s+)?"
     r"(?:commissionee(?:\s+device)?|dut|device|node)\s*"
-    r"(?:\((server|client)\))?\s*", re.I)
+    r"(?:\((server|client)\))?\s*",
+    re.I,
+)
 # leftover subject fragments that prove the strip cut mid-subject
 _BAD_REST_RE = re.compile(r"^(?:['’]|(?:or|and|device|dut|node)\b)", re.I)
 
 _IM_ACTION_RULES = [
     (r"^sending a (.+?) Message$", r"send \1"),
-    (r"^sending multiple commands batched into a single Invoke Request Message$",
-     "batch multiple commands in one Invoke"),
+    (
+        r"^sending multiple commands batched into a single Invoke Request Message$",
+        "batch multiple commands in one Invoke",
+    ),
     (r"^Reading an attribute of DataType\s*(.+)$", r"read \1 attributes"),
     (r"^Writing an attribute of DataType\s*(.+)$", r"write \1 attributes"),
-    (r"^subscribing to an attribute of DataType\s*(.+)$", r"subscribe to \1 attributes"),
+    (
+        r"^subscribing to an attribute of DataType\s*(.+)$",
+        r"subscribe to \1 attributes",
+    ),
     (r"^subscribing to (.+)$", r"subscribe to \1"),
     (r"^Reading (.+)$", r"read \1"),
-    (r"^generating large data which is greater than 1 MTU\s*\(1280 bytes\)$",
-     "generate data larger than 1 MTU (1280 bytes)"),
+    (
+        r"^generating large data which is greater than 1 MTU\s*\(1280 bytes\)$",
+        "generate data larger than 1 MTU (1280 bytes)",
+    ),
 ]
 
 
@@ -558,11 +656,19 @@ def _mcore_label(question: str) -> str | None:
         return f"TXT key '{m.group(1).upper()}' — {m.group(2)}"
     m = _MDNS_KEY_Q_RE.search(q)
     if m:
-        kind = "commissionable" if m.group(2).lower().startswith("commissionable") else "operational"
+        kind = (
+            "commissionable"
+            if m.group(2).lower().startswith("commissionable")
+            else "operational"
+        )
         return f"mDNS key '{m.group(1).upper()}' — {kind} discovery"
     m = _MDNS_SUBTYPE_Q_RE.search(q)
     if m:
-        kind = "commissionable" if m.group(2).lower().startswith("commissionable") else "operational"
+        kind = (
+            "commissionable"
+            if m.group(2).lower().startswith("commissionable")
+            else "operational"
+        )
         return f"mDNS subtype '{m.group(1).upper()}' — {kind} discovery"
     m = _SUBTYPE_ADV_Q_RE.search(q)
     if m:
@@ -574,14 +680,21 @@ def _mcore_label(question: str) -> str | None:
     if not m:
         return None
     role = (m.group(1) or "").lower()
-    rest = q[m.end():]
+    rest = q[m.end() :]
     if _BAD_REST_RE.match(rest):
-        return None    # cut mid-subject ("...device's X", "...DUT or packaging")
-    rest = re.sub(r"^(?:support(?:s)?|implement(?:s)?|require(?:s)?|provide(?:s)?)\s+",
-                  "", rest, count=1, flags=re.I)
+        return None  # cut mid-subject ("...device's X", "...DUT or packaging")
+    rest = re.sub(
+        r"^(?:support(?:s)?|implement(?:s)?|require(?:s)?|provide(?:s)?)\s+",
+        "",
+        rest,
+        count=1,
+        flags=re.I,
+    )
     rest = re.sub(r"^(?:the|a|an)\s+", "", rest, count=1, flags=re.I)
     rest = re.sub(r"^sending the (.+?) message$", r"send \1", rest, count=1, flags=re.I)
-    rest = re.sub(r"^(control|contain)\b", lambda mm: mm.group(1) + "s", rest, count=1, flags=re.I)
+    rest = re.sub(
+        r"^(control|contain)\b", lambda mm: mm.group(1) + "s", rest, count=1, flags=re.I
+    )
     rest = re.sub(r"^only function\b", "only functions", rest, count=1, flags=re.I)
     rest = rest.strip()
     if len(rest) < 3:
@@ -605,8 +718,12 @@ def _annotate_mirrors(items: list[dict]) -> None:
     base = {it["code"]: it for it in items if it["tab"] == "base"}
     for lead_code, twin_code in _MCORE_MIRRORS.items():
         lead, twin = base.get(lead_code), base.get(twin_code)
-        if (lead is None or twin is None
-                or lead["group"] != "manual" or twin["group"] != "manual"):
+        if (
+            lead is None
+            or twin is None
+            or lead["group"] != "manual"
+            or twin["group"] != "manual"
+        ):
             continue
         lead["mirrors"] = [twin_code]
         twin["mirror_of"] = lead_code
@@ -625,16 +742,29 @@ def _mcore_group(code: str, question: str):
     q = " ".join((question or "").split()).rstrip("?").strip()
     m = _TXT_KEY_Q_RE.search(q)
     if m:
-        return ("Optional TXT keys in DNS-SD commissionable node discovery",
-                f"{m.group(1).upper()} — {m.group(2)}")
+        return (
+            "Optional TXT keys in DNS-SD commissionable node discovery",
+            f"{m.group(1).upper()} — {m.group(2)}",
+        )
     m = _MDNS_KEY_Q_RE.search(q)
     if m:
-        kind = "commissionable" if m.group(2).lower().startswith("commissionable") else "operational"
+        kind = (
+            "commissionable"
+            if m.group(2).lower().startswith("commissionable")
+            else "operational"
+        )
         return (f"Optional mDNS keys — {kind} discovery", m.group(1).upper())
     m = _MDNS_SUBTYPE_Q_RE.search(q)
     if m:
-        kind = "commissionable" if m.group(2).lower().startswith("commissionable") else "operational"
-        return (f"Optional mDNS subtypes — {kind} discovery", f"subtype{m.group(1).upper()}")
+        kind = (
+            "commissionable"
+            if m.group(2).lower().startswith("commissionable")
+            else "operational"
+        )
+        return (
+            f"Optional mDNS subtypes — {kind} discovery",
+            f"subtype{m.group(1).upper()}",
+        )
     m = _SUBTYPE_ADV_Q_RE.search(q)
     if m:
         return ("Commissioning subtypes advertised in DNS-SD", m.group(1))
@@ -642,14 +772,23 @@ def _mcore_group(code: str, question: str):
     if m and m.group(1).lower() == "client":
         action = m.group(2)
         for pat, ask in (
-                (r"^Reading an attribute of DataType\s*(.+)$",
-                 "Client: attribute data types it can read"),
-                (r"^Writing an attribute of DataType\s*(.+)$",
-                 "Client: attribute data types it can write"),
-                (r"^subscribing to an attribute of DataType\s*(.+)$",
-                 "Client: attribute data types it can subscribe to"),
-                (r"^sending a (.+?) Request Message$",
-                 "Client: request messages it can send")):
+            (
+                r"^Reading an attribute of DataType\s*(.+)$",
+                "Client: attribute data types it can read",
+            ),
+            (
+                r"^Writing an attribute of DataType\s*(.+)$",
+                "Client: attribute data types it can write",
+            ),
+            (
+                r"^subscribing to an attribute of DataType\s*(.+)$",
+                "Client: attribute data types it can subscribe to",
+            ),
+            (
+                r"^sending a (.+?) Request Message$",
+                "Client: request messages it can send",
+            ),
+        ):
             mm = re.match(pat, action, re.I)
             if mm:
                 return (ask, _pretty(mm.group(1)))
@@ -658,7 +797,9 @@ def _mcore_group(code: str, question: str):
 
 def _humanize_cond(cond: str, model, prefix_map: dict) -> str:
     """Replace PICS codes in a conformance expression with human names."""
-    out = _CODE_TOKEN.sub(lambda m: _short_name(m.group(0), model, prefix_map) or m.group(0), cond)
+    out = _CODE_TOKEN.sub(
+        lambda m: _short_name(m.group(0), model, prefix_map) or m.group(0), cond
+    )
     for op, word in (("AND", "and"), ("OR", "or"), ("NOT", "not")):
         out = re.sub(rf"\b{op}\b", word, out)
     return " ".join(out.split()).strip()
@@ -709,15 +850,22 @@ def generate_payload(profile_dict: dict, claims=None) -> dict:
     model = _model(version)
     prefix_map = _pics_to_cluster(version)
     # Per-endpoint claims: a feature/side claimed on EP1 never leaks to EP2.
-    selection, app_endpoints, per_ep_seeds, per_ep_side, mcore_claim_atoms, all_claim_codes = \
-        _payload_inputs(profile_dict, claims)
+    (
+        selection,
+        app_endpoints,
+        per_ep_seeds,
+        per_ep_side,
+        mcore_claim_atoms,
+        all_claim_codes,
+    ) = _payload_inputs(profile_dict, claims)
     profile = selection.profile
 
     # Multi-interface nodes: each Network Commissioning instance gets ITS
     # interface feature (EP0 = primary, each Secondary Network Interface
     # endpoint = its declared family). Input-derived, so it joins the BASELINE.
-    iface_seeds, iface_exclude, _iface_families = interface_plan(model, selection,
-                                                                 load_transport_map())
+    iface_seeds, iface_exclude, _iface_families = interface_plan(
+        model, selection, load_transport_map()
+    )
     baseline_seeds: dict[int, dict[str, set[str]]] = {}
     merge_endpoint_seeds(baseline_seeds, iface_seeds)
     merge_endpoint_seeds(per_ep_seeds, iface_seeds)
@@ -726,12 +874,20 @@ def generate_payload(profile_dict: dict, claims=None) -> dict:
     # TWO runs on purpose: the baseline (profile only) defines "Answered by the
     # tool"; whatever the user's claims add on top stays in Optional Items --
     # pre-filled Yes where the spec mandates it, but it is THEIR selection.
-    baseline = generate_cluster_pics(model, profile, app_endpoints=app_endpoints,
-                                     per_endpoint_feature_seeds=baseline_seeds,
-                                     exclude_node_seed_clusters=iface_exclude)
-    endpoints = generate_cluster_pics(model, profile, app_endpoints=app_endpoints,
-                                      per_endpoint_feature_seeds=per_ep_seeds,
-                                      exclude_node_seed_clusters=iface_exclude)
+    baseline = generate_cluster_pics(
+        model,
+        profile,
+        app_endpoints=app_endpoints,
+        per_endpoint_feature_seeds=baseline_seeds,
+        exclude_node_seed_clusters=iface_exclude,
+    )
+    endpoints = generate_cluster_pics(
+        model,
+        profile,
+        app_endpoints=app_endpoints,
+        per_endpoint_feature_seeds=per_ep_seeds,
+        exclude_node_seed_clusters=iface_exclude,
+    )
     baseline_pics = {ep.endpoint: ep.pics for ep in baseline}
     cluster_ids = all_enabled_cluster_ids(endpoints)
     # Bridge-ness by device-type IDENTITY (never name strings): Aggregator
@@ -739,21 +895,26 @@ def generate_payload(profile_dict: dict, claims=None) -> dict:
     # Cluster detection alone misses a plain Aggregator -- its Commissioner
     # Control is mandatory only under FabricSynchronization.
     _BRIDGE_DT_IDS = {"0x000e", "0x0013"}
-    _all_dt_names = ([dt for ep in selection.endpoints for dt in ep.device_types]
-                     + list(profile.node_device_types))
-    bridge_dt = any((d := _find_device_type(model, n)) and d.id in _BRIDGE_DT_IDS
-                    for n in _all_dt_names)
+    _all_dt_names = [dt for ep in selection.endpoints for dt in ep.device_types] + list(
+        profile.node_device_types
+    )
+    bridge_dt = any(
+        (d := _find_device_type(model, n)) and d.id in _BRIDGE_DT_IDS
+        for n in _all_dt_names
+    )
     _bridge_seeds = {"MCORE.BRIDGE"} if bridge_dt else set()
     # Composition-derived: "multiple endpoints with a Groups cluster" is read
     # straight off the designed data model (engine baseline + claimed sides) --
     # the endpoint list is exhaustive, so it is decided BOTH ways.
-    _groups_eps = ({ep.endpoint for ep in endpoints if "G.S" in ep.pics}
-                   | {epid for epid, sides in per_ep_side.items() if "G.S" in sides})
+    _groups_eps = {ep.endpoint for ep in endpoints if "G.S" in ep.pics} | {
+        epid for epid, sides in per_ep_side.items() if "G.S" in sides
+    }
     multi_groups = len(_groups_eps) >= 2
     if multi_groups:
         _bridge_seeds = _bridge_seeds | {"MCORE.G.MULTIENDPOINT"}
-    mcore_on = compute_mcore_pics(profile, version, cluster_ids,
-                                  extra_seeds=_bridge_seeds) & set(order)
+    mcore_on = compute_mcore_pics(
+        profile, version, cluster_ids, extra_seeds=_bridge_seeds
+    ) & set(order)
     # ICD is declared via the ICD Management cluster claim (spec: ICDM is
     # mandatory iff SIT|LIT on the Root Node) -- or the explicit CLI input.
     # Claiming ICDM without LITS = a Short Idle Time ICD, so the Base atom
@@ -767,43 +928,46 @@ def generate_payload(profile_dict: dict, claims=None) -> dict:
     # over the claim-free run stays in Optional Items (it is the user's claim).
     mcore_claimed: set = set()
     if mcore_claim_atoms:
-        mcore_full = compute_mcore_pics(profile, version, cluster_ids,
-                                        extra_seeds=mcore_claim_atoms | _bridge_seeds) & set(order)
+        mcore_full = compute_mcore_pics(
+            profile, version, cluster_ids, extra_seeds=mcore_claim_atoms | _bridge_seeds
+        ) & set(order)
         mcore_claimed = mcore_full - mcore_on
     # IM role considers every application endpoint's device types (a switch on any
     # endpoint makes the node an IM client).
     all_app_dts = [dt for ep in selection.endpoints for dt in ep.device_types]
     derived_im_types = is_im_client(model, [*all_app_dts, *profile.node_device_types])
-    all_side_codes = [c for side in per_ep_side.values()
-                      for codes in side.values() for c in codes]
+    all_side_codes = [
+        c for side in per_ep_side.values() for codes in side.values() for c in codes
+    ]
     # A claimed client gateway (X.C = Yes) IS client behavior: the IM role must
     # follow the claim, or the export would send commands while declaring
     # "IM server only" -- an inconsistent PICS.
-    claimed_client = any(_GATEWAY_RE.match(c) and c.endswith(".C")
-                         for c in all_claim_codes)
+    claimed_client = any(
+        _GATEWAY_RE.match(c) and c.endswith(".C") for c in all_claim_codes
+    )
     derived_im = derived_im_types or claimed_client
     im_client = derived_im if profile.im_client is None else profile.im_client
     # Client role driven purely by the user's claims -> its IDM consequences
     # belong in Manual selection (pre-filled Yes), not "Selected by the tool".
-    im_from_claims = (im_client and not derived_im_types
-                      and profile.im_client is None)
+    im_from_claims = im_client and not derived_im_types and profile.im_client is None
     # Device-CONTROL client capability (narrower than im_client): the OTA
     # Requestor node type's provider client is fixed OTA infrastructure -- it
     # downloads firmware, it cannot browse another node's devices. Only an
     # application device type's mandated clients, a claimed client side, an
     # explicit override, or a commissioner/controller role make the node a
     # client that interacts with OTHER DEVICES (what a bridge client does).
-    device_control_client = (profile.role != "commissionee"
-                             or is_im_client(model, all_app_dts)
-                             or claimed_client
-                             or profile.im_client is True)
+    device_control_client = (
+        profile.role != "commissionee"
+        or is_im_client(model, all_app_dts)
+        or claimed_client
+        or profile.im_client is True
+    )
     # Does the device send commands (client Tx)? Mandated by the device type,
     # or a spec consequence of a claimed client side -- either way,
     # IDM.C.InvokeRequest is derivable, not a guess.
-    has_client_tx = (any(re.search(r"\.C\.C[0-9a-fA-F]{2}\.Tx$", c)
-                         for ep in baseline for c in ep.pics)
-                     or any(re.search(r"\.C\.C[0-9a-fA-F]{2}\.Tx$", c)
-                            for c in all_side_codes))
+    has_client_tx = any(
+        re.search(r"\.C\.C[0-9a-fA-F]{2}\.Tx$", c) for ep in baseline for c in ep.pics
+    ) or any(re.search(r"\.C\.C[0-9a-fA-F]{2}\.Tx$", c) for c in all_side_codes)
     role_profile = load_role_profile(profile.role)
     facts = node_facts_from_clusters(cluster_ids)
     if bridge_dt:
@@ -812,9 +976,12 @@ def generate_payload(profile_dict: dict, claims=None) -> dict:
     # its presence comes from the user's cluster claim: a claimed DLOG.S puts
     # the cluster in the declared composition, opening the MCORE.DLOG.* field
     # questions; without the claim they are an input-backed decided No.
-    claimed_server_cids = {prefix_map.get(g.split(".", 1)[0])
-                           for sides in per_ep_side.values()
-                           for g in sides if g.endswith(".S")}
+    claimed_server_cids = {
+        prefix_map.get(g.split(".", 1)[0])
+        for sides in per_ep_side.values()
+        for g in sides
+        if g.endswith(".S")
+    }
     if "0x0032" in claimed_server_cids:
         facts.has_diagnostic_logs = True
 
@@ -831,17 +998,23 @@ def generate_payload(profile_dict: dict, claims=None) -> dict:
     # composition is an explicit, exhaustive input now (a bridge product must
     # statically expose these device types), so bridge is decided BOTH ways.
     bridge_declared = True
-    gate_active = {"bridge": facts.has_bridge,
-                   "ota_requestor": facts.has_ota_requestor,
-                   "ota_provider": facts.has_ota_provider,
-                   "icd": profile.is_icd or icd_claimed,
-                   "diagnostic_logs": facts.has_diagnostic_logs}
+    gate_active = {
+        "bridge": facts.has_bridge,
+        "ota_requestor": facts.has_ota_requestor,
+        "ota_provider": facts.has_ota_provider,
+        "icd": profile.is_icd or icd_claimed,
+        "diagnostic_logs": facts.has_diagnostic_logs,
+    }
     # diagnostic_logs and icd are declared: DLOG.S / ICDM.S are explicit Root
     # Node offerings, so not claiming them IS the answer (cluster absent /
     # the node is not an ICD).
-    gate_declared = {"bridge": bridge_declared, "ota_requestor": True,
-                     "ota_provider": True, "icd": True,
-                     "diagnostic_logs": True}
+    gate_declared = {
+        "bridge": bridge_declared,
+        "ota_requestor": True,
+        "ota_provider": True,
+        "icd": True,
+        "diagnostic_logs": True,
+    }
     _BRIDGE_NS = ("MCORE.BRIDGE", "MCORE.DEVLIST.")
     # The bridge-CLIENT family (spec 13.1.2 "DUT client"): the DUT consumes a
     # bridge's exposed devices -- DEVICE-CONTROL client behavior. Gated on
@@ -870,13 +1043,13 @@ def generate_payload(profile_dict: dict, claims=None) -> dict:
             return "off"
         if bucket == "imrole":
             if n == "MCORE.IDM.S":
-                return "on"                       # DUT hosts clusters -> IM server
+                return "on"  # DUT hosts clusters -> IM server
             if n.startswith("MCORE.IDM.S."):
                 # LargeData / PersistentSubscription: product facts (the
                 # hand-curated reference answers them differently) -> manual.
                 return "review"
             if not im_client:
-                return "off"                      # input-backed: IM role control
+                return "off"  # input-backed: IM role control
             if n == "MCORE.IDM.C":
                 # "claimed": Yes, but in Manual selection -- the role follows
                 # the user's client-cluster claim, not the device type.
@@ -911,6 +1084,7 @@ def generate_payload(profile_dict: dict, claims=None) -> dict:
 
     def q_of(code: str) -> str:
         return text.get(code, ("", ""))[0] or code
+
     def conf_of(code: str) -> str:
         return text.get(code, ("", ""))[1] or "-"
 
@@ -921,11 +1095,22 @@ def generate_payload(profile_dict: dict, claims=None) -> dict:
         self-gated mandatory can never be engine-decided on, so it is a live
         question exactly like an Optional one."""
         conf = conf_of(code)
-        return ("optional" in conf.lower()
-                or re.search(rf"\b{re.escape(code)}\b", conf) is not None)
+        return (
+            "optional" in conf.lower()
+            or re.search(rf"\b{re.escape(code)}\b", conf) is not None
+        )
 
-    def row(code, tab, st, group, cluster, parent=None, why=None, needs_you=None,
-            opt_cluster=False):
+    def row(
+        code,
+        tab,
+        st,
+        group,
+        cluster,
+        parent=None,
+        why=None,
+        needs_you=None,
+        opt_cluster=False,
+    ):
         # "needs_you" == a live decision the user must make NOW. By default it is
         # the manual group (Base product-facts the tool cannot derive). Cluster
         # items pass it explicitly: a genuine optional choice that is applicable
@@ -946,16 +1131,27 @@ def generate_payload(profile_dict: dict, claims=None) -> dict:
         # "ask"/"option" group the parallel Base families (TXT keys, client
         # attribute data types, ...) into one multi-select question each.
         ask, option = _mcore_group(code, q_of(code)) or (None, None)
-        return {"tab": tab, "code": code, "question": q_of(code),
-                "name": (_short_name(code, model, prefix_map)
-                         or (_mcore_label(q_of(code))
-                             if code.startswith("MCORE.") else None)),
-                "ask": ask, "option": option,
-                "answer": "yes" if st in ("on", "claimed") else "no",
-                "group": group, "cluster": cluster, "parent": parent,
-                "needs_you": (group == "manual") if needs_you is None else needs_you,
-                "conformance": conf_of(code), "opt_cluster": opt_cluster,
-                "why": why if why is not None else _why(code, group, conf_of(code), model, prefix_map)}
+        return {
+            "tab": tab,
+            "code": code,
+            "question": q_of(code),
+            "name": (
+                _short_name(code, model, prefix_map)
+                or (_mcore_label(q_of(code)) if code.startswith("MCORE.") else None)
+            ),
+            "ask": ask,
+            "option": option,
+            "answer": "yes" if st in ("on", "claimed") else "no",
+            "group": group,
+            "cluster": cluster,
+            "parent": parent,
+            "needs_you": (group == "manual") if needs_you is None else needs_you,
+            "conformance": conf_of(code),
+            "opt_cluster": opt_cluster,
+            "why": why
+            if why is not None
+            else _why(code, group, conf_of(code), model, prefix_map),
+        }
 
     # Three distinct sections, shown as separate tabs: the node-level Base.xml
     # (MCORE) questions, the Root Node cluster PICS on endpoint 0 (Basic Info,
@@ -973,12 +1169,20 @@ def generate_payload(profile_dict: dict, claims=None) -> dict:
     # Plain-language reason for a node-level (MCORE) item, tied to the input
     # that actually drives it (decided_dims), so "why is this Yes/No?" is
     # answerable without knowing PICS internals.
-    _DIM_LABEL = {"transport": "network transport", "role": "device role",
-                  "onboarding": "onboarding", "ble_commissioning": "BLE commissioning",
-                  "wifi_paf": "Wi-Fi PAF commissioning", "nfc_commissioning": "NFC commissioning",
-                  "device_types": "device type"}
-    _ROLE_PHRASE = {"commissionee": "an End Device", "commissioner": "a Commissioner",
-                    "controller": "a Controller"}
+    _DIM_LABEL = {
+        "transport": "network transport",
+        "role": "device role",
+        "onboarding": "onboarding",
+        "ble_commissioning": "BLE commissioning",
+        "wifi_paf": "Wi-Fi PAF commissioning",
+        "nfc_commissioning": "NFC commissioning",
+        "device_types": "device type",
+    }
+    _ROLE_PHRASE = {
+        "commissionee": "an End Device",
+        "commissioner": "a Commissioner",
+        "controller": "a Controller",
+    }
 
     def _dims_phrase(n: str) -> str:
         labels = [_DIM_LABEL.get(d, d) for d in decided_dims.get(n, [])]
@@ -994,30 +1198,46 @@ def generate_payload(profile_dict: dict, claims=None) -> dict:
         if st == "review":
             return "Only you can answer this — it's a product-specific detail about your device."
         if n == "MCORE.G.MULTIENDPOINT":
-            return ("Yes — your data model has a Groups cluster on more than "
-                    "one endpoint." if st == "on" else
-                    "No — at most one endpoint in your data model hosts a "
-                    "Groups cluster.")
+            return (
+                "Yes — your data model has a Groups cluster on more than one endpoint."
+                if st == "on"
+                else "No — at most one endpoint in your data model hosts a "
+                "Groups cluster."
+            )
         dims = _dims_phrase(n)
         if st == "on":
-            return f"Yes — determined by {dims}." if dims else "Mandatory for every Matter device."
+            return (
+                f"Yes — determined by {dims}."
+                if dims
+                else "Mandatory for every Matter device."
+            )
         # decided No
         if n.startswith(_BRIDGE_CLIENT_NS) and not device_control_client:
-            return ("No — the device does not control other devices (it has "
-                    "no device-control client role), so it cannot be a client "
-                    "of a bridge or maintain a device list.")
+            return (
+                "No — the device does not control other devices (it has "
+                "no device-control client role), so it cannot be a client "
+                "of a bridge or maintain a device list."
+            )
         if role_denied(n, role_profile):
             return f"No — not applicable for {_ROLE_PHRASE.get(profile.role, profile.role)}."
         area = gated_area(n, role_profile)
         if area == "diagnostic_logs" and not gate_active.get(area):
-            return ("No — the device does not implement the Diagnostic Logs "
-                    "cluster (enable it on the Root Node tab to answer these).")
+            return (
+                "No — the device does not implement the Diagnostic Logs "
+                "cluster (enable it on the Root Node tab to answer these)."
+            )
         if area == "icd" and not gate_active.get(area):
-            return ("No — the device is not an Intermittently Connected Device "
-                    "(enable ICD Management on the Root Node to declare it).")
+            return (
+                "No — the device is not an Intermittently Connected Device "
+                "(enable ICD Management on the Root Node to declare it)."
+            )
         if area and not gate_active.get(area):
             return f"No — the {area.replace('_', ' ')} feature is not enabled."
-        return f"No — determined by {dims}." if dims else "No — not required for this device."
+        return (
+            f"No — determined by {dims}."
+            if dims
+            else "No — not required for this device."
+        )
 
     known = known_item_numbers(version)
 
@@ -1035,13 +1255,14 @@ def generate_payload(profile_dict: dict, claims=None) -> dict:
     # clusters itself). Family condition names come from transport_map.
     _fam_conds: dict[str, set[str]] = {}
     for _t, _e in _tmap.get("transports", {}).items():
-        _fam_conds.setdefault("wifi" if _t.startswith("wifi") else _t,
-                              set()).update(_e.get("conditions", []))
+        _fam_conds.setdefault("wifi" if _t.startswith("wifi") else _t, set()).update(
+            _e.get("conditions", [])
+        )
 
     def _ep_conditions(epid: int) -> frozenset[str]:
         fam = (_iface_families or {}).get(epid)
         if fam is None:
-            return _conditions           # endpoint not tied to an interface
+            return _conditions  # endpoint not tied to an interface
         foreign = set().union(*(c for f, c in _fam_conds.items() if f != fam))
         return frozenset(_conditions - (foreign - _fam_conds.get(fam, set())))
 
@@ -1054,11 +1275,19 @@ def generate_payload(profile_dict: dict, claims=None) -> dict:
             dts = []
             names = list(selection.endpoints[ep.endpoint - 1].device_types)
         dts += [_find_device_type(model, n) for n in names]
-        offers = offered_cluster_sides(model, [d for d in dts if d is not None],
-                                       _ep_conditions(ep.endpoint), _controlled,
-                                       ep.cluster_ids, ep.client_cluster_ids)
-        return {gw: kind for (cid, side), kind in offers.items()
-                if (gw := f"{_cluster_pics.get(cid)}.{side}") in known}
+        offers = offered_cluster_sides(
+            model,
+            [d for d in dts if d is not None],
+            _ep_conditions(ep.endpoint),
+            _controlled,
+            ep.cluster_ids,
+            ep.client_cluster_ids,
+        )
+        return {
+            gw: kind
+            for (cid, side), kind in offers.items()
+            if (gw := f"{_cluster_pics.get(cid)}.{side}") in known
+        }
 
     # Base items with a reveal parent: LargeData rides on Matter-over-TCP.
     _BASE_PARENTS = {"MCORE.IDM.S.LargeData": "MCORE.SC.TCP"}
@@ -1074,19 +1303,34 @@ def generate_payload(profile_dict: dict, claims=None) -> dict:
             base_decided.add(n)
         if st in ("on", "claimed"):
             base_yes.add(n)
-        items.append(row(n, "base", st, group, _mcore_area(n),
-                         parent=_BASE_PARENTS.get(n), why=mcore_why(n, st)))
+        items.append(
+            row(
+                n,
+                "base",
+                st,
+                group,
+                _mcore_area(n),
+                parent=_BASE_PARENTS.get(n),
+                why=mcore_why(n, st),
+            )
+        )
     choice_of = _choice_groups(version)
     statuses_of = _template_statuses(version)
     tabs = [{"id": "base", "label": "Base PICS", "caption": "Node-Wide"}]
     for ep in sorted(endpoints, key=lambda e: e.endpoint):
         tab = str(ep.endpoint)
         if ep.endpoint == 0:
-            tabs.append({"id": tab, "label": "Root Node",
-                         "caption": "Endpoint 0 clusters"})
+            tabs.append(
+                {"id": tab, "label": "Root Node", "caption": "Endpoint 0 clusters"}
+            )
         else:
-            tabs.append({"id": tab, "label": ep.device_type_name,
-                         "caption": f"Endpoint {ep.endpoint} clusters"})
+            tabs.append(
+                {
+                    "id": tab,
+                    "label": ep.device_type_name,
+                    "caption": f"Endpoint {ep.endpoint} clusters",
+                }
+            )
         # "Selected by the tool" = the claim-free baseline run. Everything the
         # user's claims add (feature codes, gateway sides + their spec-mandated
         # elements) is pre-filled Yes but stays in Manual selection.
@@ -1141,7 +1385,7 @@ def generate_payload(profile_dict: dict, claims=None) -> dict:
             """Humanized cond when the template decides this item is a No."""
             statuses = statuses_of.get(code, ())
             if not statuses or any(not cond for _, cond in statuses):
-                return None            # an unconditional status: a real option
+                return None  # an unconditional status: a real option
             atoms: set[str] = set()
             for _, cond in statuses:
                 try:
@@ -1149,26 +1393,41 @@ def generate_payload(profile_dict: dict, claims=None) -> dict:
                 except boolexpr.ExpressionSyntaxError:
                     return None
                 if boolexpr.evaluate(expr, lambda a: a in resolve_yes):
-                    return None        # a status applies: not inapplicable
+                    return None  # a status applies: not inapplicable
                 atoms |= _expr_atoms(expr)
             if atoms - settled:
-                return None            # gated by something still claimable
-            return _humanize_cond(" or ".join(c for _, c in statuses),
-                                  model, prefix_map)
+                return None  # gated by something still claimable
+            return _humanize_cond(
+                " or ".join(c for _, c in statuses), model, prefix_map
+            )
 
         def decided_no_row(code: str, cluster: str) -> dict | None:
             """A decided-No row when either spec rule settles this item."""
             chosen = _excluded_by_choice(code)
             if chosen:
                 name = _short_name(chosen, model, prefix_map) or chosen
-                return row(code, tab, "off", "decided", cluster, needs_you=False,
-                           why=f"No — the spec allows exactly one of these "
-                               f"features, and {name} is already selected.")
+                return row(
+                    code,
+                    tab,
+                    "off",
+                    "decided",
+                    cluster,
+                    needs_you=False,
+                    why=f"No — the spec allows exactly one of these "
+                    f"features, and {name} is already selected.",
+                )
             cond_text = _template_inapplicable(code)
             if cond_text:
-                return row(code, tab, "off", "decided", cluster, needs_you=False,
-                           why=f"No — applies only when {cond_text}; your "
-                               f"inputs rule that out.")
+                return row(
+                    code,
+                    tab,
+                    "off",
+                    "decided",
+                    cluster,
+                    needs_you=False,
+                    why=f"No — applies only when {cond_text}; your "
+                    f"inputs rule that out.",
+                )
             return None
 
         seen: set[str] = set()
@@ -1196,7 +1455,7 @@ def generate_payload(profile_dict: dict, claims=None) -> dict:
                 parts = code.split(".")
                 if len(parts) > 1 and parts[1] == "C":
                     if len(parts) == 2:
-                        client_rows.insert(0, (code, st, None))   # gateway first
+                        client_rows.insert(0, (code, st, None))  # gateway first
                     else:
                         client_rows.append((code, st, parent))
                 elif len(parts) == 3 and _FEATURE_TOKEN_RE.fullmatch(parts[2]):
@@ -1227,10 +1486,12 @@ def generate_payload(profile_dict: dict, claims=None) -> dict:
                 # so it is never asked. (Compound conformance like "Mandatory if
                 # CC.S AND CC.S.F01 ; Optional if CC.S" still counts as optional --
                 # the substring test keeps it a question.)
-                live = (claimable_conf(code)
-                        and (parent is None or parent in enabled_here))
-                items.append(row(code, tab, st, "manual", cluster, parent,
-                                 needs_you=live))
+                live = claimable_conf(code) and (
+                    parent is None or parent in enabled_here
+                )
+                items.append(
+                    row(code, tab, st, "manual", cluster, parent, needs_you=live)
+                )
 
         # Spec-optional clusters for this endpoint: the device type LISTS the
         # cluster but the baseline did not mandate it. The side's gateway
@@ -1242,15 +1503,15 @@ def generate_payload(profile_dict: dict, claims=None) -> dict:
         # device type stays out.
         _OFFER_WHY = {
             "optional": "The spec lists this cluster as optional for this "
-                        "endpoint's device type — enable it if your product "
-                        "implements it.",
+            "endpoint's device type — enable it if your product "
+            "implements it.",
             "product_fact": "Required only for products with this capability "
-                            "(see the conformance) — only you can answer.",
+            "(see the conformance) — only you can answer.",
         }
         for tname, entries in _template_entries(version):
             t_codes = [c for c, _ in entries]
             if tool_here.intersection(t_codes):
-                continue                       # already rendered above
+                continue  # already rendered above
             if not any(g in t_codes for g in offered_gws):
                 continue
             cluster = _cluster_label(tname)
@@ -1264,11 +1525,11 @@ def generate_payload(profile_dict: dict, claims=None) -> dict:
                     continue
                 gw = f"{parts[0]}.{parts[1]}"
                 if gw not in offered_gws:
-                    continue                   # side/prefix not offered here
+                    continue  # side/prefix not offered here
                 seen.add(code)
                 st = "on" if code in claim_here else "off"
                 bucket = srv if parts[1] == "S" else cli
-                if len(parts) == 2:            # the gateway leads its block
+                if len(parts) == 2:  # the gateway leads its block
                     bucket.insert(0, (code, st, None, offered_gws[gw]))
                 else:
                     bucket.append((code, st, _parent_of(code, cond) or gw, None))
@@ -1281,11 +1542,22 @@ def generate_payload(profile_dict: dict, claims=None) -> dict:
                     if decided:
                         items.append(dict(decided, opt_cluster=True))
                         continue
-                live = (kind is not None
-                        or (claimable_conf(code) and parent in enabled_here))
-                items.append(row(code, tab, st, "manual", cluster, parent,
-                                 why=_OFFER_WHY[kind] if kind else None,
-                                 needs_you=live, opt_cluster=True))
+                live = kind is not None or (
+                    claimable_conf(code) and parent in enabled_here
+                )
+                items.append(
+                    row(
+                        code,
+                        tab,
+                        st,
+                        "manual",
+                        cluster,
+                        parent,
+                        why=_OFFER_WHY[kind] if kind else None,
+                        needs_you=live,
+                        opt_cluster=True,
+                    )
+                )
 
     _annotate_mirrors(items)
     counts = {"yes": 0, "no": 0, "needs_you": 0}
@@ -1299,7 +1571,8 @@ def generate_payload(profile_dict: dict, claims=None) -> dict:
         "im_role": "IM client + server" if im_client else "IM server only",
         "im_client": im_client,
         "im_client_derived": derived_im,
-        "im_client_overridden": profile.im_client is not None and profile.im_client != derived_im,
+        "im_client_overridden": profile.im_client is not None
+        and profile.im_client != derived_im,
         # Echo the exact profile that produced this payload so export/validation
         # always work on the same snapshot the user is looking at.
         "profile": profile_dict,
@@ -1346,16 +1619,23 @@ def export_pics_files(profile_dict: dict, enabled_codes) -> dict:
     profile = selection.profile
     app_endpoints = [ep.device_types for ep in selection.endpoints]
     by_tab = enabled_codes if isinstance(enabled_codes, dict) else None
-    flat = ([c for codes in by_tab.values() for c in codes] if by_tab
-            else list(enabled_codes))
-    iface_seeds, iface_exclude, _ = interface_plan(_model(version), selection,
-                                                   load_transport_map())
+    flat = (
+        [c for codes in by_tab.values() for c in codes]
+        if by_tab
+        else list(enabled_codes)
+    )
+    iface_seeds, iface_exclude, _ = interface_plan(
+        _model(version), selection, load_transport_map()
+    )
     extra_seeds = _feature_seeds_from_codes(version, flat)
-    endpoints = generate_cluster_pics(_model(version), profile,
-                                      app_endpoints=app_endpoints,
-                                      extra_feature_seeds=extra_seeds,
-                                      per_endpoint_feature_seeds=iface_seeds,
-                                      exclude_node_seed_clusters=iface_exclude)
+    endpoints = generate_cluster_pics(
+        _model(version),
+        profile,
+        app_endpoints=app_endpoints,
+        extra_feature_seeds=extra_seeds,
+        per_endpoint_feature_seeds=iface_seeds,
+        exclude_node_seed_clusters=iface_exclude,
+    )
     app_ep = next((e.endpoint for e in endpoints if e.endpoint != 0), 1)
 
     by_ep: dict[int, set] = defaultdict(set)
@@ -1416,12 +1696,12 @@ def generate_scaffold_files(profile_dict: dict, claims_by_tab=None) -> dict:
     if isinstance(claims_by_tab, dict):
         for tab_id, codes in claims_by_tab.items():
             if not str(tab_id).isdigit():
-                continue                       # "base"/MCORE: node-level, not an endpoint
+                continue  # "base"/MCORE: node-level, not an endpoint
             cluster_codes = [c for c in codes if not c.startswith("MCORE.")]
-            if str(tab_id) == "0":             # root endpoint: optional Root Node clusters
+            if str(tab_id) == "0":  # root endpoint: optional Root Node clusters
                 root_claims += cluster_codes
                 continue
-            idx = int(tab_id) - 1              # app tabs are 1-based (EP1..EPN)
+            idx = int(tab_id) - 1  # app tabs are 1-based (EP1..EPN)
             if 0 <= idx < len(selection.endpoints):
                 ep = selection.endpoints[idx]
                 ep.claims = list(ep.claims) + cluster_codes
@@ -1429,60 +1709,83 @@ def generate_scaffold_files(profile_dict: dict, claims_by_tab=None) -> dict:
 
     # elements omitted from the code (no esp_matter signature) -> exclude from the
     # "added" recap so the chips reflect only what the code actually emits.
-    _omitted = {(u["endpoint"], u["cluster"], u["name"], u["kind"]) for u in result.unresolved}
+    _omitted = {
+        (u["endpoint"], u["cluster"], u["name"], u["kind"]) for u in result.unresolved
+    }
 
     from .generate.codegen.targets.esp_matter.target import root_side_disposition
 
     def _optional_items(e):
         """Structured recap of the optional bits the code ADDS (resolved only)."""
-        raw = [{"cluster": f.cluster_name, "name": f.feature_name, "kind": "feature"}
-               for f in e.optional_features]
-        raw += [{"cluster": a.cluster_name, "name": a.name, "kind": "attribute"}
-                for a in e.optional_attributes]
-        raw += [{"cluster": c.cluster_name, "name": c.name, "kind": "command"}
-                for c in e.optional_commands]
-        raw += [{"cluster": v.cluster_name, "name": v.name, "kind": "event"}
-                for v in e.optional_events]
+        raw = [
+            {"cluster": f.cluster_name, "name": f.feature_name, "kind": "feature"}
+            for f in e.optional_features
+        ]
+        raw += [
+            {"cluster": a.cluster_name, "name": a.name, "kind": "attribute"}
+            for a in e.optional_attributes
+        ]
+        raw += [
+            {"cluster": c.cluster_name, "name": c.name, "kind": "command"}
+            for c in e.optional_commands
+        ]
+        raw += [
+            {"cluster": v.cluster_name, "name": v.name, "kind": "event"}
+            for v in e.optional_events
+        ]
         # root clusters node::create covers (default / sdkconfig) are explained
         # as comments in the code, not added by it -> keep them off the recap
-        raw += [{"cluster": s.cluster_name, "name": s.side_text, "kind": "cluster"}
-                for s in e.optional_sides
-                if not (e.endpoint == 0 and root_side_disposition(s.cluster_namespace))]
-        return [it for it in raw
-                if (e.endpoint, it["cluster"], it["name"], it["kind"]) not in _omitted]
+        raw += [
+            {"cluster": s.cluster_name, "name": s.side_text, "kind": "cluster"}
+            for s in e.optional_sides
+            if not (e.endpoint == 0 and root_side_disposition(s.cluster_namespace))
+        ]
+        return [
+            it
+            for it in raw
+            if (e.endpoint, it["cluster"], it["name"], it["kind"]) not in _omitted
+        ]
 
     return {
         "snippet": result.snippet,
         "file": "app_data_model.cpp",
-        "exact": result.exact,                    # a knowledge source was consulted
+        "exact": result.exact,  # a knowledge source was consulted
         "knowledge_source": result.knowledge_source,
         # selected optional elements with no matching esp_matter function: omitted
         # from the code (kept compile-ready), listed here to add manually.
         "unresolved": result.unresolved,
         "endpoints": [
-            {"endpoint": e.endpoint, "device_types": e.device_types,
-             "label": " + ".join(e.device_types),   # device type(s) on this endpoint
-             # structured recap the UI renders as chips, grouped per endpoint
-             "optional": _optional_items(e),
-             # flat string forms kept for the CLI / back-compat
-             "features": [f"{f.cluster_name} / {f.feature_name}"
-                          for f in e.optional_features],
-             "attributes": [f"{a.cluster_name} / {a.name}" for a in e.optional_attributes],
-             "commands": [f"{c.cluster_name} / {c.name}" for c in e.optional_commands],
-             "events": [f"{v.cluster_name} / {v.name}" for v in e.optional_events],
-             "sides": [f"{s.cluster_name} ({s.side_text})" for s in e.optional_sides]
-                      + list(e.unknown_sides)}
-            for e in result.endpoints],
+            {
+                "endpoint": e.endpoint,
+                "device_types": e.device_types,
+                "label": " + ".join(e.device_types),  # device type(s) on this endpoint
+                # structured recap the UI renders as chips, grouped per endpoint
+                "optional": _optional_items(e),
+                # flat string forms kept for the CLI / back-compat
+                "features": [
+                    f"{f.cluster_name} / {f.feature_name}" for f in e.optional_features
+                ],
+                "attributes": [
+                    f"{a.cluster_name} / {a.name}" for a in e.optional_attributes
+                ],
+                "commands": [
+                    f"{c.cluster_name} / {c.name}" for c in e.optional_commands
+                ],
+                "events": [f"{v.cluster_name} / {v.name}" for v in e.optional_events],
+                "sides": [f"{s.cluster_name} ({s.side_text})" for s in e.optional_sides]
+                + list(e.unknown_sides),
+            }
+            for e in result.endpoints
+        ],
     }
 
 
 # Items we deliberately claim/leave despite a known CSA template gap. They
 # surface as WARNINGS with an explanation, never as blocking errors.
 _KNOWN_TEMPLATE_QUIRKS = {
-    "MCORE.DD.STANDARD_COMM_FLOW":
-        "claimed deliberately: the template only defines 'M if 11_MANUAL_PC' "
-        "(commissioner-side) with no plain O status; DD test selection keys "
-        "off this item. The CSA validator shows the same notice.",
+    "MCORE.DD.STANDARD_COMM_FLOW": "claimed deliberately: the template only defines 'M if 11_MANUAL_PC' "  # noqa: E501
+    "(commissioner-side) with no plain O status; DD test selection keys "
+    "off this item. The CSA validator shows the same notice.",
 }
 
 
@@ -1515,8 +1818,11 @@ def validate_selection(profile_dict: dict, enabled_codes) -> list[dict]:
     profile = selection.profile
     app_endpoints = [ep.device_types for ep in selection.endpoints]
     by_tab = enabled_codes if isinstance(enabled_codes, dict) else None
-    flat = set(c for codes in by_tab.values() for c in codes) if by_tab \
+    flat = (
+        set(c for codes in by_tab.values() for c in codes)
+        if by_tab
         else set(enabled_codes)
+    )
     text = _item_text(version)
     known = known_item_numbers(version)
     model = _model(version)
@@ -1528,33 +1834,52 @@ def validate_selection(profile_dict: dict, enabled_codes) -> list[dict]:
         if code in flagged:
             return
         flagged.add(code)
-        cl = model.clusters.get(prefix_map.get(code.split(".")[0])) if "." in code else None
-        problems.append({"code": code,
-                         "question": text.get(code, ("", ""))[0] or code,
-                         # plain-language label + cluster for the dialog; the raw
-                         # code/expression stay available under "technical details".
-                         "name": _short_name(code, model, prefix_map)
-                                 or text.get(code, ("", ""))[0] or code,
-                         "cluster": cl.name if cl else ("Node-wide" if code.startswith("MCORE.") else ""),
-                         "why": why, "severity": severity,
-                         # which endpoint tab to enable it on (the UI's auto-fix
-                         # needs this: the same code lives on several endpoints).
-                         "tab": tab or ("base" if code.startswith("MCORE.") else None)})
+        cl = (
+            model.clusters.get(prefix_map.get(code.split(".")[0]))
+            if "." in code
+            else None
+        )
+        problems.append(
+            {
+                "code": code,
+                "question": text.get(code, ("", ""))[0] or code,
+                # plain-language label + cluster for the dialog; the raw
+                # code/expression stay available under "technical details".
+                "name": _short_name(code, model, prefix_map)
+                or text.get(code, ("", ""))[0]
+                or code,
+                "cluster": cl.name
+                if cl
+                else ("Node-wide" if code.startswith("MCORE.") else ""),
+                "why": why,
+                "severity": severity,
+                # which endpoint tab to enable it on (the UI's auto-fix
+                # needs this: the same code lives on several endpoints).
+                "tab": tab or ("base" if code.startswith("MCORE.") else None),
+            }
+        )
 
     # 1) Engine side: re-run with the user's claims; everything the engine
     #    yields is mandatory for the claimed device.
-    iface_seeds, iface_exclude, iface_families = interface_plan(model, selection,
-                                                                load_transport_map())
+    iface_seeds, iface_exclude, iface_families = interface_plan(
+        model, selection, load_transport_map()
+    )
     extra_seeds = _feature_seeds_from_codes(version, flat)
-    endpoints = generate_cluster_pics(_model(version), profile,
-                                      app_endpoints=app_endpoints,
-                                      extra_feature_seeds=extra_seeds,
-                                      per_endpoint_feature_seeds=iface_seeds,
-                                      exclude_node_seed_clusters=iface_exclude)
+    endpoints = generate_cluster_pics(
+        _model(version),
+        profile,
+        app_endpoints=app_endpoints,
+        extra_feature_seeds=extra_seeds,
+        per_endpoint_feature_seeds=iface_seeds,
+        exclude_node_seed_clusters=iface_exclude,
+    )
     for ep in sorted(endpoints, key=lambda e: e.endpoint):
         for code in sorted((ep.pics & known) - flat):
-            add(code, f"mandatory on endpoint {ep.endpoint} for this device profile",
-                tab=str(ep.endpoint))
+            add(
+                code,
+                f"mandatory on endpoint {ep.endpoint} for this device profile",
+                tab=str(ep.endpoint),
+            )
 
     # 2) Gateway claims: a claimed X.S / X.C mandates its side's elements.
     for gateway, claim_codes in _gateway_claims(version, profile, flat).items():
@@ -1565,24 +1890,33 @@ def validate_selection(profile_dict: dict, enabled_codes) -> list[dict]:
     # 2b) IM-role consistency: a device that claims any client cluster side or
     # sends client commands IS an IM client -- MCORE.IDM.C (and InvokeRequest,
     # when commands are sent) must be claimed with it.
-    client_evidence = sorted(c for c in flat
-                             if not c.startswith("MCORE.")
-                             and (c.split(".")[1:2] == ["C"]))
+    client_evidence = sorted(
+        c for c in flat if not c.startswith("MCORE.") and (c.split(".")[1:2] == ["C"])
+    )
     if client_evidence:
         if "MCORE.IDM.C" not in flat:
-            add("MCORE.IDM.C",
-                f"the device initiates IM requests (you claimed {client_evidence[0]})")
-        if (any(re.search(r"\.C\.C[0-9a-fA-F]{2}\.Tx$", c) for c in client_evidence)
-                and "MCORE.IDM.C.InvokeRequest" not in flat):
-            add("MCORE.IDM.C.InvokeRequest",
-                "the device sends client commands (Tx), which are Invoke requests")
+            add(
+                "MCORE.IDM.C",
+                f"the device initiates IM requests (you claimed {client_evidence[0]})",
+            )
+        if (
+            any(re.search(r"\.C\.C[0-9a-fA-F]{2}\.Tx$", c) for c in client_evidence)
+            and "MCORE.IDM.C.InvokeRequest" not in flat
+        ):
+            add(
+                "MCORE.IDM.C.InvokeRequest",
+                "the device sends client commands (Tx), which are Invoke requests",
+            )
 
     # 2c) exactly-one choice groups (spec conformance): the O.a marker means
     #    pick exactly one -- two enabled members is a violation. Runs before
     #    the template sweep so the specific reason wins the per-code slot.
     choice_of = _choice_groups(version)
-    _choice_scopes = ([(t, set(codes)) for t, codes in by_tab.items() if t != "base"]
-                      if by_tab else [("all", set(flat))])
+    _choice_scopes = (
+        [(t, set(codes)) for t, codes in by_tab.items() if t != "base"]
+        if by_tab
+        else [("all", set(flat))]
+    )
     for scope_name, scope_enabled in _choice_scopes:
         checked: set[tuple] = set()
         for code in sorted(scope_enabled):
@@ -1592,12 +1926,14 @@ def validate_selection(profile_dict: dict, enabled_codes) -> list[dict]:
             checked.add(members)
             on = [m for m in members if m in scope_enabled]
             if len(on) > 1:
-                names = ", ".join(_short_name(m, model, prefix_map) or m
-                                  for m in on)
+                names = ", ".join(_short_name(m, model, prefix_map) or m for m in on)
                 for m in on:
-                    add(m, "the spec allows exactly ONE feature of this group, "
-                           f"but these are enabled together: {names}",
-                        tab=scope_name)
+                    add(
+                        m,
+                        "the spec allows exactly ONE feature of this group, "
+                        f"but these are enabled together: {names}",
+                        tab=scope_name,
+                    )
 
     # 3) Template sweep (what the CSA validator checks): per exported scope,
     #    evaluate every item's effective status. Runs to a fixpoint so newly
@@ -1636,8 +1972,11 @@ def validate_selection(profile_dict: dict, enabled_codes) -> list[dict]:
         scopes = [("all", set(flat))]
 
     for scope_name, scope_enabled in scopes:
-        scope_templates = [name for name, items in parsed.items()
-                           if any(it.number in scope_enabled for it in items)]
+        scope_templates = [
+            name
+            for name, items in parsed.items()
+            if any(it.number in scope_enabled for it in items)
+        ]
         working = set(scope_enabled)
         changed = True
         while changed:
@@ -1649,8 +1988,13 @@ def validate_selection(profile_dict: dict, enabled_codes) -> list[dict]:
                         continue
                     if _effective_status(it.statuses, resolve) == "M":
                         cond_text = " ; ".join(c for _, c in it.statuses if c)
-                        why = ("Required when " + _humanize_cond(cond_text, model, prefix_map) + "."
-                               if cond_text else "Required by the spec for this configuration.")
+                        why = (
+                            "Required when "
+                            + _humanize_cond(cond_text, model, prefix_map)
+                            + "."
+                            if cond_text
+                            else "Required by the spec for this configuration."
+                        )
                         add(it.number, why, tab=scope_name)
                         working.add(it.number)
                         changed = True
@@ -1662,22 +2006,31 @@ def validate_selection(profile_dict: dict, enabled_codes) -> list[dict]:
                     continue
                 eff = _effective_status(it.statuses, resolve)
                 if eff == "X":
-                    add(it.number, "PROHIBITED by the spec for this configuration",
-                        tab=scope_name)
+                    add(
+                        it.number,
+                        "PROHIBITED by the spec for this configuration",
+                        tab=scope_name,
+                    )
                 elif eff is None:
                     quirk = _KNOWN_TEMPLATE_QUIRKS.get(it.number)
-                    add(it.number,
-                        quirk or "enabled, but no status condition applies to "
-                                 "this configuration (the validator will note it)",
-                        severity="warning", tab=scope_name)
+                    add(
+                        it.number,
+                        quirk
+                        or "enabled, but no status condition applies to "
+                        "this configuration (the validator will note it)",
+                        severity="warning",
+                        tab=scope_name,
+                    )
     return problems
 
 
 # --- JSON string wrappers (Pyodide-friendly: no proxy juggling in JS) --------
 
+
 def generate_payload_json(profile_json: str, claims_json: str = "[]") -> str:
-    return json.dumps(generate_payload(json.loads(profile_json),
-                                       json.loads(claims_json)))
+    return json.dumps(
+        generate_payload(json.loads(profile_json), json.loads(claims_json))
+    )
 
 
 def list_device_types_json(version: str = "1.6") -> str:
@@ -1689,13 +2042,18 @@ def list_versions_json() -> str:
 
 
 def export_pics_files_json(profile_json: str, enabled_json: str = "[]") -> str:
-    return json.dumps(export_pics_files(json.loads(profile_json), json.loads(enabled_json)))
+    return json.dumps(
+        export_pics_files(json.loads(profile_json), json.loads(enabled_json))
+    )
 
 
 def validate_selection_json(profile_json: str, enabled_json: str = "[]") -> str:
-    return json.dumps(validate_selection(json.loads(profile_json), json.loads(enabled_json)))
+    return json.dumps(
+        validate_selection(json.loads(profile_json), json.loads(enabled_json))
+    )
 
 
 def generate_scaffold_json(profile_json: str, claims_json: str = "{}") -> str:
-    return json.dumps(generate_scaffold_files(json.loads(profile_json),
-                                              json.loads(claims_json)))
+    return json.dumps(
+        generate_scaffold_files(json.loads(profile_json), json.loads(claims_json))
+    )

@@ -39,6 +39,7 @@ from . import webapp
 
 # ---- discovery -----------------------------------------------------------------
 
+
 def list_versions() -> list[str]:
     """Matter spec versions this tool can generate for."""
     return webapp.list_versions()
@@ -52,16 +53,19 @@ def list_device_types(version: str = "1.6") -> list[str]:
 def list_targets() -> list[str]:
     """Code-generation output targets (e.g. ``["esp_matter"]``)."""
     from .generate.codegen import list_targets as _list_targets
+
     return _list_targets()
 
 
 def known_codes(version: str = "1.6") -> frozenset[str]:
     """Every claimable PICS item number for ``version`` (template-backed)."""
     from .generate.template_io import known_item_numbers
+
     return known_item_numbers(version)
 
 
 # ---- helpers -------------------------------------------------------------------
+
 
 def _with_claims(selection: dict, selected: dict | None) -> dict:
     """A copy of ``selection`` carrying the human's optional answers as the
@@ -83,6 +87,7 @@ def _enabled_by_tab(payload: dict) -> dict:
 
 
 # ---- the human-in-the-loop questions surface -----------------------------------
+
 
 def selection_questions(selection: dict, selected: dict | None = None) -> dict:
     """Optional items a *human* must decide for this selection.
@@ -123,20 +128,29 @@ def selection_questions(selection: dict, selected: dict | None = None) -> dict:
     ]
     summary = {
         "spec_version": payload["spec_version"],
-        "endpoints": [{"tab": t["id"], "label": t["label"], "caption": t["caption"]}
-                      for t in payload["tabs"]],
+        "endpoints": [
+            {"tab": t["id"], "label": t["label"], "caption": t["caption"]}
+            for t in payload["tabs"]
+        ],
         # to_decide counts DECISIONS (mirrored twins fold into their lead), so
         # it always equals len(questions)
-        "counts": {"auto_included": payload["counts"]["yes"],
-                   "to_decide": len(questions)},
+        "counts": {
+            "auto_included": payload["counts"]["yes"],
+            "to_decide": len(questions),
+        },
     }
     return {"summary": summary, "questions": questions}
 
 
 # ---- generate ------------------------------------------------------------------
 
-def generate(selection: dict, selected: dict | None = None,
-             target: str = "esp_matter", goal: str = "both") -> dict:
+
+def generate(
+    selection: dict,
+    selected: dict | None = None,
+    target: str = "esp_matter",
+    goal: str = "both",
+) -> dict:
     """Produce the PICS files and/or the data-model code for a finished selection.
 
     ``selected`` is the human's optional Yes answers (``{tab:[codes]}``). ``goal``
@@ -155,8 +169,13 @@ def generate(selection: dict, selected: dict | None = None,
     selected = selected or {}
     selection = selection or {}
 
-    out: dict = {"target": target, "goal": goal,
-                 "pics_files": {}, "code": None, "problems": []}
+    out: dict = {
+        "target": target,
+        "goal": goal,
+        "pics_files": {},
+        "code": None,
+        "problems": [],
+    }
     if goal in ("pics", "both"):
         # Full Yes set (mandatory + the human's optional choices) drives PICS + the
         # spec-check. Base.xml/MCORE answers matter here (they ARE the node PICS).
@@ -178,12 +197,17 @@ def generate(selection: dict, selected: dict | None = None,
 # the UI and MCP, goes through this one facade. Both APIs bottom out in the same
 # engines (``generate_cluster_pics`` / ``compute_mcore_pics`` / ``generate_scaffold``).
 
+
 def pics_for_selection(selection, model, output_dir: str):
     """Write per-endpoint PICS XML for a resolved ``Selection``; return the summary."""
     from .generate.selection import build_endpoints_enabled
     from .generate.writer import write_pics
-    return write_pics(selection.profile.spec_version,
-                      build_endpoints_enabled(model, selection), output_dir)
+
+    return write_pics(
+        selection.profile.spec_version,
+        build_endpoints_enabled(model, selection),
+        output_dir,
+    )
 
 
 def scaffold_for_selection(selection, model, output_dir=None, knowledge=None):
@@ -193,4 +217,5 @@ def scaffold_for_selection(selection, model, output_dir=None, knowledge=None):
     bundled signatures; ``None`` uses the bundled/nearest map for the version.
     """
     from .generate.scaffold import generate_scaffold
+
     return generate_scaffold(selection, model, output_dir, knowledge=knowledge)

@@ -26,14 +26,25 @@ from pathlib import Path
 
 from ..codegen.from_pics import build_plan
 from ..codegen.targets.esp_matter.target import (  # noqa: F401  (re-exported)
-    DeviceTypeInfo, EndpointScaffold, EspMatterTarget, OptionalElem,
-    OptionalFeature, OptionalSide, ScaffoldResult)
+    DeviceTypeInfo,
+    EndpointScaffold,
+    EspMatterTarget,
+    OptionalElem,
+    OptionalFeature,
+    OptionalSide,
+    ScaffoldResult,
+)
 
 _TARGET = EspMatterTarget()
 
 
-def generate_scaffold(selection, model, output_dir: str | Path | None = None,
-                      knowledge=None, root_claims=None) -> ScaffoldResult:
+def generate_scaffold(
+    selection,
+    model,
+    output_dir: str | Path | None = None,
+    knowledge=None,
+    root_claims=None,
+) -> ScaffoldResult:
     """Build the esp-matter data-model construction snippet for ``selection``.
 
     ``selection`` is a :class:`pics_tool.generate.selection.Selection`. If
@@ -60,11 +71,21 @@ def generate_scaffold(selection, model, output_dir: str | Path | None = None,
         written = str(dst)
 
     return ScaffoldResult(
-        snippet=snippet, file=written, endpoints=endpoints,
+        snippet=snippet,
+        file=written,
+        endpoints=endpoints,
         exact=knowledge is not None,
         knowledge_source=getattr(knowledge, "source_label", None) or "none",
-        unresolved=unresolved)
+        unresolved=unresolved,
+    )
 
 
-__all__ = ["generate_scaffold", "ScaffoldResult", "EndpointScaffold", "DeviceTypeInfo",
-           "OptionalFeature", "OptionalElem", "OptionalSide"]
+__all__ = [
+    "generate_scaffold",
+    "ScaffoldResult",
+    "EndpointScaffold",
+    "DeviceTypeInfo",
+    "OptionalFeature",
+    "OptionalElem",
+    "OptionalSide",
+]

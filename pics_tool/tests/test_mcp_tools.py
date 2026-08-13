@@ -43,8 +43,12 @@ SEL = {
 
 
 def _support(code: str, xml: str):
-    m = re.search(rf"<itemNumber>{re.escape(code)}</itemNumber>.*?"
-                  rf"<support>(true|false)</support>", xml, re.S)
+    m = re.search(
+        rf"<itemNumber>{re.escape(code)}</itemNumber>.*?"
+        rf"<support>(true|false)</support>",
+        xml,
+        re.S,
+    )
     return m and m.group(1)
 
 
@@ -55,8 +59,9 @@ def test_discovery_paths_return_data_not_exceptions():
     assert "device_types" in r and "Extended Color Light" in r["device_types"]
     r = baseline({"spec_version": "9.9"})
     assert "versions" in r
-    r = baseline({"spec_version": "1.6",
-                  "endpoints": [{"device_types": ["Colour Light"]}]})
+    r = baseline(
+        {"spec_version": "1.6", "endpoints": [{"device_types": ["Colour Light"]}]}
+    )
     assert "Colour Light" in r["error"] and "device_types" in r
 
 
@@ -69,7 +74,7 @@ def test_missing_version_instructs_agent_to_ask_not_default():
     # never nudge the agent toward a default
     assert "latest" in r["action"].lower()  # "...not even the latest..."
 
-    r = baseline({"spec_version": "1.7"})   # plausible-but-unsupported
+    r = baseline({"spec_version": "1.7"})  # plausible-but-unsupported
     assert "1.7" in r["error"] and "ASK" in r["action"] and r["versions"]
 
 
@@ -78,11 +83,14 @@ def test_device_type_not_in_version_is_rejected_with_valid_list():
     one is rejected, with the version's real device types + an ask-the-user
     instruction (no silent substitution)."""
     from pics_tool import service
-    newer = set(service.list_device_types("1.6")) - set(service.list_device_types("1.4"))
+
+    newer = set(service.list_device_types("1.6")) - set(
+        service.list_device_types("1.4")
+    )
     dt = sorted(newer)[0]  # e.g. "Audio Doorbell"
     r = baseline({"spec_version": "1.4", "endpoints": [{"device_types": [dt]}]})
     assert dt in r["error"] and "1.4" in r["error"]
-    assert dt not in r["device_types"]          # the real 1.4 list, without it
+    assert dt not in r["device_types"]  # the real 1.4 list, without it
     assert "ASK THE USER" in r["action"]
 
 
@@ -99,19 +107,25 @@ def test_baseline_is_complete_and_lists_optional_choices():
     for g in oc["groups"]:
         for cl in g["clusters"]:
             for c in cl["choices"]:
-                assert c["code"] and c["label"] and c["priority"] in ("primary", "secondary")
+                assert (
+                    c["code"]
+                    and c["label"]
+                    and c["priority"] in ("primary", "secondary")
+                )
 
 
 def test_apply_selections_threads_claims_and_consequences():
-    r = apply_sel(SEL, {"1": ["CC.S.F00"], "base": ["MCORE.DD.TXT_KEY_VP"]},
-                  goal="pics")
+    r = apply_sel(
+        SEL, {"1": ["CC.S.F00"], "base": ["MCORE.DD.TXT_KEY_VP"]}, goal="pics"
+    )
     assert r["ignored_unknown_codes"] == []
-    ep1 = next(x for p, x in r["pics_files"].items()
-               if "endpoint1" in p and "Color" in p)
+    ep1 = next(
+        x for p, x in r["pics_files"].items() if "endpoint1" in p and "Color" in p
+    )
     assert _support("CC.S.F00", ep1) == "true"
-    assert _support("CC.S.A0000", ep1) == "true"   # CurrentHue: F00 consequence
+    assert _support("CC.S.A0000", ep1) == "true"  # CurrentHue: F00 consequence
     base_xml = next(x for p, x in r["pics_files"].items() if "Base" in p)
-    assert _support("MCORE.SC.VP_KEY", base_xml) == "true"   # mirrored twin
+    assert _support("MCORE.SC.VP_KEY", base_xml) == "true"  # mirrored twin
 
 
 def test_apply_selections_guards():

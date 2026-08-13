@@ -68,12 +68,18 @@ class Attribute:
 
     @classmethod
     def from_json(cls, d: dict) -> "Attribute":
-        return cls(id=d["id"], name=d["name"],
-                   conformance=conformance_from_json(d["conformance"]))
+        return cls(
+            id=d["id"],
+            name=d["name"],
+            conformance=conformance_from_json(d["conformance"]),
+        )
 
     def to_json(self) -> dict:
-        return {"id": self.id, "name": self.name,
-                "conformance": conformance_to_json(self.conformance)}
+        return {
+            "id": self.id,
+            "name": self.name,
+            "conformance": conformance_to_json(self.conformance),
+        }
 
 
 @dataclass
@@ -84,12 +90,18 @@ class Command:
 
     @classmethod
     def from_json(cls, d: dict) -> "Command":
-        return cls(id=d["id"], name=d["name"],
-                   conformance=conformance_from_json(d["conformance"]))
+        return cls(
+            id=d["id"],
+            name=d["name"],
+            conformance=conformance_from_json(d["conformance"]),
+        )
 
     def to_json(self) -> dict:
-        return {"id": self.id, "name": self.name,
-                "conformance": conformance_to_json(self.conformance)}
+        return {
+            "id": self.id,
+            "name": self.name,
+            "conformance": conformance_to_json(self.conformance),
+        }
 
 
 @dataclass
@@ -101,12 +113,19 @@ class Event:
 
     @classmethod
     def from_json(cls, d: dict) -> "Event":
-        return cls(id=d["id"], name=d["name"], priority=d.get("priority"),
-                   conformance=conformance_from_json(d["conformance"]))
+        return cls(
+            id=d["id"],
+            name=d["name"],
+            priority=d.get("priority"),
+            conformance=conformance_from_json(d["conformance"]),
+        )
 
     def to_json(self) -> dict:
-        out: dict = {"id": self.id, "name": self.name,
-                     "conformance": conformance_to_json(self.conformance)}
+        out: dict = {
+            "id": self.id,
+            "name": self.name,
+            "conformance": conformance_to_json(self.conformance),
+        }
         if self.priority is not None:
             out["priority"] = self.priority
         return out
@@ -139,12 +158,20 @@ class Cluster:
             name=d["name"],
             pics=d.get("pics", ""),
             revision=d["revision"],
-            features={int(k): Feature.from_json(v) for k, v in d.get("features", {}).items()},
-            attributes={k: Attribute.from_json(v) for k, v in d.get("attributes", {}).items()},
-            accepted_commands={k: Command.from_json(v)
-                               for k, v in d.get("accepted_commands", {}).items()},
-            generated_commands={k: Command.from_json(v)
-                                for k, v in d.get("generated_commands", {}).items()},
+            features={
+                int(k): Feature.from_json(v) for k, v in d.get("features", {}).items()
+            },
+            attributes={
+                k: Attribute.from_json(v) for k, v in d.get("attributes", {}).items()
+            },
+            accepted_commands={
+                k: Command.from_json(v)
+                for k, v in d.get("accepted_commands", {}).items()
+            },
+            generated_commands={
+                k: Command.from_json(v)
+                for k, v in d.get("generated_commands", {}).items()
+            },
             events={k: Event.from_json(v) for k, v in d.get("events", {}).items()},
         )
 
@@ -179,12 +206,18 @@ class ClusterRequirement:
             id=d["id"],
             name=d["name"],
             conformance=conformance_from_json(d["conformance"]),
-            feature_overrides={int(k): conformance_from_json(v["conformance"])
-                               for k, v in d.get("feature_overrides", {}).items()},
-            attribute_overrides={k: conformance_from_json(v["conformance"])
-                                 for k, v in d.get("attribute_overrides", {}).items()},
-            command_overrides={k: conformance_from_json(v["conformance"])
-                               for k, v in d.get("command_overrides", {}).items()},
+            feature_overrides={
+                int(k): conformance_from_json(v["conformance"])
+                for k, v in d.get("feature_overrides", {}).items()
+            },
+            attribute_overrides={
+                k: conformance_from_json(v["conformance"])
+                for k, v in d.get("attribute_overrides", {}).items()
+            },
+            command_overrides={
+                k: conformance_from_json(v["conformance"])
+                for k, v in d.get("command_overrides", {}).items()
+            },
         )
 
     def to_json(self) -> dict:
@@ -192,12 +225,18 @@ class ClusterRequirement:
             "id": self.id,
             "name": self.name,
             "conformance": conformance_to_json(self.conformance),
-            "feature_overrides": {str(k): {"conformance": conformance_to_json(v)}
-                                  for k, v in self.feature_overrides.items()},
-            "attribute_overrides": {k: {"conformance": conformance_to_json(v)}
-                                    for k, v in self.attribute_overrides.items()},
-            "command_overrides": {k: {"conformance": conformance_to_json(v)}
-                                  for k, v in self.command_overrides.items()},
+            "feature_overrides": {
+                str(k): {"conformance": conformance_to_json(v)}
+                for k, v in self.feature_overrides.items()
+            },
+            "attribute_overrides": {
+                k: {"conformance": conformance_to_json(v)}
+                for k, v in self.attribute_overrides.items()
+            },
+            "command_overrides": {
+                k: {"conformance": conformance_to_json(v)}
+                for k, v in self.command_overrides.items()
+            },
         }
 
 
@@ -215,10 +254,14 @@ class DeviceType:
             id=d["id"],
             name=d["name"],
             revision=d["revision"],
-            server_clusters={k: ClusterRequirement.from_json(v)
-                             for k, v in d.get("server_clusters", {}).items()},
-            client_clusters={k: ClusterRequirement.from_json(v)
-                             for k, v in d.get("client_clusters", {}).items()},
+            server_clusters={
+                k: ClusterRequirement.from_json(v)
+                for k, v in d.get("server_clusters", {}).items()
+            },
+            client_clusters={
+                k: ClusterRequirement.from_json(v)
+                for k, v in d.get("client_clusters", {}).items()
+            },
         )
 
     def to_json(self) -> dict:
@@ -250,9 +293,12 @@ class DataModel:
             schema_version=d.get("schema_version", SCHEMA_VERSION),
             spec_version=d["spec_version"],
             provenance=d.get("provenance", {}),
-            clusters={k: Cluster.from_json(v) for k, v in d.get("clusters", {}).items()},
-            device_types={k: DeviceType.from_json(v)
-                          for k, v in d.get("device_types", {}).items()},
+            clusters={
+                k: Cluster.from_json(v) for k, v in d.get("clusters", {}).items()
+            },
+            device_types={
+                k: DeviceType.from_json(v) for k, v in d.get("device_types", {}).items()
+            },
             base_device_type=DeviceType.from_json(base) if base else None,
         )
 

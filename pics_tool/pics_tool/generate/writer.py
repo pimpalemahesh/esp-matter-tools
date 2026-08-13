@@ -54,7 +54,9 @@ def _pixits_of(src: Path, enabled: set[str]) -> list[tuple[str, str]]:
     return out
 
 
-def _pixit_checklist(per_endpoint: dict[int, list[tuple[str, list[tuple[str, str]]]]]) -> str:
+def _pixit_checklist(
+    per_endpoint: dict[int, list[tuple[str, list[tuple[str, str]]]]],
+) -> str:
     """Render PIXIT_CHECKLIST.md: the test-bed values only the engineer can fill.
 
     The CSA PICS validator flags every unfilled applicable PIXIT as a warning;
@@ -142,8 +144,9 @@ def write_filled(src: Path, dst: Path, enabled: set[str]) -> int:
     return count
 
 
-def write_pics(version: str, endpoints_enabled: dict[int, set[str]],
-               out_dir: str | Path) -> WriteSummary:
+def write_pics(
+    version: str, endpoints_enabled: dict[int, set[str]], out_dir: str | Path
+) -> WriteSummary:
     """Write filled templates per endpoint into ``out_dir/endpoint<N>/``.
 
     A template is written for an endpoint only if at least one of its items is

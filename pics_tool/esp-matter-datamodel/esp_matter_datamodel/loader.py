@@ -39,7 +39,9 @@ def load(path: str | Path, *, validate: bool = True) -> DataModel:
 
 def load_version(version: str, *, validate: bool = True) -> DataModel:
     """Load a data-model shipped with the package for ``version`` (e.g. "1.6")."""
-    resource = files("esp_matter_datamodel").joinpath(f"datamodels/datamodel_{version}.json")
+    resource = files("esp_matter_datamodel").joinpath(
+        f"datamodels/datamodel_{version}.json"
+    )
     if not resource.is_file():
         raise FileNotFoundError(f"no packaged data model for version {version!r}")
     data = json.loads(resource.read_text(encoding="utf-8"))

@@ -30,10 +30,18 @@ loader = pytest.importorskip("esp_matter_datamodel.loader")
 
 
 def _sel():
-    return Selection.from_dict({
-        "spec_version": "1.6", "transport": ["wifi_2g"],
-        "endpoints": [{"device_types": ["Extended Color Light"],
-                       "claims": ["CC.S.F04", "LVL.S.A0012", "LVL.C"]}]})
+    return Selection.from_dict(
+        {
+            "spec_version": "1.6",
+            "transport": ["wifi_2g"],
+            "endpoints": [
+                {
+                    "device_types": ["Extended Color Light"],
+                    "claims": ["CC.S.F04", "LVL.S.A0012", "LVL.C"],
+                }
+            ],
+        }
+    )
 
 
 def test_registry_lists_esp_matter_target():
@@ -62,7 +70,7 @@ def test_facade_matches_legacy_scaffold():
     sel = _sel()
     out = generate_code(sel, model, target="esp_matter")
     legacy = generate_scaffold(sel, model)
-    assert out.primary == legacy.snippet          # one engine, identical output
+    assert out.primary == legacy.snippet  # one engine, identical output
     assert out.target == "esp_matter" and out.version == "1.6"
     assert out.files and out.files[0].path == "app_data_model.cpp"
     # 1.6 has no released component -> nearest (1.5.1) signatures, still exact.

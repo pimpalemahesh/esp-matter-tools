@@ -26,7 +26,9 @@ def test_evaluate_atoms_and_ops():
     assert boolexpr.evaluate(expr, resolve_set({"A", "B"})) is True
     assert boolexpr.evaluate(expr, resolve_set({"A"})) is True  # not C
     assert boolexpr.evaluate(expr, resolve_set({"B", "C"})) is False  # A missing
-    assert boolexpr.evaluate(expr, resolve_set({"A", "C"})) is False  # B missing, C present
+    assert (
+        boolexpr.evaluate(expr, resolve_set({"A", "C"})) is False
+    )  # B missing, C present
 
 
 def test_evaluate_bool_constants():
@@ -68,9 +70,12 @@ def test_parse_symbol_operators():
 
 def test_parse_dotted_atoms():
     expr = boolexpr.parse("MCORE.ROLE.COMMISSIONER AND MCORE.COM.BLE")
-    assert boolexpr.evaluate(
-        expr, resolve_set({"MCORE.ROLE.COMMISSIONER", "MCORE.COM.BLE"})
-    ) is True
+    assert (
+        boolexpr.evaluate(
+            expr, resolve_set({"MCORE.ROLE.COMMISSIONER", "MCORE.COM.BLE"})
+        )
+        is True
+    )
     assert boolexpr.evaluate(expr, resolve_set({"MCORE.COM.BLE"})) is False
 
 

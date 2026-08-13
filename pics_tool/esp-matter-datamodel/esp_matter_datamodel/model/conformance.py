@@ -203,7 +203,9 @@ def _operand_value(operand: Any, ctx: ConformanceContext) -> int | None:
             return None  # e.g. an attribute value we do not track
 
 
-def _make_resolver(ctx: ConformanceContext, on_unknown: UnknownHandler) -> boolexpr.Resolver:
+def _make_resolver(
+    ctx: ConformanceContext, on_unknown: UnknownHandler
+) -> boolexpr.Resolver:
     def resolve(payload: Any) -> bool:
         match payload:
             case FeatureRef(_, bit):
@@ -242,7 +244,9 @@ def evaluate(
     return _evaluate(conformance, resolve)
 
 
-def _evaluate(conformance: Conformance, resolve: boolexpr.Resolver) -> ConformanceResult:
+def _evaluate(
+    conformance: Conformance, resolve: boolexpr.Resolver
+) -> ConformanceResult:
     match conformance.type:
         case "mandatory":
             if _condition_holds(conformance, resolve):
@@ -325,7 +329,9 @@ def condition_from_json(node: dict) -> Expr:
         case "compare":
             left, right = node["args"]
             return boolexpr.Atom(
-                Compare(node["cmp"], _operand_from_json(left), _operand_from_json(right))
+                Compare(
+                    node["cmp"], _operand_from_json(left), _operand_from_json(right)
+                )
             )
         case "unsupported":
             return boolexpr.Atom(Unsupported(node.get("detail", "")))
@@ -350,8 +356,11 @@ def condition_to_json(expr: Expr) -> dict:
         case boolexpr.Atom(ConditionRef(name)):
             return {"op": "condition", "name": name}
         case boolexpr.Atom(Compare(cmp, left, right)):
-            return {"op": "compare", "cmp": cmp,
-                    "args": [_operand_to_json(left), _operand_to_json(right)]}
+            return {
+                "op": "compare",
+                "cmp": cmp,
+                "args": [_operand_to_json(left), _operand_to_json(right)],
+            }
         case boolexpr.Atom(Unsupported(detail)):
             return {"op": "unsupported", "detail": detail}
         case _:

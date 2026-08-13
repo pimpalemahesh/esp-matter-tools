@@ -81,8 +81,10 @@ def parse_pics_items(path: str | Path) -> list[PicsItem]:
         number_el = pi.find("itemNumber")
         if number_el is None or not (number_el.text and number_el.text.strip()):
             continue
-        statuses = [((st.text or "").strip(), (st.attrib.get("cond", "") or "").strip())
-                    for st in pi.findall("status")]
+        statuses = [
+            ((st.text or "").strip(), (st.attrib.get("cond", "") or "").strip())
+            for st in pi.findall("status")
+        ]
         support_el = pi.find("support")
         support = (support_el.text or "").strip() if support_el is not None else "false"
         items.append(PicsItem(number_el.text.strip(), statuses, support))

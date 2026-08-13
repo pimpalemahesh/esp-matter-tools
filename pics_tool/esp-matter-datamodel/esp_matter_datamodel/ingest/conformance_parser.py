@@ -98,8 +98,11 @@ def find_conformance(element: Element, resolver: Resolver) -> Conformance:
     for child in element:
         if child.tag in _CONFORM_TAGS:
             return _parse_conform(child, resolver)
-    logger.debug("no conformance found in <%s> (%s); defaulting to optional",
-                 element.tag, resolver.context)
+    logger.debug(
+        "no conformance found in <%s> (%s); defaulting to optional",
+        element.tag,
+        resolver.context,
+    )
     return Conformance("optional")
 
 
@@ -161,12 +164,18 @@ def _parse_term(el: Element, resolver: Resolver) -> Expr:
         return boolexpr.Or(tuple(_child_terms(el, resolver)))
     if tag == "notTerm":
         inner = _parse_terms([c for c in el if c.tag in _TERM_TAGS], resolver)
-        return boolexpr.Not(inner if inner is not None else boolexpr.Atom(Unsupported("not:empty")))
+        return boolexpr.Not(
+            inner if inner is not None else boolexpr.Atom(Unsupported("not:empty"))
+        )
     if tag in _CMP_TAGS:
         operands = [c for c in el]
         if len(operands) != 2:
-            logger.warning("comparison %s with %d operands in %s", tag, len(operands),
-                           resolver.context)
+            logger.warning(
+                "comparison %s with %d operands in %s",
+                tag,
+                len(operands),
+                resolver.context,
+            )
             return boolexpr.Atom(Unsupported(f"compare:{tag}"))
         left = _parse_operand(operands[0])
         right = _parse_operand(operands[1])

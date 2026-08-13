@@ -41,18 +41,30 @@ def test_ble_default_ethernet_only_is_false():
 
 def test_ble_explicit_override_respected():
     p = DeviceProfile.from_dict(
-        {"spec_version": "1.6", "device_type": "X", "transport": ["ethernet"],
-         "ble_commissioning": True}
+        {
+            "spec_version": "1.6",
+            "device_type": "X",
+            "transport": ["ethernet"],
+            "ble_commissioning": True,
+        }
     )
     assert p.ble_commissioning is True
 
 
-@pytest.mark.parametrize("bad", [
-    {"spec_version": "1.6", "device_type": "X", "transport": ["zigbee"]},
-    {"spec_version": "1.6", "device_type": "X", "transport": []},
-    {"spec_version": "1.6", "device_type": "X", "transport": ["wifi_2g"], "role": "boss"},
-    {"spec_version": "", "device_type": "X", "transport": ["wifi_2g"]},
-])
+@pytest.mark.parametrize(
+    "bad",
+    [
+        {"spec_version": "1.6", "device_type": "X", "transport": ["zigbee"]},
+        {"spec_version": "1.6", "device_type": "X", "transport": []},
+        {
+            "spec_version": "1.6",
+            "device_type": "X",
+            "transport": ["wifi_2g"],
+            "role": "boss",
+        },
+        {"spec_version": "", "device_type": "X", "transport": ["wifi_2g"]},
+    ],
+)
 def test_invalid_profiles(bad):
     with pytest.raises(ProfileError):
         DeviceProfile.from_dict(bad)
@@ -60,8 +72,12 @@ def test_invalid_profiles(bad):
 
 def test_unknown_keys_go_to_extra():
     p = DeviceProfile.from_dict(
-        {"spec_version": "1.6", "device_type": "X", "transport": ["thread"],
-         "future_flag": 42}
+        {
+            "spec_version": "1.6",
+            "device_type": "X",
+            "transport": ["thread"],
+            "future_flag": 42,
+        }
     )
     assert p.extra == {"future_flag": 42}
 
@@ -92,8 +108,9 @@ def test_multiple_interface_types_accepted_at_profile_level():
     (selection.interface_plan), since only it sees the endpoints."""
     from pics_tool.generate.profile import DeviceProfile
 
-    p = DeviceProfile.from_dict({"spec_version": "1.6", "device_type": "X",
-                                 "transport": ["wifi_2g", "thread"]})
+    p = DeviceProfile.from_dict(
+        {"spec_version": "1.6", "device_type": "X", "transport": ["wifi_2g", "thread"]}
+    )
     assert p.transport == ["wifi_2g", "thread"]
 
 
@@ -101,13 +118,25 @@ def test_icd_mode_validated_and_defaulted():
     from pics_tool.generate.profile import DeviceProfile, ProfileError
     import pytest as _pytest
 
-    p = DeviceProfile.from_dict({"spec_version": "1.6", "device_type": "X",
-                                 "transport": ["thread"], "is_icd": True})
+    p = DeviceProfile.from_dict(
+        {
+            "spec_version": "1.6",
+            "device_type": "X",
+            "transport": ["thread"],
+            "is_icd": True,
+        }
+    )
     assert p.icd_mode == "sit"
     with _pytest.raises(ProfileError):
-        DeviceProfile.from_dict({"spec_version": "1.6", "device_type": "X",
-                                 "transport": ["thread"], "is_icd": True,
-                                 "icd_mode": "bogus"})
+        DeviceProfile.from_dict(
+            {
+                "spec_version": "1.6",
+                "device_type": "X",
+                "transport": ["thread"],
+                "is_icd": True,
+                "icd_mode": "bogus",
+            }
+        )
 
 
 def test_manual_code_aliases_normalize_to_flow_derived_form():
@@ -117,8 +146,13 @@ def test_manual_code_aliases_normalize_to_flow_derived_form():
     from pics_tool.generate.profile import DeviceProfile
 
     base = {"spec_version": "1.6", "device_type": "X", "transport": ["wifi_2g"]}
-    p = DeviceProfile.from_dict(dict(base, commissioning_flow="custom",
-                                     onboarding=["qr", "manual_pairing_code_21"]))
+    p = DeviceProfile.from_dict(
+        dict(
+            base,
+            commissioning_flow="custom",
+            onboarding=["qr", "manual_pairing_code_21"],
+        )
+    )
     assert p.onboarding == ["qr", "manual_pairing_code"]
     p2 = DeviceProfile.from_dict(dict(base, onboarding=["manual_pairing_code_21"]))
     assert p2.onboarding == ["manual_pairing_code"]  # alias ignored, flow governs

@@ -30,7 +30,9 @@ from .ir import ClusterSide, DataModelPlan, ElementRef, EndpointPlan
 # Server-side optional attribute / command / event PICS codes, e.g. "LVL.S.A0012",
 # "LVL.S.C00.Rsp", "DRLK.S.E00". (Features are FEATURE_CODE_RE; sides are GATEWAY_RE.)
 ATTR_CODE_RE = re.compile(r"^(?P<pics>[A-Z0-9_]+)\.S\.A(?P<id>[0-9A-Fa-f]{4})$")
-CMD_CODE_RE = re.compile(r"^(?P<pics>[A-Z0-9_]+)\.S\.C(?P<id>[0-9A-Fa-f]{2})(?:\.(?:Rsp|Tx))?$")
+CMD_CODE_RE = re.compile(
+    r"^(?P<pics>[A-Z0-9_]+)\.S\.C(?P<id>[0-9A-Fa-f]{2})(?:\.(?:Rsp|Tx))?$"
+)
 EVENT_CODE_RE = re.compile(r"^(?P<pics>[A-Z0-9_]+)\.S\.E(?P<id>[0-9A-Fa-f]{2})$")
 
 
@@ -39,8 +41,11 @@ def _mandatory_ids(reqs) -> set[str]:
     # cluster (Fixed Label "O", Binding "M if Simple & Client", Root Node's
     # Diagnostic Logs "O") is NOT built by the endpoint/node create call, so a
     # claim for it must produce an explicit cluster::create.
-    return {cid for cid, req in reqs.items()
-            if req.conformance.type == "mandatory" and req.conformance.condition is None}
+    return {
+        cid
+        for cid, req in reqs.items()
+        if req.conformance.type == "mandatory" and req.conformance.condition is None
+    }
 
 
 def _baseline_cluster_ids(model: DataModel, dt) -> set[str]:
@@ -71,7 +76,9 @@ def _classify(model: DataModel, claims, baseline_cluster_ids: set[str]):
             cl = model.clusters[cid]
             feat = cl.features.get(int(fm.group("bit"), 16))
             if feat is not None:
-                features.append(ElementRef(cid, cl.name, hex(int(fm.group("bit"), 16)), feat.name))
+                features.append(
+                    ElementRef(cid, cl.name, hex(int(fm.group("bit"), 16)), feat.name)
+                )
             continue
         am = ATTR_CODE_RE.match(code)
         if am:
@@ -111,8 +118,10 @@ def _classify(model: DataModel, claims, baseline_cluster_ids: set[str]):
             cid = clusters_by_pics.get(gm.group("pics"))
             is_server = gm.group("side") == "S"
             if cid is None:
-                unknown.append(f"{gm.group('pics')} "
-                               f"({'server' if is_server else 'client'} side, {code})")
+                unknown.append(
+                    f"{gm.group('pics')} "
+                    f"({'server' if is_server else 'client'} side, {code})"
+                )
                 continue
             # A server cluster the device type already builds needs nothing extra.
             if is_server and cid in baseline_cluster_ids:
@@ -140,13 +149,25 @@ def build_plan(selection, model: DataModel, root_claims=None) -> DataModelPlan:
     endpoints: list[EndpointPlan] = []
     if root_claims:
         root_dt = model.device_types.get(ROOT_NODE_DEVICE_TYPE_ID)
-        baseline = _baseline_cluster_ids(model, root_dt) if root_dt is not None else set()
-        feats, attrs, cmds, evts, sides, unknown = _classify(model, root_claims, baseline)
+        baseline = (
+            _baseline_cluster_ids(model, root_dt) if root_dt is not None else set()
+        )
+        feats, attrs, cmds, evts, sides, unknown = _classify(
+            model, root_claims, baseline
+        )
         if feats or attrs or cmds or evts or sides or unknown:
-            endpoints.append(EndpointPlan(
-                index=0, device_types=[root_dt.name if root_dt else "Root Node"],
-                features=feats, attributes=attrs, commands=cmds, events=evts,
-                sides=sides, unknown_sides=unknown))
+            endpoints.append(
+                EndpointPlan(
+                    index=0,
+                    device_types=[root_dt.name if root_dt else "Root Node"],
+                    features=feats,
+                    attributes=attrs,
+                    commands=cmds,
+                    events=evts,
+                    sides=sides,
+                    unknown_sides=unknown,
+                )
+            )
     for epid, ep in enumerate(selection.endpoints, start=1):
         names: list[str] = []
         baseline: set[str] = set()
@@ -154,11 +175,21 @@ def build_plan(selection, model: DataModel, root_claims=None) -> DataModelPlan:
             dt = model.device_type_by_name(name)
             if dt is None:
                 raise ValueError(
-                    f"device type {name!r} not found in the {model.spec_version} data model")
+                    f"device type {name!r} not found in the {model.spec_version} data model"
+                )
             names.append(dt.name)
             baseline |= _baseline_cluster_ids(model, dt)
         feats, attrs, cmds, evts, sides, unknown = _classify(model, ep.claims, baseline)
-        endpoints.append(EndpointPlan(
-            index=epid, device_types=names, features=feats, attributes=attrs,
-            commands=cmds, events=evts, sides=sides, unknown_sides=unknown))
+        endpoints.append(
+            EndpointPlan(
+                index=epid,
+                device_types=names,
+                features=feats,
+                attributes=attrs,
+                commands=cmds,
+                events=evts,
+                sides=sides,
+                unknown_sides=unknown,
+            )
+        )
     return DataModelPlan(spec_version=model.spec_version, endpoints=endpoints)

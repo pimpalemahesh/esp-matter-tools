@@ -26,51 +26,68 @@ def _enabled(selection_dict):
 
 
 def test_two_application_endpoints():
-    enabled = _enabled({
-        "spec_version": "1.6", "transport": ["wifi_2g"],
-        "endpoints": [
-            {"device_types": ["Extended Color Light"]},
-            {"device_types": ["Temperature Sensor"]},
-        ],
-    })
+    enabled = _enabled(
+        {
+            "spec_version": "1.6",
+            "transport": ["wifi_2g"],
+            "endpoints": [
+                {"device_types": ["Extended Color Light"]},
+                {"device_types": ["Temperature Sensor"]},
+            ],
+        }
+    )
     assert set(enabled) >= {0, 1, 2}
-    assert "OO.S" in enabled[1]                     # On/Off on the light endpoint
-    assert "TMP.S" in enabled[2]                    # Temperature Measurement on EP2
-    assert "OO.S" not in enabled[2]                 # the light's clusters stay on EP1
+    assert "OO.S" in enabled[1]  # On/Off on the light endpoint
+    assert "TMP.S" in enabled[2]  # Temperature Measurement on EP2
+    assert "OO.S" not in enabled[2]  # the light's clusters stay on EP1
 
 
 def test_per_endpoint_claim_does_not_leak():
     # Same cluster (On/Off) on both endpoints; claim OO.S.F02 only on EP1.
-    enabled = _enabled({
-        "spec_version": "1.6", "transport": ["wifi_2g"],
-        "endpoints": [
-            {"device_types": ["On/Off Light"], "claims": ["OO.S.F02"]},
-            {"device_types": ["On/Off Light"]},
-        ],
-    })
+    enabled = _enabled(
+        {
+            "spec_version": "1.6",
+            "transport": ["wifi_2g"],
+            "endpoints": [
+                {"device_types": ["On/Off Light"], "claims": ["OO.S.F02"]},
+                {"device_types": ["On/Off Light"]},
+            ],
+        }
+    )
     assert "OO.S.F02" in enabled[1]
     assert "OO.S.F02" not in enabled[2]
 
 
 def test_composed_device_types_on_one_endpoint():
-    enabled = _enabled({
-        "spec_version": "1.6", "transport": ["wifi_2g"],
-        "endpoints": [{"device_types": ["On/Off Light", "Occupancy Sensor"]}],
-    })
-    assert "OO.S" in enabled[1]                     # from On/Off Light
-    assert "OCC.S" in enabled[1]                    # from Occupancy Sensor (composed)
+    enabled = _enabled(
+        {
+            "spec_version": "1.6",
+            "transport": ["wifi_2g"],
+            "endpoints": [{"device_types": ["On/Off Light", "Occupancy Sensor"]}],
+        }
+    )
+    assert "OO.S" in enabled[1]  # from On/Off Light
+    assert "OCC.S" in enabled[1]  # from Occupancy Sensor (composed)
 
 
 def test_mcore_claim_lands_on_endpoint_0():
-    enabled = _enabled({
-        "spec_version": "1.6", "transport": ["wifi_2g"],
-        "mcore_claims": ["MCORE.DD.NFC"],
-        "endpoints": [{"device_types": ["On/Off Light"]}],
-    })
+    enabled = _enabled(
+        {
+            "spec_version": "1.6",
+            "transport": ["wifi_2g"],
+            "mcore_claims": ["MCORE.DD.NFC"],
+            "endpoints": [{"device_types": ["On/Off Light"]}],
+        }
+    )
     assert "MCORE.DD.NFC" in enabled[0]
 
 
 def test_deterministic():
-    doc = {"spec_version": "1.6", "transport": ["wifi_2g"],
-           "endpoints": [{"device_types": ["Extended Color Light"], "claims": ["OO.S.F02"]}]}
+    doc = {
+        "spec_version": "1.6",
+        "transport": ["wifi_2g"],
+        "endpoints": [
+            {"device_types": ["Extended Color Light"], "claims": ["OO.S.F02"]}
+        ],
+    }
     assert _enabled(doc) == _enabled(doc)

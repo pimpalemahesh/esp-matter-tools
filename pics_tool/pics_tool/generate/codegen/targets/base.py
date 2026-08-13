@@ -32,15 +32,20 @@ class GeneratedFile:
 @dataclass
 class GeneratedOutput:
     """What a consumer (CLI/UI) receives -- identical regardless of who asked."""
+
     target: str
     version: str
-    primary: str                                       # the snippet to show / copy
+    primary: str  # the snippet to show / copy
     files: list[GeneratedFile] = field(default_factory=list)
-    elements: list[dict] = field(default_factory=list)  # recap: {endpoint, cluster, name, kind}
+    elements: list[dict] = field(
+        default_factory=list
+    )  # recap: {endpoint, cluster, name, kind}
     notes: list[str] = field(default_factory=list)
-    exact: bool = False                                 # a knowledge source was consulted
-    knowledge_source: str = ""                          # e.g. "bundled esp_matter 1.5.1"
-    unresolved: list[dict] = field(default_factory=list)  # selected elements omitted (no signature)
+    exact: bool = False  # a knowledge source was consulted
+    knowledge_source: str = ""  # e.g. "bundled esp_matter 1.5.1"
+    unresolved: list[dict] = field(
+        default_factory=list
+    )  # selected elements omitted (no signature)
 
 
 class CodeTarget:
@@ -55,5 +60,7 @@ class CodeTarget:
         """
         return None
 
-    def render(self, plan, knowledge=None) -> GeneratedOutput:  # pragma: no cover - interface
+    def render(
+        self, plan, knowledge=None
+    ) -> GeneratedOutput:  # pragma: no cover - interface
         raise NotImplementedError

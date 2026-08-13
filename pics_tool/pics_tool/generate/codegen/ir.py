@@ -32,6 +32,7 @@ class ElementRef:
     ``id`` is the element's spec id (feature bit as hex, or ``0xNNNN`` for
     attributes/commands/events) -- kept for future knowledge lookups.
     """
+
     cluster_id: str
     cluster_name: str
     id: str
@@ -41,6 +42,7 @@ class ElementRef:
 @dataclass
 class ClusterSide:
     """A whole cluster added by SIDE (server/client) beyond the device baseline."""
+
     cluster_id: str
     cluster_name: str
     server: bool = False
@@ -55,6 +57,7 @@ class EndpointPlan:
     Optional additions are kept in claim order and split by kind so the target
     can render them deterministically.
     """
+
     index: int
     device_types: list[str]
     features: list[ElementRef] = field(default_factory=list)
@@ -62,11 +65,14 @@ class EndpointPlan:
     commands: list[ElementRef] = field(default_factory=list)
     events: list[ElementRef] = field(default_factory=list)
     sides: list[ClusterSide] = field(default_factory=list)
-    unknown_sides: list[str] = field(default_factory=list)   # unresolvable side claims (notes)
+    unknown_sides: list[str] = field(
+        default_factory=list
+    )  # unresolvable side claims (notes)
 
 
 @dataclass
 class DataModelPlan:
     """The full construction plan for a node: spec version + its endpoints."""
+
     spec_version: str
     endpoints: list[EndpointPlan] = field(default_factory=list)

@@ -85,10 +85,14 @@ def load_role_profile(role: str) -> dict:
 # is inferred (no reference yet) and should be confirmed against the BDX test plan.
 # All BDX items are optional in Base.xml, so an omission never causes an error.
 _BDX_REQUESTOR = {
-    "MCORE.BDX.Receiver", "MCORE.BDX.Initiator", "MCORE.BDX.SynchronousReceiver",
+    "MCORE.BDX.Receiver",
+    "MCORE.BDX.Initiator",
+    "MCORE.BDX.SynchronousReceiver",
 }
 _BDX_PROVIDER = {
-    "MCORE.BDX.Sender", "MCORE.BDX.Responder", "MCORE.BDX.SynchronousSender",
+    "MCORE.BDX.Sender",
+    "MCORE.BDX.Responder",
+    "MCORE.BDX.SynchronousSender",
 }
 
 
@@ -107,8 +111,9 @@ def node_facts_from_clusters(cluster_ids: set[str]) -> NodeFacts:
     return NodeFacts(
         has_ota_requestor=_CLUSTER_OTA_REQUESTOR in ids,
         has_ota_provider=_CLUSTER_OTA_PROVIDER in ids,
-        has_bridge=(_CLUSTER_BRIDGED_BASIC_INFO in ids
-                    or _CLUSTER_COMMISSIONER_CONTROL in ids),
+        has_bridge=(
+            _CLUSTER_BRIDGED_BASIC_INFO in ids or _CLUSTER_COMMISSIONER_CONTROL in ids
+        ),
         has_diagnostic_logs=_CLUSTER_DIAGNOSTIC_LOGS in ids,
     )
 
@@ -122,8 +127,9 @@ def bdx_from_facts(facts: NodeFacts) -> set[str]:
     return out
 
 
-def profile_seeds(profile: DeviceProfile, facts: NodeFacts,
-                  transport_map: dict | None = None) -> set[str]:
+def profile_seeds(
+    profile: DeviceProfile, facts: NodeFacts, transport_map: dict | None = None
+) -> set[str]:
     from .cluster_engine import load_transport_map
 
     transport_map = transport_map or load_transport_map()
@@ -137,7 +143,9 @@ def profile_seeds(profile: DeviceProfile, facts: NodeFacts,
     # transport's policy (conditions, cluster features, MCORE atoms) is authored.
     # Other role atoms are NOT seeded here: the per-role profile YAML seeds them.
     for t in profile.transport:
-        seeds.update(transport_map.get("transports", {}).get(t, {}).get("mcore_atoms", []))
+        seeds.update(
+            transport_map.get("transports", {}).get(t, {}).get("mcore_atoms", [])
+        )
     if profile.ble_commissioning:
         seeds.add("MCORE.COM.BLE")
     if profile.wifi_paf:
@@ -183,8 +191,9 @@ def role_denied(number: str, role_profile: dict) -> bool:
     return any(fnmatch(number, pat) for pat in role_profile.get("deny", []))
 
 
-def _gated_off(number: str, profile: DeviceProfile, facts: NodeFacts,
-               role_profile: dict) -> bool:
+def _gated_off(
+    number: str, profile: DeviceProfile, facts: NodeFacts, role_profile: dict
+) -> bool:
     gates = role_profile.get("feature_area_gates", {})
     active = {
         "bridge": facts.has_bridge,
@@ -200,16 +209,20 @@ def _gated_off(number: str, profile: DeviceProfile, facts: NodeFacts,
     return False
 
 
-def _denied(number: str, profile: DeviceProfile, facts: NodeFacts,
-            role_profile: dict) -> bool:
+def _denied(
+    number: str, profile: DeviceProfile, facts: NodeFacts, role_profile: dict
+) -> bool:
     if any(fnmatch(number, pat) for pat in role_profile.get("deny", [])):
         return True
     return _gated_off(number, profile, facts, role_profile)
 
 
-def compute_mcore_pics(profile: DeviceProfile, version: str,
-                       cluster_ids: set[str] | None = None,
-                       extra_seeds: set[str] | None = None) -> set[str]:
+def compute_mcore_pics(
+    profile: DeviceProfile,
+    version: str,
+    cluster_ids: set[str] | None = None,
+    extra_seeds: set[str] | None = None,
+) -> set[str]:
     """``extra_seeds``: user-claimed Base atoms; the cond fixpoint then derives
     everything a claim makes mandatory (DD.CONCATENATED_QR_CODE -> DD.QR)."""
     items = parse_pics_items(base_template_path(version))
@@ -218,8 +231,13 @@ def compute_mcore_pics(profile: DeviceProfile, version: str,
     return _compute(items, profile, facts, role_profile, extra_seeds)
 
 
-def _compute(items: list[PicsItem], profile: DeviceProfile, facts: NodeFacts,
-             role_profile: dict, extra_seeds: set[str] | None = None) -> set[str]:
+def _compute(
+    items: list[PicsItem],
+    profile: DeviceProfile,
+    facts: NodeFacts,
+    role_profile: dict,
+    extra_seeds: set[str] | None = None,
+) -> set[str]:
     enabled: set[str] = set()
     enabled |= profile_seeds(profile, facts)
     enabled |= set(role_profile.get("seeds", []))
@@ -248,7 +266,9 @@ def _compute(items: list[PicsItem], profile: DeviceProfile, facts: NodeFacts,
     while changed:
         changed = False
         for item in items:
-            if item.number in enabled or _denied(item.number, profile, facts, role_profile):
+            if item.number in enabled or _denied(
+                item.number, profile, facts, role_profile
+            ):
                 continue
             for text, cond in item.statuses:
                 if text != "M" or not cond:

@@ -189,10 +189,12 @@ def test_validate_accounts_for_user_enabled_features():
     full = [it["code"] for it in p["items"] if it["answer"] == "yes"]
     full.append("MCORE.OTA.VendorSpecific")  # resolve the OTA choice (see above)
     dependents = webapp.validate_selection(
-        PROFILE, [c for c in full if c == "OO.S.F01" or not c.startswith("OO.S.F")])
+        PROFILE, [c for c in full if c == "OO.S.F01" or not c.startswith("OO.S.F")]
+    )
     # dropping nothing: full set validates with no ERRORS
-    assert [p for p in webapp.validate_selection(PROFILE, full)
-            if p["severity"] == "error"] == []
+    assert [
+        p for p in webapp.validate_selection(PROFILE, full) if p["severity"] == "error"
+    ] == []
     assert isinstance(dependents, list)
 
 
@@ -228,8 +230,9 @@ def test_every_payload_code_is_template_backed():
 
     known = known_item_numbers("1.6")
     for extra in ([], ["OTA Requestor"]):
-        p = webapp.generate_payload(dict(PROFILE, device_type="Dimmer Switch",
-                                         node_device_types=extra))
+        p = webapp.generate_payload(
+            dict(PROFILE, device_type="Dimmer Switch", node_device_types=extra)
+        )
         orphans = {it["code"] for it in p["items"]} - known
         assert not orphans, f"unanswerable codes in payload: {sorted(orphans)}"
 
@@ -256,10 +259,10 @@ def test_items_split_into_decided_and_manual_groups():
     ep1 = [it for it in p["items"] if it["tab"] == "1"]
     decided = {it["code"] for it in ep1 if it["group"] == "decided"}
     manual = {it["code"] for it in ep1 if it["group"] == "manual"}
-    assert "OO.S.A0000" in decided       # mandatory OnOff attribute
-    assert "OO.S.A4001" in decided       # OnTime: mandatory under the LT feature
-    assert "OO.S.F01" in manual          # optional DeadFrontBehavior feature
-    assert "OO.C" in manual              # client role not mandated -> vendor choice
+    assert "OO.S.A0000" in decided  # mandatory OnOff attribute
+    assert "OO.S.A4001" in decided  # OnTime: mandatory under the LT feature
+    assert "OO.S.F01" in manual  # optional DeadFrontBehavior feature
+    assert "OO.C" in manual  # client role not mandated -> vendor choice
     assert decided.isdisjoint(manual)
 
 
@@ -285,8 +288,12 @@ def test_manual_cluster_item_flipped_yes_exports():
     files = webapp.export_pics_files(PROFILE, enabled)
     onoff = next(f for f in files if "On-Off" in f)
     import re
-    m = re.search(r"<itemNumber>OO\.S\.A4001</itemNumber>.*?<support>(\w+)</support>",
-                  files[onoff], re.S)
+
+    m = re.search(
+        r"<itemNumber>OO\.S\.A4001</itemNumber>.*?<support>(\w+)</support>",
+        files[onoff],
+        re.S,
+    )
     assert m and m.group(1) == "true"
 
 
@@ -335,8 +342,11 @@ def test_cluster_items_carry_short_names_for_chip_labels():
     # the vast majority of selectable cluster items resolve to a short name;
     # the rest (template-only clusters, ids absent from the data model) fall
     # back to the question text in the UI, so None is allowed but must be rare
-    manual = [it for it in p["items"]
-              if it["group"] == "manual" and not it["code"].startswith("MCORE.")]
+    manual = [
+        it
+        for it in p["items"]
+        if it["group"] == "manual" and not it["code"].startswith("MCORE.")
+    ]
     unnamed = [it["code"] for it in manual if not it["name"]]
     assert len(unnamed) < len(manual) * 0.05, f"too many unnamed: {unnamed[:10]}"
 
@@ -349,15 +359,21 @@ def test_mcore_questions_get_short_labels():
     p = webapp.generate_payload(PROFILE)
     by = {it["code"]: it["name"] for it in p["items"] if it["tab"] == "base"}
     assert by["MCORE.DD.TXT_KEY_VP"] == "TXT key 'VP' — Vendor ID / Product ID"
-    assert by["MCORE.SC.SII_OP_DISCOVERY_KEY"] == "mDNS key 'SII' — operational discovery"
+    assert (
+        by["MCORE.SC.SII_OP_DISCOVERY_KEY"] == "mDNS key 'SII' — operational discovery"
+    )
     assert by["MCORE.BDX.Sender"] == "BDX Sender role"
     assert by["MCORE.IDM.C.ReadRequest"] == "Client: send Read Request"
     # a possessive subject is NOT the device itself: no confident label
     assert by["MCORE.DD.CONCATENATED_QR_CODE"] is None
     # every base item either has a label or legitimately falls back
-    manual = [it for it in p["items"] if it["tab"] == "base" and it["group"] == "manual"]
+    manual = [
+        it for it in p["items"] if it["tab"] == "base" and it["group"] == "manual"
+    ]
     labeled = [it for it in manual if it["name"]]
-    assert len(labeled) >= len(manual) * 0.9, "most base questions should get short labels"
+    assert len(labeled) >= len(manual) * 0.9, (
+        "most base questions should get short labels"
+    )
 
 
 def test_parallel_base_families_group_into_one_question():
@@ -367,18 +383,27 @@ def test_parallel_base_families_group_into_one_question():
     1:1 to its own PICS item."""
     p = webapp.generate_payload(PROFILE)
     by = {it["code"]: it for it in p["items"] if it["tab"] == "base"}
-    assert by["MCORE.DD.TXT_KEY_VP"]["ask"] == \
-        "Optional TXT keys in DNS-SD commissionable node discovery"
+    assert (
+        by["MCORE.DD.TXT_KEY_VP"]["ask"]
+        == "Optional TXT keys in DNS-SD commissionable node discovery"
+    )
     assert by["MCORE.DD.TXT_KEY_VP"]["option"] == "VP — Vendor ID / Product ID"
-    assert by["MCORE.SC.SII_OP_DISCOVERY_KEY"]["ask"] == \
-        "Optional mDNS keys — operational discovery"
+    assert (
+        by["MCORE.SC.SII_OP_DISCOVERY_KEY"]["ask"]
+        == "Optional mDNS keys — operational discovery"
+    )
     assert by["MCORE.SC.SII_OP_DISCOVERY_KEY"]["option"] == "SII"
     # commissionable vs operational mDNS keys are DIFFERENT questions
-    assert by["MCORE.SC.SII_COMM_DISCOVERY_KEY"]["ask"] != \
-        by["MCORE.SC.SII_OP_DISCOVERY_KEY"]["ask"]
+    assert (
+        by["MCORE.SC.SII_COMM_DISCOVERY_KEY"]["ask"]
+        != by["MCORE.SC.SII_OP_DISCOVERY_KEY"]["ask"]
+    )
     # one family per client-capability verb, option = the data type
-    read = [it for it in p["items"] if it["ask"] ==
-            "Client: attribute data types it can read"]
+    read = [
+        it
+        for it in p["items"]
+        if it["ask"] == "Client: attribute data types it can read"
+    ]
     assert {"Bool", "String", "Struct"} <= {it["option"] for it in read}
     assert len(read) >= 8
     # items outside any family stay individual questions
@@ -396,6 +421,7 @@ def test_mcore_area_grouping_is_version_driven():
 
     # counts are derived, never stated: recompute one group independently
     from pics_tool.generate.template_io import base_template_path, parse_pics_items
+
     items = parse_pics_items(base_template_path("1.6"))
     idm = [it.number for it in items if it.number.startswith("MCORE.IDM.")]
     p = webapp.generate_payload(PROFILE)
@@ -415,8 +441,8 @@ def test_gateway_claim_derives_mandatory_side_elements():
     for code in ("OO.C", "OO.C.C00.Tx", "OO.C.C01.Tx", "OO.C.C02.Tx"):
         assert by[code]["group"] == "manual" and by[code]["answer"] == "yes", code
     assert by["OO.C.C40.Tx"]["group"] == "manual"
-    assert by["OO.C.C40.Tx"]["answer"] == "no"     # OffWithEffect stays optional
-    assert by["OO.S"]["group"] == "decided"        # profile-derived side untouched
+    assert by["OO.C.C40.Tx"]["answer"] == "no"  # OffWithEffect stays optional
+    assert by["OO.S"]["group"] == "decided"  # profile-derived side untouched
 
 
 def test_claimed_feature_stays_in_manual_section():
@@ -429,8 +455,13 @@ def test_claimed_feature_stays_in_manual_section():
 
 def test_manual_section_orders_server_before_client():
     p = webapp.generate_payload(PROFILE)
-    manual = [it["code"] for it in p["items"]
-              if it["tab"] == "1" and it["group"] == "manual" and it["cluster"] == "On-Off Cluster"]
+    manual = [
+        it["code"]
+        for it in p["items"]
+        if it["tab"] == "1"
+        and it["group"] == "manual"
+        and it["cluster"] == "On-Off Cluster"
+    ]
     first_client = next(i for i, c in enumerate(manual) if c.split(".")[1] == "C")
     assert all(c.split(".")[1] == "C" for c in manual[first_client:]), manual
 
@@ -447,17 +478,21 @@ def test_manual_items_nest_under_their_feature_or_gateway():
     nest under the client gateway. Negated refs ("M if NOT F02") never parent."""
     p = webapp.generate_payload(dict(PROFILE, device_type="Dimmer Switch"))
     by = {it["code"]: it for it in p["items"] if it["tab"] == "1"}
-    assert by["OO.S.A4000"]["parent"] == "OO.S.F00"   # LT-gated attribute
-    assert by["OO.C.C40.Tx"]["parent"] == "OO.C"      # client item under gateway
-    assert by["OO.S.C01.Rsp"]["parent"] is None       # "NOT (OO.S.F02)": no parent
-    assert by["OO.S.F00"]["parent"] is None           # feature row is a mini-gateway
+    assert by["OO.S.A4000"]["parent"] == "OO.S.F00"  # LT-gated attribute
+    assert by["OO.C.C40.Tx"]["parent"] == "OO.C"  # client item under gateway
+    assert by["OO.S.C01.Rsp"]["parent"] is None  # "NOT (OO.S.F02)": no parent
+    assert by["OO.S.F00"]["parent"] is None  # feature row is a mini-gateway
 
     # ordering within the cluster: feature block sits together, client last
-    manual = [it["code"] for it in p["items"]
-              if it["tab"] == "1" and it["group"] == "manual"
-              and it["cluster"] == "On-Off Cluster"]
+    manual = [
+        it["code"]
+        for it in p["items"]
+        if it["tab"] == "1"
+        and it["group"] == "manual"
+        and it["cluster"] == "On-Off Cluster"
+    ]
     f00 = manual.index("OO.S.F00")
-    assert manual[f00 + 1] == "OO.S.A4000"            # dependents right below
+    assert manual[f00 + 1] == "OO.S.A4000"  # dependents right below
 
 
 def test_multi_feature_conformance_is_boolean_exact():
@@ -471,8 +506,9 @@ def test_multi_feature_conformance_is_boolean_exact():
     cond = frozenset({"Wi-Fi", "IP", "Active"})
 
     def enabled(cid, item, feats):
-        return item in claim_cluster_side(m, cid, "S", cond,
-                                          seed_feature_codes=set(feats))
+        return item in claim_cluster_side(
+            m, cid, "S", cond, seed_feature_codes=set(feats)
+        )
 
     # TSTAT.S.A0013 (OccupiedCoolingSetpoint): M if COOL AND OCC
     assert not enabled("0x0201", "TSTAT.S.A0013", ())
@@ -500,8 +536,11 @@ def test_export_roundtrip_fidelity():
     p = webapp.generate_payload(profile)
 
     # flip a manual item on every tab, incl. Descriptor on EP1 (also on EP0)
-    extra = {"base": "MCORE.DD.PHYSICAL_TAMPERING",
-             "0": "ACL.S.A0007", "1": "DESC.S.A0005"}
+    extra = {
+        "base": "MCORE.DD.PHYSICAL_TAMPERING",
+        "0": "ACL.S.A0007",
+        "1": "DESC.S.A0005",
+    }
     by_tab = {}
     for it in p["items"]:
         if it["answer"] == "yes" or extra.get(it["tab"]) == it["code"]:
@@ -512,8 +551,9 @@ def test_export_roundtrip_fidelity():
     def supports(xml):
         out = {}
         for pi in ET.fromstring(xml).iter("picsItem"):
-            out[(pi.findtext("itemNumber") or "").strip()] = \
-                (pi.findtext("support") or "").strip() == "true"
+            out[(pi.findtext("itemNumber") or "").strip()] = (
+                pi.findtext("support") or ""
+            ).strip() == "true"
         return out
 
     tab_dir = {"base": "endpoint0", "0": "endpoint0", "1": "endpoint1"}
@@ -522,8 +562,11 @@ def test_export_roundtrip_fidelity():
     # guarantee 1: every Yes present, true, in the right endpoint dir
     for t, codes in by_tab.items():
         for code in codes:
-            hits = [f for f, sup in parsed.items()
-                    if f.startswith(tab_dir[t] + "/") and sup.get(code)]
+            hits = [
+                f
+                for f, sup in parsed.items()
+                if f.startswith(tab_dir[t] + "/") and sup.get(code)
+            ]
             assert hits, f"{code} (tab {t}) missing from export"
     # ...and nothing extra is true
     all_yes = {c for codes in by_tab.values() for c in codes}
@@ -533,8 +576,9 @@ def test_export_roundtrip_fidelity():
                 assert code in all_yes, f"{f}: {code} true but never answered Yes"
 
     # guarantee 2: written files carry the complete template, item for item
-    templates = {t.name: {it.number for it in parse_pics_items(t)}
-                 for t in list_templates("1.6")}
+    templates = {
+        t.name: {it.number for it in parse_pics_items(t)} for t in list_templates("1.6")
+    }
     for f, sup in parsed.items():
         tname = f.split("/", 1)[1]
         assert set(sup) == templates[tname], f"{f} does not match its template"
@@ -573,7 +617,9 @@ def test_validate_cascades_to_fixpoint():
 def test_known_template_quirks_are_warnings_not_errors():
     p = webapp.generate_payload(PROFILE)
     enabled = [it["code"] for it in p["items"] if it["answer"] == "yes"]
-    problems = webapp.validate_selection(PROFILE, enabled + ["MCORE.OTA.VendorSpecific"])
+    problems = webapp.validate_selection(
+        PROFILE, enabled + ["MCORE.OTA.VendorSpecific"]
+    )
     scf = [pr for pr in problems if pr["code"] == "MCORE.DD.STANDARD_COMM_FLOW"]
     assert scf and scf[0]["severity"] == "warning"
     assert "deliberately" in scf[0]["why"]
@@ -588,9 +634,13 @@ def test_idm_capabilities_not_blanket_claimed():
     by = {it["code"]: it for it in p["items"] if it["tab"] == "base"}
     assert by["MCORE.IDM.C"]["answer"] == "yes"
     assert by["MCORE.IDM.C.InvokeRequest"]["answer"] == "yes"  # mandated Tx
-    for c in ("MCORE.IDM.C.WriteRequest.Attribute.DataType_Bool",
-              "MCORE.IDM.C.ReadRequest", "MCORE.IDM.C.InvokeRequest.BatchCommands",
-              "MCORE.IDM.S.LargeData", "MCORE.IDM.S.PersistentSubscription"):
+    for c in (
+        "MCORE.IDM.C.WriteRequest.Attribute.DataType_Bool",
+        "MCORE.IDM.C.ReadRequest",
+        "MCORE.IDM.C.InvokeRequest.BatchCommands",
+        "MCORE.IDM.S.LargeData",
+        "MCORE.IDM.S.PersistentSubscription",
+    ):
         assert by[c]["group"] == "manual" and by[c]["answer"] == "no", c
 
     # server-only device: client side is an input-backed decided No
@@ -614,8 +664,11 @@ def test_client_claim_flows_into_im_role():
     assert by["MCORE.IDM.C.ReadRequest"]["answer"] == "no"
 
     # validation backs it up if the claim set is inconsistent
-    errs = {pr["code"] for pr in webapp.validate_selection(PROFILE, ["OO.C", "OO.C.C00.Tx"])
-            if pr["severity"] == "error"}
+    errs = {
+        pr["code"]
+        for pr in webapp.validate_selection(PROFILE, ["OO.C", "OO.C.C00.Tx"])
+        if pr["severity"] == "error"
+    }
     assert {"MCORE.IDM.C", "MCORE.IDM.C.InvokeRequest"} <= errs
 
     # no claim -> server only, client side decided No
@@ -656,9 +709,9 @@ def test_nfc_commissioning_input_decides_ntl():
 
     p2 = webapp.generate_payload(dict(PROFILE, onboarding=["nfc"]))
     by2 = {it["code"]: it for it in p2["items"] if it["tab"] == "base"}
-    assert by2["MCORE.DD.NFC"]["answer"] == "yes"   # tag claimed
+    assert by2["MCORE.DD.NFC"]["answer"] == "yes"  # tag claimed
     assert by2["MCORE.DD.NTL"]["group"] == "decided"
-    assert by2["MCORE.DD.NTL"]["answer"] == "no"    # transport NOT implied by tag
+    assert by2["MCORE.DD.NTL"]["answer"] == "no"  # transport NOT implied by tag
 
 
 def test_commissioning_flow_input_decides_flow_items():
@@ -692,15 +745,20 @@ def test_tcp_and_extended_discovery_inputs():
 
     p2 = webapp.generate_payload(PROFILE)
     by2 = {it["code"]: it for it in p2["items"] if it["tab"] == "base"}
-    for c in ("MCORE.SC.TCP", "MCORE.DD.EXTENDED_DISCOVERY", "MCORE.SC.EXTENDED_DISCOVERY"):
+    for c in (
+        "MCORE.SC.TCP",
+        "MCORE.DD.EXTENDED_DISCOVERY",
+        "MCORE.SC.EXTENDED_DISCOVERY",
+    ):
         assert by2[c]["group"] == "decided" and by2[c]["answer"] == "no", c
 
 
 def test_ota_input_covers_all_combinations():
     """OTA input: requestor / provider / vendor-specific, any combination."""
     base = dict(PROFILE, onboarding=["qr"])
-    p = webapp.generate_payload(dict(base, node_device_types=["OTA Requestor"],
-                                     vendor_specific_ota=True))
+    p = webapp.generate_payload(
+        dict(base, node_device_types=["OTA Requestor"], vendor_specific_ota=True)
+    )
     by = {it["code"]: it for it in p["items"] if it["tab"] == "base"}
     assert by["MCORE.OTA.Requestor"]["answer"] == "yes"
     assert by["MCORE.OTA.VendorSpecific"]["answer"] == "yes"  # both is valid
@@ -725,8 +783,8 @@ def test_mcore_claims_reenter_the_cond_fixpoint():
     p = webapp.generate_payload(profile, claims=["MCORE.DD.CONCATENATED_QR_CODE"])
     by = {it["code"]: it for it in p["items"] if it["tab"] == "base"}
     assert by["MCORE.DD.CONCATENATED_QR_CODE"]["answer"] == "yes"
-    assert by["MCORE.DD.QR"]["answer"] == "yes"          # derived from the claim
-    assert by["MCORE.DD.QR"]["group"] == "manual"        # ...and stays YOURS
+    assert by["MCORE.DD.QR"]["answer"] == "yes"  # derived from the claim
+    assert by["MCORE.DD.QR"]["group"] == "manual"  # ...and stays YOURS
 
 
 def test_bdx_not_ruled_out_by_vendor_ota():
@@ -737,16 +795,28 @@ def test_bdx_not_ruled_out_by_vendor_ota():
     stay optional."""
     vendor = webapp.generate_payload(dict(PROFILE, vendor_specific_ota=True))
     byv = {it["code"]: it for it in vendor["items"] if it["tab"] == "base"}
-    for c in ("MCORE.BDX.Receiver", "MCORE.BDX.Sender", "MCORE.BDX.Initiator",
-              "MCORE.BDX.Responder", "MCORE.BDX.AsynchronousReceiver",
-              "MCORE.BDX.Driver"):
+    for c in (
+        "MCORE.BDX.Receiver",
+        "MCORE.BDX.Sender",
+        "MCORE.BDX.Initiator",
+        "MCORE.BDX.Responder",
+        "MCORE.BDX.AsynchronousReceiver",
+        "MCORE.BDX.Driver",
+    ):
         assert byv[c]["group"] == "manual" and byv[c]["answer"] == "no", c
 
     req = webapp.generate_payload(dict(PROFILE, node_device_types=["OTA Requestor"]))
     byr = {it["code"]: it for it in req["items"] if it["tab"] == "base"}
-    for c in ("MCORE.BDX.Receiver", "MCORE.BDX.Initiator", "MCORE.BDX.SynchronousReceiver"):
+    for c in (
+        "MCORE.BDX.Receiver",
+        "MCORE.BDX.Initiator",
+        "MCORE.BDX.SynchronousReceiver",
+    ):
         assert byr[c]["group"] == "decided" and byr[c]["answer"] == "yes", c
-    for c in ("MCORE.BDX.Sender", "MCORE.BDX.Responder"):  # sender side: DLOG may need it
+    for c in (
+        "MCORE.BDX.Sender",
+        "MCORE.BDX.Responder",
+    ):  # sender side: DLOG may need it
         assert byr[c]["group"] == "manual" and byr[c]["answer"] == "no", c
 
 
@@ -760,8 +830,11 @@ def test_bridge_derived_from_device_type_identity():
     by = {it["code"]: it for it in p["items"] if it["tab"] == "base"}
     assert by["MCORE.BRIDGE"]["group"] == "decided"
     assert by["MCORE.BRIDGE"]["answer"] == "yes"
-    for c in ("MCORE.BRIDGE.BatInfo", "MCORE.BRIDGE.OtherControl",
-              "MCORE.BRIDGE.AllowDeviceRename"):
+    for c in (
+        "MCORE.BRIDGE.BatInfo",
+        "MCORE.BRIDGE.OtherControl",
+        "MCORE.BRIDGE.AllowDeviceRename",
+    ):
         assert by[c]["group"] == "manual" and by[c]["answer"] == "no", c
 
     p2 = webapp.generate_payload(PROFILE)  # plain light: input-backed No
@@ -783,8 +856,13 @@ def test_spec_optional_clusters_offered_from_device_type():
     defendable No and is NOT offered; a side blocked only by a claimable
     condition (LanguageLocale, SIT/LIT) IS offered -- absence of information
     is never a No."""
-    p = webapp.generate_payload(dict(PROFILE, device_type="Extended Color Light",
-                                     node_device_types=["OTA Requestor"]))
+    p = webapp.generate_payload(
+        dict(
+            PROFILE,
+            device_type="Extended Color Light",
+            node_device_types=["OTA Requestor"],
+        )
+    )
     opt = {it["code"]: it for it in p["items"] if it["opt_cluster"]}
 
     # plainly optional on Root Node (Wi-Fi device): Wi-Fi diag, DLOG, TimeSync
@@ -819,13 +897,14 @@ def test_icd_declared_via_cluster_claim():
     sit = by[("base", "MCORE.SC.SIT_ICD")]
     assert sit["group"] == "manual" and sit["answer"] == "yes"
     assert by[("0", "ICDM.S")]["answer"] == "yes"
-    assert ("0", "ICDM.S.A0000") in by      # the claimed side's elements open
+    assert ("0", "ICDM.S.A0000") in by  # the claimed side's elements open
 
     # LIT: LITS feature claimed -> SIT question stays open (default No), and
     # the spec's own conformance makes CheckInProtocol/UserActiveModeTrigger
     # mandatory under LITS
-    p = webapp.generate_payload(dict(PROFILE,
-                                     claims_by_tab={"0": ["ICDM.S", "ICDM.S.F02"]}))
+    p = webapp.generate_payload(
+        dict(PROFILE, claims_by_tab={"0": ["ICDM.S", "ICDM.S.F02"]})
+    )
     by = {(it["tab"], it["code"]): it for it in p["items"]}
     lit_sit = by[("base", "MCORE.SC.SIT_ICD")]
     assert lit_sit["group"] == "manual" and lit_sit["answer"] == "no"
@@ -841,7 +920,9 @@ def test_mirrored_dns_sd_twins_marked():
     by = {it["code"]: it for it in p["items"] if it["tab"] == "base"}
     assert by["MCORE.DD.TXT_KEY_VP"]["mirrors"] == ["MCORE.SC.VP_KEY"]
     assert by["MCORE.SC.VP_KEY"]["mirror_of"] == "MCORE.DD.TXT_KEY_VP"
-    assert by["MCORE.DD.COMMISSIONING_SUBTYPE_T"]["mirrors"] == ["MCORE.SC.DEVTYPE_SUBTYPE"]
+    assert by["MCORE.DD.COMMISSIONING_SUBTYPE_T"]["mirrors"] == [
+        "MCORE.SC.DEVTYPE_SUBTYPE"
+    ]
     # every declared pair is linked and both ends are open manual questions
     for lead, twin in webapp._MCORE_MIRRORS.items():
         assert by[lead].get("mirrors") == [twin], lead
@@ -859,8 +940,15 @@ def test_multiendpoint_groups_decided_from_composition():
     it = next(x for x in single["items"] if x["code"] == "MCORE.G.MULTIENDPOINT")
     assert it["group"] == "decided" and it["answer"] == "no"
 
-    two = webapp.generate_payload(dict(PROFILE, endpoints=[
-        {"device_types": ["On/Off Light"]}, {"device_types": ["On/Off Light"]}]))
+    two = webapp.generate_payload(
+        dict(
+            PROFILE,
+            endpoints=[
+                {"device_types": ["On/Off Light"]},
+                {"device_types": ["On/Off Light"]},
+            ],
+        )
+    )
     it = next(x for x in two["items"] if x["code"] == "MCORE.G.MULTIENDPOINT")
     assert it["group"] == "decided" and it["answer"] == "yes"
     assert "Groups cluster" in it["why"]
@@ -869,12 +957,20 @@ def test_multiendpoint_groups_decided_from_composition():
     from esp_matter_datamodel import loader
 
     from pics_tool.generate.selection import Selection, build_endpoints_enabled
+
     model = loader.load_version("1.6", validate=False)
-    sel = Selection.from_dict({
-        "spec_version": "1.6", "role": "commissionee", "transport": ["wifi_2g"],
-        "onboarding": ["qr", "manual_pairing_code"],
-        "endpoints": [{"device_types": ["On/Off Light"]},
-                      {"device_types": ["On/Off Light"]}]})
+    sel = Selection.from_dict(
+        {
+            "spec_version": "1.6",
+            "role": "commissionee",
+            "transport": ["wifi_2g"],
+            "onboarding": ["qr", "manual_pairing_code"],
+            "endpoints": [
+                {"device_types": ["On/Off Light"]},
+                {"device_types": ["On/Off Light"]},
+            ],
+        }
+    )
     enabled = build_endpoints_enabled(model, sel)
     assert "MCORE.G.MULTIENDPOINT" in enabled[0]
 
@@ -886,20 +982,30 @@ def test_cli_selection_derives_icd_from_claims():
     from pics_tool.generate.selection import Selection, build_endpoints_enabled
 
     model = loader.load_version("1.6", validate=False)
-    sel = Selection.from_dict({
-        "spec_version": "1.6", "role": "commissionee", "transport": ["thread"],
-        "onboarding": ["qr", "manual_pairing_code"],
-        "endpoints": [{"device_types": ["On/Off Light"], "claims": ["ICDM.S"]}],
-    })
+    sel = Selection.from_dict(
+        {
+            "spec_version": "1.6",
+            "role": "commissionee",
+            "transport": ["thread"],
+            "onboarding": ["qr", "manual_pairing_code"],
+            "endpoints": [{"device_types": ["On/Off Light"], "claims": ["ICDM.S"]}],
+        }
+    )
     enabled = build_endpoints_enabled(model, sel)
     assert sel.profile.is_icd and sel.profile.icd_mode == "sit"
     assert "MCORE.SC.SIT_ICD" in enabled[0]
     # explicit input always wins over the (absent) claim
-    sel2 = Selection.from_dict({
-        "spec_version": "1.6", "role": "commissionee", "transport": ["thread"],
-        "onboarding": ["qr", "manual_pairing_code"], "is_icd": True,
-        "icd_mode": "lit", "device_type": "On/Off Light",
-    })
+    sel2 = Selection.from_dict(
+        {
+            "spec_version": "1.6",
+            "role": "commissionee",
+            "transport": ["thread"],
+            "onboarding": ["qr", "manual_pairing_code"],
+            "is_icd": True,
+            "icd_mode": "lit",
+            "device_type": "On/Off Light",
+        }
+    )
     build_endpoints_enabled(model, sel2)
     assert sel2.profile.icd_mode == "lit"
 
@@ -935,16 +1041,23 @@ def test_claimed_optional_cluster_validates_and_exports():
         if it["answer"] == "yes":
             by_tab.setdefault(it["tab"], []).append(it["code"])
 
-    assert not [x for x in webapp.validate_selection(profile, by_tab)
-                if "DGWIFI" in x["code"]]
+    assert not [
+        x for x in webapp.validate_selection(profile, by_tab) if "DGWIFI" in x["code"]
+    ]
     broken = {t: [c for c in cs if c != "DGWIFI.S.A0003"] for t, cs in by_tab.items()}
-    flagged = [x for x in webapp.validate_selection(profile, broken)
-               if x["code"] == "DGWIFI.S.A0003"]
+    flagged = [
+        x
+        for x in webapp.validate_selection(profile, broken)
+        if x["code"] == "DGWIFI.S.A0003"
+    ]
     assert flagged and flagged[0]["severity"] == "error"
 
     files = webapp.export_pics_files(profile, by_tab)
-    target = next(f for f in files
-                  if f.startswith("endpoint0") and "Wi-Fi Network Diagnostics" in f)
+    target = next(
+        f
+        for f in files
+        if f.startswith("endpoint0") and "Wi-Fi Network Diagnostics" in f
+    )
     assert "<itemNumber>DGWIFI.S</itemNumber>" in files[target]
 
 
@@ -973,9 +1086,13 @@ def test_bridge_client_family_follows_device_control_client():
     devices. The OTA Requestor node type's provider client is fixed OTA
     infrastructure and does NOT count -- a light with Matter OTA still gets a
     decided No."""
-    family = ("MCORE.BRIDGECLIENT", "MCORE.DEVLIST.UseDevices",
-              "MCORE.DEVLIST.UseDeviceName", "MCORE.DEVLIST.UseDeviceState",
-              "MCORE.DEVLIST.UseBatInfo")
+    family = (
+        "MCORE.BRIDGECLIENT",
+        "MCORE.DEVLIST.UseDevices",
+        "MCORE.DEVLIST.UseDeviceName",
+        "MCORE.DEVLIST.UseDeviceState",
+        "MCORE.DEVLIST.UseBatInfo",
+    )
 
     p = webapp.generate_payload(PROFILE)  # server-only light
     by = {it["code"]: it for it in p["items"] if it["tab"] == "base"}
@@ -1015,8 +1132,10 @@ def test_exactly_one_choice_group_decided_by_transport():
     model is untouched."""
     p = webapp.generate_payload(PROFILE)  # wifi_2g
     by = {it["code"]: it for it in p["items"] if it["tab"] == "0"}
-    assert by["CNET.S.F00"]["group"] == "decided" and by["CNET.S.F00"]["answer"] == "yes"
-    for c in ("CNET.S.F01", "CNET.S.F02"):   # Thread / Ethernet interface
+    assert (
+        by["CNET.S.F00"]["group"] == "decided" and by["CNET.S.F00"]["answer"] == "yes"
+    )
+    for c in ("CNET.S.F01", "CNET.S.F02"):  # Thread / Ethernet interface
         assert by[c]["group"] == "decided" and by[c]["answer"] == "no", c
         assert "exactly one" in by[c]["why"]
     # client-side feature: gated by the claimable CNET.C gateway -> still manual
@@ -1038,10 +1157,13 @@ def test_validate_flags_choice_group_violation():
     for it in p["items"]:
         if it["answer"] == "yes":
             yes.setdefault(it["tab"], []).append(it["code"])
-    yes["0"] = yes["0"] + ["CNET.S.F01"]     # Thread alongside the derived Wi-Fi
+    yes["0"] = yes["0"] + ["CNET.S.F01"]  # Thread alongside the derived Wi-Fi
     probs = webapp.validate_selection(PROFILE, yes)
-    hits = [x for x in probs if x["code"] in ("CNET.S.F00", "CNET.S.F01")
-            and "exactly ONE" in x["why"]]
+    hits = [
+        x
+        for x in probs
+        if x["code"] in ("CNET.S.F00", "CNET.S.F01") and "exactly ONE" in x["why"]
+    ]
     assert hits and all(x["severity"] == "error" for x in hits)
 
 
@@ -1050,9 +1172,13 @@ def test_input_decided_base_items_cannot_be_claimed():
     remedy for 'my device also does Thread' is the transport input. Derived
     consequences of legitimate claims, and claims of genuine questions
     (BDX roles), keep working."""
-    claims = {"base": ["MCORE.COM.THR",       # transport-decided: blocked
-                       "MCORE.BRIDGE",        # composition-decided: blocked
-                       "MCORE.BDX.Sender"]}   # genuine question: honored
+    claims = {
+        "base": [
+            "MCORE.COM.THR",  # transport-decided: blocked
+            "MCORE.BRIDGE",  # composition-decided: blocked
+            "MCORE.BDX.Sender",
+        ]
+    }  # genuine question: honored
     p = webapp.generate_payload(dict(PROFILE, claims_by_tab=claims))
     by = {it["code"]: it for it in p["items"] if it["tab"] == "base"}
     assert by["MCORE.COM.THR"]["group"] == "decided"
@@ -1073,17 +1199,21 @@ def test_secondary_network_interface_dual_transport():
     hosts its declared family. Exactly-one choice holds per instance, both
     transport atoms are Yes node-wide, validation is clean, and the export
     puts each instance in its own endpoint file."""
-    P = dict(PROFILE, transport=["wifi_2g", "thread"],
-             endpoints=[{"device_types": ["On/Off Light"]},
-                        {"device_types": ["Secondary Network Interface"],
-                         "interface": "thread"}])
+    P = dict(
+        PROFILE,
+        transport=["wifi_2g", "thread"],
+        endpoints=[
+            {"device_types": ["On/Off Light"]},
+            {"device_types": ["Secondary Network Interface"], "interface": "thread"},
+        ],
+    )
     P.pop("device_type", None)
     p = webapp.generate_payload(P)
     ep0 = {it["code"]: it for it in p["items"] if it["tab"] == "0"}
     sni = {it["code"]: it for it in p["items"] if it["tab"] == "2"}
-    assert ep0["CNET.S.F00"]["answer"] == "yes"   # primary = the unassigned family
+    assert ep0["CNET.S.F00"]["answer"] == "yes"  # primary = the unassigned family
     assert ep0["CNET.S.F01"]["answer"] == "no"
-    assert sni["CNET.S.F01"]["answer"] == "yes"   # declared secondary interface
+    assert sni["CNET.S.F01"]["answer"] == "yes"  # declared secondary interface
     assert sni["CNET.S.F00"]["answer"] == "no"
     base = {it["code"]: it["answer"] for it in p["items"] if it["tab"] == "base"}
     assert base["MCORE.COM.WIFI"] == "yes" and base["MCORE.COM.THR"] == "yes"
@@ -1099,8 +1229,9 @@ def test_secondary_network_interface_dual_transport():
     for it in p["items"]:
         if it["answer"] == "yes":
             yes.setdefault(it["tab"], []).append(it["code"])
-    assert not [x for x in webapp.validate_selection(P, yes)
-                if x["severity"] == "error"]
+    assert not [
+        x for x in webapp.validate_selection(P, yes) if x["severity"] == "error"
+    ]
 
     files = webapp.export_pics_files(P, yes)
     cnet = sorted(f for f in files if "Network Commissioning" in f)
@@ -1115,17 +1246,32 @@ def test_secondary_network_interface_composition_errors():
     base = dict(PROFILE, transport=["wifi_2g", "thread"])
     base.pop("device_type", None)
     with pytest.raises(SelectionError, match="Secondary Network Interface"):
-        webapp.generate_payload(dict(base,
-            endpoints=[{"device_types": ["On/Off Light"]}]))
+        webapp.generate_payload(
+            dict(base, endpoints=[{"device_types": ["On/Off Light"]}])
+        )
     with pytest.raises(SelectionError, match="interface"):
-        webapp.generate_payload(dict(base,
-            endpoints=[{"device_types": ["On/Off Light"]},
-                       {"device_types": ["Secondary Network Interface"]}]))
+        webapp.generate_payload(
+            dict(
+                base,
+                endpoints=[
+                    {"device_types": ["On/Off Light"]},
+                    {"device_types": ["Secondary Network Interface"]},
+                ],
+            )
+        )
     # an SNI endpoint with only one technology selected is equally wrong
     single = dict(PROFILE)
     single.pop("device_type", None)
     with pytest.raises(SelectionError, match="second network"):
-        webapp.generate_payload(dict(single,
-            endpoints=[{"device_types": ["On/Off Light"]},
-                       {"device_types": ["Secondary Network Interface"],
-                        "interface": "thread"}]))
+        webapp.generate_payload(
+            dict(
+                single,
+                endpoints=[
+                    {"device_types": ["On/Off Light"]},
+                    {
+                        "device_types": ["Secondary Network Interface"],
+                        "interface": "thread",
+                    },
+                ],
+            )
+        )

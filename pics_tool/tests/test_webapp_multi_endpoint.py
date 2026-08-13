@@ -27,11 +27,15 @@ def _answer(payload, tab, code):
 
 
 def _profile():
-    return {"spec_version": "1.6", "role": "commissionee", "transport": ["wifi_2g"],
-            "endpoints": [
-                {"device_types": ["Extended Color Light"], "claims": ["OO.S.F02"]},
-                {"device_types": ["On/Off Light"]},
-            ]}
+    return {
+        "spec_version": "1.6",
+        "role": "commissionee",
+        "transport": ["wifi_2g"],
+        "endpoints": [
+            {"device_types": ["Extended Color Light"], "claims": ["OO.S.F02"]},
+            {"device_types": ["On/Off Light"]},
+        ],
+    }
 
 
 def test_one_tab_per_application_endpoint():
@@ -44,15 +48,16 @@ def test_one_tab_per_application_endpoint():
 
 def test_per_endpoint_claim_scoping():
     p = webapp.generate_payload(_profile())
-    assert _answer(p, "1", "OO.S.F02") == "yes"   # claimed on EP1
-    assert _answer(p, "2", "OO.S.F02") == "no"     # not claimed on EP2
-    assert _answer(p, "1", "OO.S") == "yes"         # both host On/Off
+    assert _answer(p, "1", "OO.S.F02") == "yes"  # claimed on EP1
+    assert _answer(p, "2", "OO.S.F02") == "no"  # not claimed on EP2
+    assert _answer(p, "1", "OO.S") == "yes"  # both host On/Off
     assert _answer(p, "2", "OO.S") == "yes"
 
 
 def test_export_routes_per_endpoint():
     files = webapp.export_pics_files(
-        _profile(), {"1": ["OO.S", "OO.S.F02"], "2": ["OO.S"], "base": []})
+        _profile(), {"1": ["OO.S", "OO.S.F02"], "2": ["OO.S"], "base": []}
+    )
     dirs = {f.split("/")[0] for f in files}
     assert "endpoint1" in dirs and "endpoint2" in dirs
 
@@ -60,7 +65,12 @@ def test_export_routes_per_endpoint():
 def test_single_endpoint_backcompat():
     # Old UI payload (scalar device_type + flat claims arg) still works.
     p = webapp.generate_payload(
-        {"spec_version": "1.6", "device_type": "On/Off Light", "transport": ["wifi_2g"]},
-        claims=["OO.S.F02"])
+        {
+            "spec_version": "1.6",
+            "device_type": "On/Off Light",
+            "transport": ["wifi_2g"],
+        },
+        claims=["OO.S.F02"],
+    )
     assert [t["id"] for t in p["tabs"]] == ["base", "0", "1"]
     assert _answer(p, "1", "OO.S.F02") == "yes"

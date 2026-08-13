@@ -58,7 +58,7 @@ def build_call(sig, symbol: str, var_base: str, n: int) -> tuple[list[str], list
     args: list[str] = []
     for i, p in enumerate(sig.params):
         if i == 0:
-            continue                      # the receiver (cluster_t*/endpoint_t*/...)
+            continue  # the receiver (cluster_t*/endpoint_t*/...)
         t = p.type.strip()
         is_ptr = t.endswith("*")
         base = t[:-1].strip() if is_ptr else t
@@ -68,7 +68,7 @@ def build_call(sig, symbol: str, var_base: str, n: int) -> tuple[list[str], list
             decls.append(f"{qualified} {var};")
             args.append(f"&{var}")
         elif is_ptr:
-            args.append("nullptr")        # non-config pointer/delegate: user must wire it
+            args.append("nullptr")  # non-config pointer/delegate: user must wire it
         else:
             args.append(value_for(t))
     return decls, args

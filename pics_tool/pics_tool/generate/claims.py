@@ -63,8 +63,9 @@ def feature_seeds_from_codes(model: DataModel, codes) -> dict[str, set[str]]:
     return seeds
 
 
-def side_claims(model: DataModel, profile: DeviceProfile, codes,
-                conditions, known: set[str]) -> dict[str, set[str]]:
+def side_claims(
+    model: DataModel, profile: DeviceProfile, codes, conditions, known: set[str]
+) -> dict[str, set[str]]:
     """{gateway code: spec-mandated codes for that claimed side}.
 
     Claiming ``OO.C`` means the device IS an On/Off client; the spec then dictates
@@ -81,9 +82,16 @@ def side_claims(model: DataModel, profile: DeviceProfile, codes,
             continue
         cid = prefix_map.get(m.group("pics"))
         if cid is not None:
-            out[code] = claim_cluster_side(
-                model, cid, m.group("side"), conditions,
-                seed_feature_codes=feature_seeds.get(cid, set())) & known
+            out[code] = (
+                claim_cluster_side(
+                    model,
+                    cid,
+                    m.group("side"),
+                    conditions,
+                    seed_feature_codes=feature_seeds.get(cid, set()),
+                )
+                & known
+            )
     return out
 
 

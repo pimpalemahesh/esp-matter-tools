@@ -45,14 +45,17 @@ for _path in (_HERE, _HERE / "esp-matter-datamodel"):
 # The high-level decorator server: MCPServer in mcp >= 2.0, FastMCP in mcp 1.x.
 # Both expose ``@server.tool()`` and ``server.run()`` (stdio).
 try:
-    from mcp.server.mcpserver import MCPServer as _Server   # mcp >= 2.0
+    from mcp.server.mcpserver import MCPServer as _Server  # mcp >= 2.0
 except ModuleNotFoundError:
     try:
-        from mcp.server.fastmcp import FastMCP as _Server   # mcp 1.x
-    except ModuleNotFoundError as exc:  # pragma: no cover - clearer than a raw ImportError
+        from mcp.server.fastmcp import FastMCP as _Server  # mcp 1.x
+    except (
+        ModuleNotFoundError
+    ) as exc:  # pragma: no cover - clearer than a raw ImportError
         raise SystemExit(
             "The 'mcp' package is required for the MCP server. Install it with:\n"
-            "    pip install -r requirements-mcp.txt") from exc
+            "    pip install -r requirements-mcp.txt"
+        ) from exc
 
 from pics_tool import service
 
@@ -61,13 +64,14 @@ mcp = _Server("esp-matter-pics")
 
 _USAGE = (
     "Provide 'selection' with at least spec_version, endpoints (device types) "
-    "and transport, e.g. {\"spec_version\": \"1.6\", \"transport\": [\"wifi_2g\"], "
-    "\"role\": \"commissionee\", \"onboarding\": [\"qr\", \"manual_pairing_code\"], "
-    "\"endpoints\": [{\"device_types\": [\"Extended Color Light\"]}]}. "
-    "Optional selection fields: node_device_types ([\"OTA Requestor\"]), "
+    'and transport, e.g. {"spec_version": "1.6", "transport": ["wifi_2g"], '
+    '"role": "commissionee", "onboarding": ["qr", "manual_pairing_code"], '
+    '"endpoints": [{"device_types": ["Extended Color Light"]}]}. '
+    'Optional selection fields: node_device_types (["OTA Requestor"]), '
     "ble_commissioning, nfc_commissioning, wifi_paf, tcp, extended_discovery, "
     "commissioning_flow ('standard'|'user_intent'|'custom'), "
-    "vendor_specific_ota, role ('commissionee'|'commissioner'|'controller').")
+    "vendor_specific_ota, role ('commissionee'|'commissioner'|'controller')."
+)
 
 
 def _kind(code: str) -> str:
@@ -87,8 +91,15 @@ def _kind(code: str) -> str:
     return "other"
 
 
-_KIND_ORDER = {"cluster": 0, "feature": 1, "command": 2, "event": 3,
-               "attribute": 4, "node": 5, "other": 6}
+_KIND_ORDER = {
+    "cluster": 0,
+    "feature": 1,
+    "command": 2,
+    "event": 3,
+    "attribute": 4,
+    "node": 5,
+    "other": 6,
+}
 # The capability decisions a product owner actually recognises: whole optional
 # clusters and optional features. The long tail (attributes/commands/events,
 # node product-facts) safely defaults to "No".
@@ -110,40 +121,55 @@ def _validate(selection: dict | None) -> dict | None:
     selection = selection or {}
     version = selection.get("spec_version")
     if not version:
-        return {"error": "no spec_version given", "versions": versions,
-                "action": "ASK THE USER which Matter spec version to target and "
-                          "show them the supported versions listed here. Do NOT "
-                          "pick a version yourself (not even the latest) -- the "
-                          "version is the user's decision.",
-                "usage": _USAGE}
+        return {
+            "error": "no spec_version given",
+            "versions": versions,
+            "action": "ASK THE USER which Matter spec version to target and "
+            "show them the supported versions listed here. Do NOT "
+            "pick a version yourself (not even the latest) -- the "
+            "version is the user's decision.",
+            "usage": _USAGE,
+        }
     if version not in versions:
-        return {"error": f"unsupported spec_version {version!r}", "versions": versions,
-                "action": f"Matter {version} is not supported. Show the user the "
-                          "supported versions listed here and ASK which one to use; "
-                          "do not substitute one yourself.",
-                "usage": _USAGE}
+        return {
+            "error": f"unsupported spec_version {version!r}",
+            "versions": versions,
+            "action": f"Matter {version} is not supported. Show the user the "
+            "supported versions listed here and ASK which one to use; "
+            "do not substitute one yourself.",
+            "usage": _USAGE,
+        }
     known_types = sorted(service.list_device_types(version))
-    named = [dt for ep in selection.get("endpoints") or []
-             for dt in (ep.get("device_types") if isinstance(ep, dict) else [ep]) or []]
+    named = [
+        dt
+        for ep in selection.get("endpoints") or []
+        for dt in (ep.get("device_types") if isinstance(ep, dict) else [ep]) or []
+    ]
     if selection.get("device_type"):
         named.append(selection["device_type"])
     if not named:
-        return {"error": "no endpoints/device types given",
-                "device_types": known_types, "spec_version": version,
-                "action": f"ASK THE USER which application device type(s) their "
-                          f"product exposes, choosing from the device types "
-                          f"supported in Matter {version} (listed here).",
-                "usage": _USAGE}
+        return {
+            "error": "no endpoints/device types given",
+            "device_types": known_types,
+            "spec_version": version,
+            "action": f"ASK THE USER which application device type(s) their "
+            f"product exposes, choosing from the device types "
+            f"supported in Matter {version} (listed here).",
+            "usage": _USAGE,
+        }
     unknown = [n for n in named if n not in known_types]
     if unknown:
-        return {"error": f"device type(s) not available in Matter {version}: {unknown}",
-                "device_types": known_types, "spec_version": version,
-                "action": f"The device type(s) {unknown} are not available in "
-                          f"Matter {version}. ASK THE USER to pick from the "
-                          f"supported device types for this version (listed here), "
-                          f"or to choose a different Matter version -- do not "
-                          f"substitute a similar-sounding device type yourself.",
-                "usage": _USAGE}
+        return {
+            "error": f"device type(s) not available in Matter {version}: {unknown}",
+            "device_types": known_types,
+            "spec_version": version,
+            "action": f"The device type(s) {unknown} are not available in "
+            f"Matter {version}. ASK THE USER to pick from the "
+            f"supported device types for this version (listed here), "
+            f"or to choose a different Matter version -- do not "
+            f"substitute a similar-sounding device type yourself.",
+            "usage": _USAGE,
+        }
     return None
 
 
@@ -158,9 +184,13 @@ def _optional_choices(selection: dict, selected: dict | None) -> dict:
         kind = _kind(q["code"])
         g = by_tab.get(q["tab"])
         if g is None:
-            g = by_tab[q["tab"]] = {"tab": q["tab"], "label": q["endpoint"],
-                                    "scope": "node" if q["tab"] == "base" else "endpoint",
-                                    "clusters": [], "_by": {}}
+            g = by_tab[q["tab"]] = {
+                "tab": q["tab"],
+                "label": q["endpoint"],
+                "scope": "node" if q["tab"] == "base" else "endpoint",
+                "clusters": [],
+                "_by": {},
+            }
             groups.append(g)
         cl = g["_by"].get(q["cluster"])
         if cl is None:
@@ -168,14 +198,22 @@ def _optional_choices(selection: dict, selected: dict | None) -> dict:
             g["clusters"].append(cl)
         pri = kind in _PRIMARY
         primary += pri
-        cl["choices"].append({"code": q["code"], "label": q["label"], "kind": kind,
-                              "priority": "primary" if pri else "secondary"})
+        cl["choices"].append(
+            {
+                "code": q["code"],
+                "label": q["label"],
+                "kind": kind,
+                "priority": "primary" if pri else "secondary",
+            }
+        )
     for g in groups:
         g.pop("_by", None)
         for cl in g["clusters"]:
             cl["choices"].sort(key=lambda c: _KIND_ORDER.get(c["kind"], 9))
-    return {"counts": {"open": len(res["questions"]), "primary": primary},
-            "groups": groups}
+    return {
+        "counts": {"open": len(res["questions"]), "primary": primary},
+        "groups": groups,
+    }
 
 
 def _run(selection: dict, selected: dict | None, goal: str, target: str) -> dict:
@@ -191,8 +229,9 @@ def _run(selection: dict, selected: dict | None, goal: str, target: str) -> dict
 
 
 @mcp.tool()
-def generate_baseline(selection: dict | None = None, goal: str = "both",
-                      target: str = "esp_matter") -> dict:
+def generate_baseline(
+    selection: dict | None = None, goal: str = "both", target: str = "esp_matter"
+) -> dict:
     """STEP 1 -- generate the complete MANDATORY Matter PICS and/or esp-matter
     data-model code from a device description, plus the list of optional
     choices a human may still want to add.
@@ -243,13 +282,15 @@ def generate_baseline(selection: dict | None = None, goal: str = "both",
         out["summary"]["note"] = (
             "Mandatory baseline -- complete as-is. To add optional capabilities, "
             "ask the human about the primary optional_choices and pass their YES "
-            "codes to apply_selections.")
+            "codes to apply_selections."
+        )
     return out
 
 
 @mcp.tool()
-def apply_selections(selection: dict, selected: dict, goal: str = "both",
-                     target: str = "esp_matter") -> dict:
+def apply_selections(
+    selection: dict, selected: dict, goal: str = "both", target: str = "esp_matter"
+) -> dict:
     """STEP 2 -- re-generate with the HUMAN's optional answers applied: the
     final PICS files and/or data-model code.
 
@@ -277,34 +318,46 @@ def apply_selections(selection: dict, selected: dict, goal: str = "both",
     if err:
         return err
     if not selected or not any(selected.values()):
-        return {"error": "no selections given -- generate_baseline already "
-                         "returns the mandatory-only outputs; call this tool "
-                         "only with the human's YES codes in 'selected'",
-                "usage": _USAGE}
+        return {
+            "error": "no selections given -- generate_baseline already "
+            "returns the mandatory-only outputs; call this tool "
+            "only with the human's YES codes in 'selected'",
+            "usage": _USAGE,
+        }
     bad_tabs = [t for t in selected if t != "base" and not str(t).isdigit()]
     if bad_tabs:
-        return {"error": f"invalid tab keys {bad_tabs}: use 'base', '0' (Root "
-                         "Node) or the application endpoint number ('1'..)",
-                "usage": _USAGE}
+        return {
+            "error": f"invalid tab keys {bad_tabs}: use 'base', '0' (Root "
+            "Node) or the application endpoint number ('1'..)",
+            "usage": _USAGE,
+        }
     known = service.known_codes(selection["spec_version"])
-    unknown = sorted({c for codes in selected.values() for c in codes}
-                     - set(known))
+    unknown = sorted({c for codes in selected.values() for c in codes} - set(known))
     out = _run(dict(selection), selected, goal, target)
     if "error" not in out:
         out["ignored_unknown_codes"] = unknown
         remaining = out["optional_choices"]["counts"]
         out["summary"]["note"] = (
             "Final outputs with the human's selections applied. "
-            + (f"WARNING: {len(unknown)} selected code(s) are not real PICS items "
-               f"and were ignored -- see ignored_unknown_codes. " if unknown else "")
-            + (f"{remaining['primary']} primary optional choice(s) are still open "
-               "(some may have been revealed by these claims) -- offer them to "
-               "the human if not already answered." if remaining["primary"] else ""))
+            + (
+                f"WARNING: {len(unknown)} selected code(s) are not real PICS items "
+                f"and were ignored -- see ignored_unknown_codes. "
+                if unknown
+                else ""
+            )
+            + (
+                f"{remaining['primary']} primary optional choice(s) are still open "
+                "(some may have been revealed by these claims) -- offer them to "
+                "the human if not already answered."
+                if remaining["primary"]
+                else ""
+            )
+        )
     return out
 
 
 def main() -> None:
-    mcp.run()   # stdio transport
+    mcp.run()  # stdio transport
 
 
 if __name__ == "__main__":

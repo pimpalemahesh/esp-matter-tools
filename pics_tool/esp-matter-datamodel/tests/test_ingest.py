@@ -89,13 +89,17 @@ def test_parse_cluster_conformance():
     assert evaluate(cluster.attributes["0x0000"].conformance, ctx_none).is_mandatory()
     # A4000 mandatory only with LT
     assert evaluate(cluster.attributes["0x4000"].conformance, ctx_lt).is_mandatory()
-    assert evaluate(cluster.attributes["0x4000"].conformance, ctx_none).decision \
+    assert (
+        evaluate(cluster.attributes["0x4000"].conformance, ctx_none).decision
         == Decision.NOT_APPLICABLE
+    )
     # On command mandatory unless OFFONLY
     on = cluster.accepted_commands["0x01"].conformance
     assert evaluate(on, ctx_none).is_mandatory()
-    assert evaluate(on, ConformanceContext(feature_mask=1 << 2)).decision \
+    assert (
+        evaluate(on, ConformanceContext(feature_mask=1 << 2)).decision
         == Decision.NOT_APPLICABLE
+    )
 
 
 def test_parse_device_type_overrides():
@@ -117,7 +121,8 @@ def test_parse_device_type_serializes_valid():
     cluster = parse_cluster(fromstring(CLUSTER_XML))
     dt = parse_device_type(fromstring(DEVICE_TYPE_XML), {"0x0006": cluster})
     instance = {
-        "schema_version": "1.0.0", "spec_version": "1.6",
+        "schema_version": "1.0.0",
+        "spec_version": "1.6",
         "clusters": {cluster.id: cluster.to_json()},
         "device_types": {dt.id: dt.to_json()},
     }

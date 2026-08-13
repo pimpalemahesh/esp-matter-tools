@@ -31,8 +31,12 @@ import json
 import re
 from pathlib import Path
 
-_HEADERS = ("esp_matter_feature.h", "esp_matter_attribute.h",
-            "esp_matter_command.h", "esp_matter_event.h")
+_HEADERS = (
+    "esp_matter_feature.h",
+    "esp_matter_attribute.h",
+    "esp_matter_command.h",
+    "esp_matter_event.h",
+)
 
 _COMMENT_BLOCK = re.compile(r"/\*.*?\*/", re.S)
 _COMMENT_LINE = re.compile(r"//[^\n]*")
@@ -45,7 +49,8 @@ _TOK = re.compile(
     r"|(?P<close>\})"
     r"|(?P<ret>esp_err_t|attribute_t\s*\*|command_t\s*\*|event_t\s*\*)\s*"
     r"(?P<fn>add|create_\w+)\s*\((?P<args>[^)]*)\)\s*;",
-    re.S)
+    re.S,
+)
 
 _NAME_RE = re.compile(r"([A-Za-z_]\w*)\s*$")
 _INT_TYPE = re.compile(r"^u?int(?:8|16|32|64)_t$")
@@ -57,7 +62,7 @@ def _strip_comments(text: str) -> str:
 
 def _norm_type(t: str) -> str:
     t = re.sub(r"\s+", " ", t).strip()
-    t = re.sub(r"\s*\*", "*", t)     # "cluster_t *" -> "cluster_t*"
+    t = re.sub(r"\s*\*", "*", t)  # "cluster_t *" -> "cluster_t*"
     t = re.sub(r"\s*&", "&", t)
     return t
 
@@ -81,16 +86,16 @@ def _split_params(args: str) -> list[str]:
 
 
 def _parse_param(p: str) -> dict:
-    p = p.split("=", 1)[0].strip()          # drop any default value
+    p = p.split("=", 1)[0].strip()  # drop any default value
     m = _NAME_RE.search(p)
-    if not m or not p[:m.start()].strip():   # unnamed param -> whole thing is the type
+    if not m or not p[: m.start()].strip():  # unnamed param -> whole thing is the type
         return {"type": _norm_type(p), "name": ""}
-    return {"type": _norm_type(p[:m.start()]), "name": m.group(1)}
+    return {"type": _norm_type(p[: m.start()]), "name": m.group(1)}
 
 
 def _parse_header(text: str, symbols: dict) -> None:
     text = _strip_comments(text)
-    stack: list[str | None] = []             # namespace names; None for struct/other braces
+    stack: list[str | None] = []  # namespace names; None for struct/other braces
     for m in _TOK.finditer(text):
         if m.group("ns") is not None:
             stack.append(m.group("ns"))
@@ -103,7 +108,7 @@ def _parse_header(text: str, symbols: dict) -> None:
             path = [x for x in stack if x]
             if len(path) < 2 or path[0] != "esp_matter":
                 continue
-            symbol = "::".join(path[1:] + [m.group("fn")])   # drop the esp_matter root
+            symbol = "::".join(path[1:] + [m.group("fn")])  # drop the esp_matter root
             symbols[symbol] = {
                 "returns": _norm_type(m.group("ret")),
                 "params": [_parse_param(p) for p in _split_params(m.group("args"))],
@@ -117,8 +122,11 @@ def find_data_model(root: str | Path) -> Path | None:
     (``components/esp_matter/data_model``), or an esp-matter SDK checkout.
     """
     root = Path(root).expanduser()
-    for cand in (root, root / "data_model",
-                 root / "components" / "esp_matter" / "data_model"):
+    for cand in (
+        root,
+        root / "data_model",
+        root / "components" / "esp_matter" / "data_model",
+    ):
         if (cand / "esp_matter_feature.h").is_file():
             return cand
     for hit in root.rglob("esp_matter_feature.h"):
@@ -148,8 +156,9 @@ def build_index(data_model_dir: str | Path, component_version: str) -> dict:
     return {"component_version": component_version, "symbols": symbols}
 
 
-def write_caps(data_model_dir: str | Path, out_path: str | Path,
-               component_version: str) -> int:
+def write_caps(
+    data_model_dir: str | Path, out_path: str | Path, component_version: str
+) -> int:
     """Build and write ``caps_<ver>.json``; returns the symbol count."""
     index = build_index(data_model_dir, component_version)
     out = Path(out_path).expanduser()

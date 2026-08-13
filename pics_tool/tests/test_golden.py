@@ -25,21 +25,37 @@ import pytest
 
 loader = pytest.importorskip("esp_matter_datamodel.loader")
 
-from pics_tool.generate.cluster_engine import all_enabled_cluster_ids, generate_cluster_pics
+from pics_tool.generate.cluster_engine import (
+    all_enabled_cluster_ids,
+    generate_cluster_pics,
+)
 from pics_tool.generate.mcore_engine import compute_mcore_pics
 from pics_tool.generate.profile import DeviceProfile
 
 GOLDEN_DIR = Path(__file__).parent / "golden"
 
 CASES = {
-    "onoff_light_wifi": {"spec_version": "1.6", "device_type": "On/Off Light",
-                         "transport": ["wifi_2g"]},
-    "onoff_light_thread": {"spec_version": "1.6", "device_type": "On/Off Light",
-                           "transport": ["thread"]},
-    "dimmable_light_wifi": {"spec_version": "1.6", "device_type": "Dimmable Light",
-                            "transport": ["wifi_2g"]},
-    "onoff_light_wifi_ota": {"spec_version": "1.6", "device_type": "On/Off Light",
-                             "transport": ["wifi_2g"], "node_device_types": ["OTA Requestor"]},
+    "onoff_light_wifi": {
+        "spec_version": "1.6",
+        "device_type": "On/Off Light",
+        "transport": ["wifi_2g"],
+    },
+    "onoff_light_thread": {
+        "spec_version": "1.6",
+        "device_type": "On/Off Light",
+        "transport": ["thread"],
+    },
+    "dimmable_light_wifi": {
+        "spec_version": "1.6",
+        "device_type": "Dimmable Light",
+        "transport": ["wifi_2g"],
+    },
+    "onoff_light_wifi_ota": {
+        "spec_version": "1.6",
+        "device_type": "On/Off Light",
+        "transport": ["wifi_2g"],
+        "node_device_types": ["OTA Requestor"],
+    },
 }
 
 
@@ -49,7 +65,8 @@ def _generate(profile_dict: dict) -> dict[str, list[str]]:
     cluster_eps = generate_cluster_pics(model, profile)
     eps = {ep.endpoint: set(ep.pics) for ep in cluster_eps}
     eps.setdefault(0, set()).update(
-        compute_mcore_pics(profile, "1.6", all_enabled_cluster_ids(cluster_eps)))
+        compute_mcore_pics(profile, "1.6", all_enabled_cluster_ids(cluster_eps))
+    )
     return {str(k): sorted(v) for k, v in sorted(eps.items())}
 
 

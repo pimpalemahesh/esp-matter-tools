@@ -39,12 +39,13 @@ def _profile(**extra):
 
 def test_basic_snippet_creates_node_and_endpoint():
     res = webapp.generate_scaffold_files(
-        _profile(endpoints=[{"device_types": ["Extended Color Light"]}]))
+        _profile(endpoints=[{"device_types": ["Extended Color Light"]}])
+    )
     snippet = res["snippet"]
     assert res["file"] == "app_data_model.cpp"
     assert "node::create(&node_config" in snippet
     assert "endpoint_1 = extended_color_light::create(node," in snippet
-    assert "endpoint::get_id" not in snippet          # no trailing scratch var
+    assert "endpoint::get_id" not in snippet  # no trailing scratch var
     # nothing optional claimed -> no feature guidance
     assert res["endpoints"][0]["features"] == []
     assert "Optional feature claimed" not in snippet
@@ -56,12 +57,18 @@ def test_optional_feature_from_ui_flows_into_code():
     prof = _profile(endpoints=[{"device_types": ["Extended Color Light"]}])
     res = webapp.generate_scaffold_files(prof, {"1": ["CC.S.F04"]})
     snippet = res["snippet"]
-    assert "cluster::get(endpoint_1, ColorControl::Id)" in snippet   # chip Id, not 0x0300
+    assert (
+        "cluster::get(endpoint_1, ColorControl::Id)" in snippet
+    )  # chip Id, not 0x0300
     # exact code (1.6 -> nearest 1.5.1): ColorTemperature has a config -> declared + &config
-    assert ("cluster::color_control::feature::color_temperature::config_t "
-            "color_control_color_temperature_config_1;") in snippet
-    assert ("cluster::color_control::feature::color_temperature::add("
-            "color_control_cluster_1, &color_control_color_temperature_config_1);") in snippet
+    assert (
+        "cluster::color_control::feature::color_temperature::config_t "
+        "color_control_color_temperature_config_1;"
+    ) in snippet
+    assert (
+        "cluster::color_control::feature::color_temperature::add("
+        "color_control_cluster_1, &color_control_color_temperature_config_1);"
+    ) in snippet
     assert res["endpoints"][0]["features"] == ["Color Control / ColorTemperature"]
 
 
@@ -73,20 +80,30 @@ def test_optional_attribute_from_ui_flows_into_code():
     snippet = res["snippet"]
     assert "cluster::get(endpoint_1, LevelControl::Id)" in snippet
     # exact code (1.6 -> nearest 1.5.1): nullable<uint16_t> value default + TODO
-    assert "attribute::create_on_transition_time(level_control_cluster_1, nullable<uint16_t>());" in snippet
-    assert "attribute::create_off_transition_time(level_control_cluster_1, nullable<uint16_t>());" in snippet
+    assert (
+        "attribute::create_on_transition_time(level_control_cluster_1, nullable<uint16_t>());"
+        in snippet
+    )
+    assert (
+        "attribute::create_off_transition_time(level_control_cluster_1, nullable<uint16_t>());"
+        in snippet
+    )
     assert res["endpoints"][0]["attributes"] == [
-        "Level Control / OnTransitionTime", "Level Control / OffTransitionTime"]
+        "Level Control / OnTransitionTime",
+        "Level Control / OffTransitionTime",
+    ]
 
 
 def test_claims_are_scoped_per_endpoint_no_leak():
-    prof = _profile(endpoints=[
-        {"device_types": ["Extended Color Light"]},
-        {"device_types": ["On/Off Light"]},
-    ])
+    prof = _profile(
+        endpoints=[
+            {"device_types": ["Extended Color Light"]},
+            {"device_types": ["On/Off Light"]},
+        ]
+    )
     # feature enabled only on EP2's tab
     res = webapp.generate_scaffold_files(prof, {"2": ["OO.S.F00"]})
-    assert res["endpoints"][0]["features"] == []                    # EP1 untouched
+    assert res["endpoints"][0]["features"] == []  # EP1 untouched
     assert res["endpoints"][1]["features"] == ["On/Off / Lighting"]  # EP2 only
     assert "endpoint_2 = on_off_light::create(node," in res["snippet"]
 
@@ -101,20 +118,24 @@ def test_base_mcore_claims_do_not_affect_endpoint_code():
 def test_ui_and_cli_engine_agree():
     """The bridge must return byte-identical code to calling generate_scaffold
     directly (what the CLI does) for the same selection + claims."""
-    sel_dict = _profile(endpoints=[
-        {"device_types": ["Extended Color Light"], "claims": ["CC.S.F04"]},
-    ])
+    sel_dict = _profile(
+        endpoints=[
+            {"device_types": ["Extended Color Light"], "claims": ["CC.S.F04"]},
+        ]
+    )
     cli = generate_scaffold(Selection.from_dict(sel_dict), loader.load_version("1.6"))
     ui = webapp.generate_scaffold_files(
         _profile(endpoints=[{"device_types": ["Extended Color Light"]}]),
-        {"1": ["CC.S.F04"]})
+        {"1": ["CC.S.F04"]},
+    )
     assert ui["snippet"] == cli.snippet
 
 
 def test_json_wrapper_roundtrips():
     out = webapp.generate_scaffold_json(
         json.dumps(_profile(endpoints=[{"device_types": ["Extended Color Light"]}])),
-        json.dumps({"1": ["CC.S.F04"]}))
+        json.dumps({"1": ["CC.S.F04"]}),
+    )
     res = json.loads(out)
     assert "color_temperature::add(" in res["snippet"]
     assert res["file"] == "app_data_model.cpp"

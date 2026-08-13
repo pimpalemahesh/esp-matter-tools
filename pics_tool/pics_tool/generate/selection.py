@@ -36,10 +36,13 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from .claims import (feature_seeds_from_codes, icd_from_claims, mcore_atoms,
-                     side_claims)
-from .cluster_engine import (active_conditions, all_enabled_cluster_ids,
-                             generate_cluster_pics, load_transport_map)
+from .claims import feature_seeds_from_codes, icd_from_claims, mcore_atoms, side_claims
+from .cluster_engine import (
+    active_conditions,
+    all_enabled_cluster_ids,
+    generate_cluster_pics,
+    load_transport_map,
+)
 from .mcore_engine import compute_mcore_pics
 from .profile import DeviceProfile, load_profile_data
 from .template_io import known_item_numbers
@@ -66,8 +69,8 @@ class EndpointSpec:
 
 @dataclass
 class Selection:
-    profile: DeviceProfile                 # node-level facts (spec, role, transport, ...)
-    endpoints: list[EndpointSpec]          # application endpoints, assigned EP1..EPN
+    profile: DeviceProfile  # node-level facts (spec, role, transport, ...)
+    endpoints: list[EndpointSpec]  # application endpoints, assigned EP1..EPN
     mcore_claims: list[str] = field(default_factory=list)
 
     @classmethod
@@ -118,8 +121,11 @@ def _parse_endpoint(entry) -> EndpointSpec:
             dts = [dts]
         if not dts:
             raise SelectionError(f"endpoint entry needs 'device_types': {entry!r}")
-        return EndpointSpec(list(dts), list(entry.get("claims", []) or []),
-                            interface=entry.get("interface"))
+        return EndpointSpec(
+            list(dts),
+            list(entry.get("claims", []) or []),
+            interface=entry.get("interface"),
+        )
     raise SelectionError(f"invalid endpoint entry: {entry!r}")
 
 
@@ -163,14 +169,16 @@ def interface_plan(model, selection: Selection, transport_map: dict):
         if sni_eps:
             raise SelectionError(
                 "a Secondary Network Interface endpoint needs a second network "
-                "technology in 'transport' (it hosts the ADDITIONAL interface)")
+                "technology in 'transport' (it hosts the ADDITIONAL interface)"
+            )
         return None, frozenset(), None
 
     if len(sni_eps) != len(families) - 1:
         raise SelectionError(
             f"{len(families)} network interface types ({', '.join(families)}) need "
             f"{len(families) - 1} Secondary Network Interface endpoint(s) -- one "
-            f"per non-primary interface (spec 11.9); found {len(sni_eps)}")
+            f"per non-primary interface (spec 11.9); found {len(sni_eps)}"
+        )
 
     assigned: dict[int, str] = {}
     for epid in sni_eps:
@@ -178,11 +186,13 @@ def interface_plan(model, selection: Selection, transport_map: dict):
         if iface not in families:
             raise SelectionError(
                 f"endpoint {epid} (Secondary Network Interface) must declare "
-                f"'interface' as one of the selected transports: {families}")
+                f"'interface' as one of the selected transports: {families}"
+            )
         if iface in assigned.values():
             raise SelectionError(
                 f"two Secondary Network Interface endpoints declare {iface!r}; "
-                "each hosts a different interface")
+                "each hosts a different interface"
+            )
         assigned[epid] = iface
 
     primary = next(f for f in families if f not in assigned.values())
@@ -207,8 +217,10 @@ def load_selection(path: str | Path) -> Selection:
     return Selection.from_dict(load_profile_data(path))
 
 
-def merge_endpoint_seeds(per_ep_seeds: dict[int, dict[str, set[str]]],
-                         extra: dict[int, dict[str, set[str]]] | None) -> None:
+def merge_endpoint_seeds(
+    per_ep_seeds: dict[int, dict[str, set[str]]],
+    extra: dict[int, dict[str, set[str]]] | None,
+) -> None:
     """Union ``extra`` per-endpoint feature seeds into ``per_ep_seeds`` in place."""
     for epid, seeds in (extra or {}).items():
         target = per_ep_seeds.setdefault(epid, {})
@@ -216,8 +228,9 @@ def merge_endpoint_seeds(per_ep_seeds: dict[int, dict[str, set[str]]],
             target.setdefault(cid, set()).update(codes)
 
 
-def build_endpoints_enabled(model, selection: Selection,
-                            transport_map: dict | None = None) -> dict[int, set[str]]:
+def build_endpoints_enabled(
+    model, selection: Selection, transport_map: dict | None = None
+) -> dict[int, set[str]]:
     """Run the engines for a selection -> {endpoint: enabled PICS codes}.
 
     The single seam both the CLI PICS export and the scaffold build on: multi
@@ -232,11 +245,14 @@ def build_endpoints_enabled(model, selection: Selection,
     # iff SIT|LIT on the Root Node); an explicit is_icd input wins.
     if not profile.is_icd:
         icd, mode = icd_from_claims(
-            [c for ep in selection.endpoints for c in ep.claims])
+            [c for ep in selection.endpoints for c in ep.claims]
+        )
         if icd:
             profile.is_icd, profile.icd_mode = True, mode
     conditions = active_conditions(profile, transport_map)
-    iface_seeds, iface_exclude, _families = interface_plan(model, selection, transport_map)
+    iface_seeds, iface_exclude, _families = interface_plan(
+        model, selection, transport_map
+    )
 
     app_endpoints = [ep.device_types for ep in selection.endpoints]
     per_ep_seeds: dict[int, dict[str, set[str]]] = {}
@@ -251,15 +267,20 @@ def build_endpoints_enabled(model, selection: Selection,
     merge_endpoint_seeds(per_ep_seeds, iface_seeds)
 
     endpoints = generate_cluster_pics(
-        model, profile, transport_map=transport_map,
-        app_endpoints=app_endpoints, per_endpoint_feature_seeds=per_ep_seeds,
-        exclude_node_seed_clusters=iface_exclude)
+        model,
+        profile,
+        transport_map=transport_map,
+        app_endpoints=app_endpoints,
+        per_endpoint_feature_seeds=per_ep_seeds,
+        exclude_node_seed_clusters=iface_exclude,
+    )
 
     cluster_ids = all_enabled_cluster_ids(endpoints)
     # Composition-derived Base atom: several endpoints hosting a Groups server
     # (engine baseline or a claimed side) answer MCORE.G.MULTIENDPOINT.
-    groups_eps = ({ep.endpoint for ep in endpoints if "G.S" in ep.pics}
-                  | {epid for epid, side in per_ep_side.items() if "G.S" in side})
+    groups_eps = {ep.endpoint for ep in endpoints if "G.S" in ep.pics} | {
+        epid for epid, side in per_ep_side.items() if "G.S" in side
+    }
     extra = mcore_atoms(selection.mcore_claims)
     if len(groups_eps) >= 2:
         extra = extra | {"MCORE.G.MULTIENDPOINT"}
@@ -267,6 +288,6 @@ def build_endpoints_enabled(model, selection: Selection,
 
     enabled = {ep.endpoint: set(ep.pics) & known for ep in endpoints}
     for epid, side in per_ep_side.items():
-        enabled.setdefault(epid, set()).update(side)     # already intersected with known
-    enabled.setdefault(0, set()).update(mcore)           # MCORE lives on endpoint 0
+        enabled.setdefault(epid, set()).update(side)  # already intersected with known
+    enabled.setdefault(0, set()).update(mcore)  # MCORE lives on endpoint 0
     return enabled

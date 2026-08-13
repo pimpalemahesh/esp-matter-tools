@@ -23,7 +23,7 @@ import sys
 from pathlib import Path
 
 _TOOL_ROOT = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(_TOOL_ROOT))            # so `import pics_tool` works
+sys.path.insert(0, str(_TOOL_ROOT))  # so `import pics_tool` works
 sys.path.insert(0, str(_TOOL_ROOT / "tests"))  # so `import test_golden` works
 # the shared datamodel is the in-repo sibling, not a pip install
 sys.path.insert(0, str(_TOOL_ROOT.parent / "esp-matter-datamodel"))
@@ -35,8 +35,12 @@ def main() -> None:
     for name, profile_dict in CASES.items():
         golden = _generate(profile_dict)
         (GOLDEN_DIR / f"{name}.json").write_text(
-            json.dumps(golden, indent=2) + "\n", encoding="utf-8")
-        print(f"updated {name}: " + ", ".join(f"ep{k}={len(v)}" for k, v in golden.items()))
+            json.dumps(golden, indent=2) + "\n", encoding="utf-8"
+        )
+        print(
+            f"updated {name}: "
+            + ", ".join(f"ep{k}={len(v)}" for k, v in golden.items())
+        )
 
 
 if __name__ == "__main__":

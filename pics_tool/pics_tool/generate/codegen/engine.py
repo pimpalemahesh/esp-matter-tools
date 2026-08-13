@@ -26,8 +26,9 @@ from .targets import get_target
 from .targets.base import GeneratedOutput
 
 
-def generate_code(selection, model: DataModel, *, target: str = "esp_matter",
-                  knowledge=None) -> GeneratedOutput:
+def generate_code(
+    selection, model: DataModel, *, target: str = "esp_matter", knowledge=None
+) -> GeneratedOutput:
     """Render code for a PICS ``selection`` with the chosen output ``target``.
 
     ``knowledge`` overrides the target's default knowledge source (e.g. a live
@@ -35,5 +36,7 @@ def generate_code(selection, model: DataModel, *, target: str = "esp_matter",
     """
     plan = build_plan(selection, model)
     tgt = get_target(target)
-    kb = knowledge if knowledge is not None else tgt.default_knowledge(plan.spec_version)
+    kb = (
+        knowledge if knowledge is not None else tgt.default_knowledge(plan.spec_version)
+    )
     return tgt.render(plan, kb)

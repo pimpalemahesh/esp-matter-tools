@@ -52,14 +52,20 @@ def download_url(component_version: str) -> str:
     return f"{_REGISTRY}/{component_version}/{fname}"
 
 
-def refresh(pics_version: str, *, component_dir=None, download: bool = False,
-            out_dir: str | Path | None = None) -> tuple[Path, int]:
+def refresh(
+    pics_version: str,
+    *,
+    component_dir=None,
+    download: bool = False,
+    out_dir: str | Path | None = None,
+) -> tuple[Path, int]:
     """Write ``caps_<pics_version>.json`` from a component; return (path, symbol_count)."""
     compver = component_version_for(pics_version)
     if compver is None:
         raise ValueError(
             f"no released esp_matter component maps to PICS {pics_version!r} "
-            f"(known: {sorted(PICS_TO_COMPONENT)})")
+            f"(known: {sorted(PICS_TO_COMPONENT)})"
+        )
     out = Path(out_dir or DATA_DIR) / f"caps_{pics_version}.json"
 
     tmp = None
@@ -69,7 +75,7 @@ def refresh(pics_version: str, *, component_dir=None, download: bool = False,
         elif download:
             tmp = Path(tempfile.mkdtemp(prefix="esp_matter_comp_"))
             zpath = tmp / "component.zip"
-            urllib.request.urlretrieve(download_url(compver), zpath)   # noqa: S310 (trusted host)
+            urllib.request.urlretrieve(download_url(compver), zpath)  # noqa: S310 (trusted host)
             # Header location moved across releases (1.4.0: components/esp_matter/;
             # 1.4.2+: components/esp_matter/data_model/), so match by basename.
             wanted = set(_HEADERS)

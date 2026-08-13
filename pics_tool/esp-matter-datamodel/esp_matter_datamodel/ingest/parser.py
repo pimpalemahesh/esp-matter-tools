@@ -49,7 +49,9 @@ def parse_cluster(root: Element) -> Cluster:
     cluster_id = norm_id(root.attrib["id"], 4) if root.attrib.get("id") else ""
     name = _cluster_name(root)
     classification = root.find("classification")
-    pics = classification.attrib.get("picsCode", "") if classification is not None else ""
+    pics = (
+        classification.attrib.get("picsCode", "") if classification is not None else ""
+    )
     revision = int(root.attrib.get("revision", "1"))
 
     resolver = _build_cluster_resolver(root, name)
@@ -72,8 +74,11 @@ def parse_cluster(root: Element) -> Cluster:
     if attrs_el is not None:
         for ae in attrs_el.findall("attribute"):
             aid = norm_id(ae.attrib["id"], 4)
-            attributes[aid] = Attribute(id=aid, name=ae.attrib.get("name", ""),
-                                        conformance=find_conformance(ae, resolver))
+            attributes[aid] = Attribute(
+                id=aid,
+                name=ae.attrib.get("name", ""),
+                conformance=find_conformance(ae, resolver),
+            )
 
     accepted: dict[str, Command] = {}
     generated: dict[str, Command] = {}
@@ -81,8 +86,11 @@ def parse_cluster(root: Element) -> Cluster:
     if commands_el is not None:
         for ce in commands_el.findall("command"):
             cid = norm_id(ce.attrib["id"], 2)
-            command = Command(id=cid, name=ce.attrib.get("name", ""),
-                              conformance=find_conformance(ce, resolver))
+            command = Command(
+                id=cid,
+                name=ce.attrib.get("name", ""),
+                conformance=find_conformance(ce, resolver),
+            )
             direction = ce.attrib.get("direction", "commandToServer")
             # Server-generated (responses / commands to client) -> generated (.Tx);
             # server-received commands -> accepted (.Rsp).
@@ -96,14 +104,23 @@ def parse_cluster(root: Element) -> Cluster:
     if events_el is not None:
         for ee in events_el.findall("event"):
             eid = norm_id(ee.attrib["id"], 2)
-            events[eid] = Event(id=eid, name=ee.attrib.get("name", ""),
-                                priority=ee.attrib.get("priority"),
-                                conformance=find_conformance(ee, resolver))
+            events[eid] = Event(
+                id=eid,
+                name=ee.attrib.get("name", ""),
+                priority=ee.attrib.get("priority"),
+                conformance=find_conformance(ee, resolver),
+            )
 
     return Cluster(
-        id=cluster_id, name=name, pics=pics, revision=revision,
-        features=features, attributes=attributes,
-        accepted_commands=accepted, generated_commands=generated, events=events,
+        id=cluster_id,
+        name=name,
+        pics=pics,
+        revision=revision,
+        features=features,
+        attributes=attributes,
+        accepted_commands=accepted,
+        generated_commands=generated,
+        events=events,
     )
 
 
@@ -147,8 +164,12 @@ def _build_cluster_resolver(root: Element, context: str) -> Resolver:
             if ce.attrib.get("name"):
                 command_ids_by_name[ce.attrib["name"]] = norm_id(ce.attrib["id"], 2)
 
-    return Resolver(features_by_key, attribute_ids_by_name, command_ids_by_name,
-                    context=f"cluster {context}")
+    return Resolver(
+        features_by_key,
+        attribute_ids_by_name,
+        command_ids_by_name,
+        context=f"cluster {context}",
+    )
 
 
 # --------------------------------------------------------------------------- #
@@ -172,12 +193,18 @@ def parse_device_type(root: Element, clusters_by_id: dict[str, Cluster]) -> Devi
             side = ce.attrib.get("side", "server")
             (client if side == "client" else server)[req.id] = req
 
-    return DeviceType(id=dt_id, name=name, revision=revision,
-                      server_clusters=server, client_clusters=client)
+    return DeviceType(
+        id=dt_id,
+        name=name,
+        revision=revision,
+        server_clusters=server,
+        client_clusters=client,
+    )
 
 
-def _parse_cluster_requirement(ce: Element, clusters_by_id: dict[str, Cluster],
-                               dt_name: str) -> ClusterRequirement:
+def _parse_cluster_requirement(
+    ce: Element, clusters_by_id: dict[str, Cluster], dt_name: str
+) -> ClusterRequirement:
     cid = norm_id(ce.attrib["id"], 4)
     cname = ce.attrib.get("name", "")
     definition = clusters_by_id.get(cid)
@@ -197,8 +224,12 @@ def _parse_cluster_requirement(ce: Element, clusters_by_id: dict[str, Cluster],
             key = fe.attrib.get("code") or fe.attrib.get("name")
             bit = code_to_bit.get(key, name_to_bit.get(key))
             if bit is None:
-                logger.warning("device-type %s: unresolved feature %r on cluster %s",
-                               dt_name, key, cname)
+                logger.warning(
+                    "device-type %s: unresolved feature %r on cluster %s",
+                    dt_name,
+                    key,
+                    cname,
+                )
                 continue
             feature_overrides[bit] = override
 
@@ -227,7 +258,9 @@ def _parse_cluster_requirement(ce: Element, clusters_by_id: dict[str, Cluster],
             command_overrides[norm_id(code, 2)] = override
 
     return ClusterRequirement(
-        id=cid, name=cname, conformance=conformance,
+        id=cid,
+        name=cname,
+        conformance=conformance,
         feature_overrides=feature_overrides,
         attribute_overrides=attribute_overrides,
         command_overrides=command_overrides,
@@ -260,10 +293,17 @@ def _build_requirement_resolver(definition: Cluster | None, context: str) -> Res
                 features_by_key[f.code] = ref
             if f.name:
                 features_by_key[f.name] = ref
-        attribute_ids_by_name = {a.name: a.id for a in definition.attributes.values() if a.name}
-        for cmd in list(definition.accepted_commands.values()) + \
-                list(definition.generated_commands.values()):
+        attribute_ids_by_name = {
+            a.name: a.id for a in definition.attributes.values() if a.name
+        }
+        for cmd in list(definition.accepted_commands.values()) + list(
+            definition.generated_commands.values()
+        ):
             if cmd.name:
                 command_ids_by_name[cmd.name] = cmd.id
-    return Resolver(features_by_key, attribute_ids_by_name, command_ids_by_name,
-                    context=f"device-type {context}")
+    return Resolver(
+        features_by_key,
+        attribute_ids_by_name,
+        command_ids_by_name,
+        context=f"device-type {context}",
+    )

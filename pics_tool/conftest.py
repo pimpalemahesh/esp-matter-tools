@@ -33,7 +33,10 @@ def pytest_collection_modifyitems(config, items):
     if any(_DATAMODELS.glob("datamodel_*.json")):
         return
     import pytest
-    skip = pytest.mark.skip(reason="Data models not built -- run ./build_tool.sh "
-                            "(or set MATTER_SDK_PATH to a connectedhomeip checkout) first.")
+
+    skip = pytest.mark.skip(
+        reason="Data models not built -- run ./build_tool.sh "
+        "(or set MATTER_SDK_PATH to a connectedhomeip checkout) first."
+    )
     for item in items:
         item.add_marker(skip)
