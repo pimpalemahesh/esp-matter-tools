@@ -268,9 +268,14 @@ class EspMatterTarget(CodeTarget):
 
     # ---- the optional calls for one cluster group (only verified ones) ----
     @staticmethod
-    def _group_items(cns, g, knowledge=None):
+    def _group_items(
+        cns, g, knowledge=None, kinds=("feature", "attribute", "command", "event")
+    ):
         """(kind, symbol, var_base, display_name, cluster_name) per element, in
-        render order: features, attributes, commands, events.
+        render order: features, attributes, commands, events. ``kinds`` selects
+        which element kinds to yield -- features are rendered PRE-create (as
+        config feature_flags) and the post-create pass asks only for
+        attributes/commands/events, so the two callers request disjoint sets.
 
         Both the cluster namespace (``resolve_cluster_ns``: ``switch`` vs
         ``switch_cluster``, ``wi_fi_network_management`` vs
@@ -293,50 +298,54 @@ class EspMatterTarget(CodeTarget):
             return resolve_element_ns(rcns, kind, derived, avail)
 
         items = []
-        for f in g["features"]:
-            ns = ns_for("feature", f.feature_namespace)
-            items.append(
-                (
-                    "feature",
-                    f"cluster::{rcns}::feature::{ns}::add",
-                    f"{cns}_{ns}",
-                    f.feature_name,
-                    f.cluster_name,
+        if "feature" in kinds:
+            for f in g["features"]:
+                ns = ns_for("feature", f.feature_namespace)
+                items.append(
+                    (
+                        "feature",
+                        f"cluster::{rcns}::feature::{ns}::add",
+                        f"{cns}_{ns}",
+                        f.feature_name,
+                        f.cluster_name,
+                    )
                 )
-            )
-        for a in g["attributes"]:
-            ns = ns_for("attribute", a.namespace)
-            items.append(
-                (
-                    "attribute",
-                    f"cluster::{rcns}::attribute::create_{ns}",
-                    f"{cns}_{ns}",
-                    a.name,
-                    a.cluster_name,
+        if "attribute" in kinds:
+            for a in g["attributes"]:
+                ns = ns_for("attribute", a.namespace)
+                items.append(
+                    (
+                        "attribute",
+                        f"cluster::{rcns}::attribute::create_{ns}",
+                        f"{cns}_{ns}",
+                        a.name,
+                        a.cluster_name,
+                    )
                 )
-            )
-        for c in g["commands"]:
-            ns = ns_for("command", c.namespace)
-            items.append(
-                (
-                    "command",
-                    f"cluster::{rcns}::command::create_{ns}",
-                    f"{cns}_{ns}",
-                    c.name,
-                    c.cluster_name,
+        if "command" in kinds:
+            for c in g["commands"]:
+                ns = ns_for("command", c.namespace)
+                items.append(
+                    (
+                        "command",
+                        f"cluster::{rcns}::command::create_{ns}",
+                        f"{cns}_{ns}",
+                        c.name,
+                        c.cluster_name,
+                    )
                 )
-            )
-        for e in g["events"]:
-            ns = ns_for("event", e.namespace)
-            items.append(
-                (
-                    "event",
-                    f"cluster::{rcns}::event::create_{ns}",
-                    f"{cns}_{ns}",
-                    e.name,
-                    e.cluster_name,
+        if "event" in kinds:
+            for e in g["events"]:
+                ns = ns_for("event", e.namespace)
+                items.append(
+                    (
+                        "event",
+                        f"cluster::{rcns}::event::create_{ns}",
+                        f"{cns}_{ns}",
+                        e.name,
+                        e.cluster_name,
+                    )
                 )
-            )
         return items
 
     # ---- render the esp-matter snippet. Every selected element is verified against
@@ -361,6 +370,61 @@ class EspMatterTarget(CodeTarget):
         ]
         for ep in endpoints:
             ns, n = ep.primary.namespace, ep.endpoint
+            groups = _cluster_groups(ep)
+            side_ns = {s.cluster_namespace for s in ep.optional_sides}
+
+            # Feature flags live in the cluster CONFIG and must be set BEFORE the
+            # cluster is created: esp_matter's cluster::create() validates the
+            # feature map (VALIDATE_FEATURES_{EXACT,AT_LEAST}_ONE) and enables
+            # each set feature during create, so a post-create feature::add is
+            # too late -- a mandatory-choice cluster (Thermostat, Occupancy, ...)
+            # would abort at create with feature_flags == 0. Pre-compute the
+            # assignments: baseline clusters (built by endpoint::<type>::create)
+            # set them on the endpoint config; sides on their own cluster config.
+            # Root-endpoint (0) clusters are owned by node::create -- their
+            # config is out of reach, so features there stay in the post-create
+            # pass (there is no create we can precede).
+            precreate_baseline: list[str] = []  # on {ns}_config_{n}
+            precreate_side: dict[str, list[str]] = {}  # cns -> on {cns}_config_{n}
+            feature_notes: list[str] = []  # unresolved feature comments
+            post_kinds = ("attribute", "command", "event")
+            if n != 0:
+                for cns, g in groups:
+                    if not g["features"]:
+                        continue
+                    rcns = (
+                        resolve_cluster_ns(cns, knowledge.cluster_namespaces())
+                        if knowledge
+                        else cns
+                    )
+                    for _kind, symbol, _var, name, cluster_name in self._group_items(
+                        cns, g, knowledge, kinds=("feature",)
+                    ):
+                        sig = (
+                            knowledge.symbol(symbol) if knowledge is not None else None
+                        )
+                        if sig is None:  # feature not in this component -> comment
+                            unresolved.append(
+                                {
+                                    "endpoint": n,
+                                    "cluster": cluster_name,
+                                    "name": name,
+                                    "kind": "feature",
+                                }
+                            )
+                            feature_notes.append(
+                                f"    // {symbol}() not found in {where} -- add it manually"  # noqa: E501
+                            )
+                            continue
+                        gid = symbol[: -len("::add")] + "::get_id()"
+                        if cns in side_ns:
+                            precreate_side.setdefault(cns, []).append(
+                                f"    {cns}_config_{n}.feature_flags |= {gid};"
+                            )
+                        else:
+                            precreate_baseline.append(
+                                f"    {ns}_config_{n}.{rcns}.feature_flags |= {gid};"
+                            )
             if n == 0:
                 # The root endpoint is created by node::create above; fetch it
                 # to add the optional Root Node clusters selected in the PICS.
@@ -372,6 +436,7 @@ class EspMatterTarget(CodeTarget):
                 )
             else:
                 L.append(f"    {ns}::config_t {ns}_config_{n};")
+                L += precreate_baseline  # feature_flags BEFORE create
                 L.append(
                     f"    endpoint_t *endpoint_{n} = {ns}::create(node, &{ns}_config_{n}, ENDPOINT_FLAG_NONE, nullptr);"  # noqa: E501
                 )
@@ -383,21 +448,25 @@ class EspMatterTarget(CodeTarget):
                     L.append(
                         f'    ABORT_APP_ON_FAILURE({c.namespace}::add(endpoint_{n}, &{c.namespace}_config_{n}) == ESP_OK, ESP_LOGE(TAG, "Failed to add {c.name} device type"));'  # noqa: E501
                     )
+            L += feature_notes
             # Whole-cluster sides FIRST. create() already returns the
             # cluster_t*, so when this snippet ALSO adds elements to a cluster
             # it creates, the pointer is captured here and the element calls
             # below skip the redundant cluster::get (get remains only for
             # clusters built elsewhere: the device type's or node::create's).
-            groups = _cluster_groups(ep)
-            # namespaces with at least one RESOLVABLE element call: only those
-            # need the pointer (capturing for comment-only groups would leave
-            # an unused variable behind).
+            # namespaces with at least one RESOLVABLE POST-CREATE element call
+            # (attributes/commands/events): only those need the pointer
+            # (features are pre-create; capturing for a comment-only or
+            # feature-only group would leave an unused variable behind).
             group_ns = {
                 cns
                 for cns, g in groups
                 if knowledge is not None
                 and any(
-                    knowledge.symbol(sym) for _, sym, *_ in self._group_items(cns, g, knowledge)
+                    knowledge.symbol(sym)
+                    for _, sym, *_ in self._group_items(
+                        cns, g, knowledge, kinds=post_kinds
+                    )
                 )
             }
             created: dict[str, str] = {}  # cluster namespace -> captured var
@@ -422,6 +491,7 @@ class EspMatterTarget(CodeTarget):
                 )
                 L.append("")
                 L.append(f"    cluster::{rcns}::config_t {cns}_config_{n};")
+                L += precreate_side.get(cns, [])  # feature_flags BEFORE this create
                 call = f"cluster::{rcns}::create(endpoint_{n}, &{cns}_config_{n}, {s.flags});"
                 if cns in group_ns:  # elements follow: keep the pointer
                     created[cns] = f"{cns}_cluster_{n}"
@@ -433,7 +503,7 @@ class EspMatterTarget(CodeTarget):
                 calls: list[str] = []
                 notes: list[str] = []
                 for kind, symbol, var_base, name, cluster_name in self._group_items(
-                    cns, g, knowledge
+                    cns, g, knowledge, kinds=post_kinds
                 ):
                     sig = knowledge.symbol(symbol) if knowledge is not None else None
                     if sig is None:  # API not in this component -> comment, don't drop

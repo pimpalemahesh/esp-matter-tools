@@ -362,6 +362,48 @@ def _choice_groups(version: str) -> dict[str, tuple[str, ...]]:
     return out
 
 
+def _conformance_choice(conf):
+    """The :class:`Choice` a feature's conformance carries, if any -- looking
+    THROUGH an ``otherwise`` wrapper. A ``[choice]`` feature is often modelled as
+    ``otherwise{ mandatory if X ; optional [choice a] }`` (e.g. Thermostat's
+    Heating/Cooling), so the choice lives on a nested item, not the top node."""
+    if conf is None:
+        return None
+    if getattr(conf, "choice", None) is not None:
+        return conf.choice
+    for item in getattr(conf, "items", ()) or ():
+        found = _conformance_choice(item)
+        if found is not None:
+            return found
+    return None
+
+
+def _choice_group_defs(version: str) -> list[tuple[str, str, bool, tuple[str, ...]]]:
+    """Every server-feature choice group as ``(cluster_pics, marker, more,
+    member_codes)`` -- BOTH ``O.a`` (exactly-one, ``more=False``) and ``O.a+``
+    (one-or-more, ``more=True``), and including choices nested in an
+    ``otherwise``. Unlike :func:`_choice_groups` (which only maps enabled members
+    to their siblings for the exactly-one exclusion rule), this enumerates the
+    groups themselves so the validator can enforce the LOWER bound: a group in an
+    enabled cluster must have >=1 member selected, or the esp_matter cluster
+    ``create()`` aborts (``VALIDATE_FEATURES_*``)."""
+    model = _model(version)
+    defs: list[tuple[str, str, bool, tuple[str, ...]]] = []
+    for cl in model.clusters.values():
+        if not cl.pics:
+            continue
+        groups: dict[str, list] = {}  # marker -> [more, [codes]]
+        for f in cl.features.values():
+            ch = _conformance_choice(f.conformance)
+            if ch is not None:
+                g = groups.setdefault(ch.marker, [ch.more, []])
+                g[1].append(pics_codes.feature(cl.pics, f.bit))
+        for marker, (more, members) in groups.items():
+            if len(members) > 1:
+                defs.append((cl.pics, marker, bool(more), tuple(members)))
+    return defs
+
+
 def _expr_atoms(expr) -> set[str]:
     """Every atom (PICS code) mentioned in a parsed boolexpr tree."""
     if isinstance(expr, boolexpr.Atom):
@@ -1934,6 +1976,34 @@ def validate_selection(profile_dict: dict, enabled_codes) -> list[dict]:
                         f"but these are enabled together: {names}",
                         tab=scope_name,
                     )
+
+    # 2d) choice-group LOWER bound (spec conformance): a feature choice group
+    #    (O.a exactly-one OR O.a+ one-or-more) on an ENABLED cluster must have
+    #    at least one member selected. Missing it is a real defect: esp_matter's
+    #    cluster create() runs VALIDATE_FEATURES_{EXACT,AT_LEAST}_ONE against
+    #    config->feature_flags and aborts the cluster when none is set (e.g.
+    #    Thermostat Heating/Cooling, Electrical Power Measurement AC/DC). The
+    #    exactly-one OVER bound is handled by 2c above; here we catch the
+    #    under-selection the mandatory derivation misses for pure choice groups
+    #    with no spec-designated fallback member.
+    for scope_name, scope_enabled in _choice_scopes:
+        for prefix, _marker, more, members in _choice_group_defs(version):
+            if f"{prefix}.S" not in scope_enabled:
+                continue  # cluster server not on this endpoint -> choice N/A
+            if any(m in scope_enabled for m in members):
+                continue  # satisfied (2c enforces the exactly-one upper bound)
+            need = "exactly one" if not more else "at least one"
+            picklist = ", ".join(
+                _short_name(m, model, prefix_map) or m for m in members
+            )
+            add(
+                members[0],
+                f"the spec requires {need} feature of this group to be enabled, "
+                f"but none is selected: {picklist}. Enable the one your device "
+                "supports on this endpoint (otherwise the esp-matter cluster "
+                "create aborts and the data model is invalid).",
+                tab=scope_name,
+            )
 
     # 3) Template sweep (what the CSA validator checks): per exported scope,
     #    evaluate every item's effective status. Runs to a fixpoint so newly

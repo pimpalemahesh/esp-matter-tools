@@ -112,7 +112,9 @@ def test_generate_threads_optional_answers_into_code():
     q = service.selection_questions(_ECL)["questions"]
     cc = next(x for x in q if x["code"].startswith("CC.S.F"))
     gen = service.generate(_ECL, {cc["tab"]: [cc["code"]]})
-    assert "color_control_cluster_1" in gen["code"]["snippet"]
+    # the claimed Color Control feature is set pre-create in the config
+    assert "cluster::color_control::feature::" in gen["code"]["snippet"]
+    assert "color_control.feature_flags |=" in gen["code"]["snippet"]
 
 
 def test_mirrored_dns_sd_claim_answers_both_codes():

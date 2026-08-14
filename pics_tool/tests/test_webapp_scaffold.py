@@ -57,17 +57,12 @@ def test_optional_feature_from_ui_flows_into_code():
     prof = _profile(endpoints=[{"device_types": ["Extended Color Light"]}])
     res = webapp.generate_scaffold_files(prof, {"1": ["CC.S.F04"]})
     snippet = res["snippet"]
+    # exact code (1.6 -> nearest 1.5.1): the feature is set PRE-create in the
+    # device-type config (feature_flags), using ColorControl's component
+    # namespace and ::get_id() -- create() then validates + enables it.
     assert (
-        "cluster::get(endpoint_1, ColorControl::Id)" in snippet
-    )  # chip Id, not 0x0300
-    # exact code (1.6 -> nearest 1.5.1): ColorTemperature has a config -> declared + &config
-    assert (
-        "cluster::color_control::feature::color_temperature::config_t "
-        "color_control_color_temperature_config_1;"
-    ) in snippet
-    assert (
-        "cluster::color_control::feature::color_temperature::add("
-        "color_control_cluster_1, &color_control_color_temperature_config_1);"
+        "extended_color_light_config_1.color_control.feature_flags |= "
+        "cluster::color_control::feature::color_temperature::get_id();"
     ) in snippet
     assert res["endpoints"][0]["features"] == ["Color Control / ColorTemperature"]
 
@@ -137,5 +132,8 @@ def test_json_wrapper_roundtrips():
         json.dumps({"1": ["CC.S.F04"]}),
     )
     res = json.loads(out)
-    assert "color_temperature::add(" in res["snippet"]
+    assert (
+        "color_control.feature_flags |= "
+        "cluster::color_control::feature::color_temperature::get_id();"
+    ) in res["snippet"]
     assert res["file"] == "app_data_model.cpp"

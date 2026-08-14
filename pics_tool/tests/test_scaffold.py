@@ -110,11 +110,13 @@ def test_optional_feature_claim_is_surfaced():
     # OO bit 0x02 is On/Off "OffOnly"; surfaced as the door_lock enable idiom,
     # with no descriptive comment (just the code).
     assert "Optional" not in snippet and "claimed in your PICS" not in snippet
-    # cluster fetched by ClusterName::Id (not a hardcoded 0x0006)
-    assert "cluster::get(endpoint_1, OnOff::Id)" in snippet
+    # the feature is set PRE-create in the device-type config (feature_flags),
+    # referenced by feature namespace -- no hardcoded cluster id anywhere.
+    assert (
+        "extended_color_light_config_1.on_off.feature_flags |= "
+        "cluster::on_off::feature::off_only::get_id();" in snippet
+    )
     assert "0x0006" not in snippet
-    # OffOnly takes no config in esp_matter 1.5.1 -> no extra argument
-    assert "cluster::on_off::feature::off_only::add(on_off_cluster_1);" in snippet
     assert result.endpoints[0].optional_features[0].feature_namespace == "off_only"
 
 
@@ -132,15 +134,15 @@ def test_optional_features_grouped_and_use_chip_cluster_id():
         }
     )
     snippet = result.snippet
-    # both Color Control features share one cluster::get, by ColorControl::Id
-    assert snippet.count("cluster::get(endpoint_1, ColorControl::Id)") == 1
+    # both Color Control features are set PRE-create on the same device-type
+    # config (feature_flags), by feature namespace -- no cluster::get needed.
     assert (
-        "cluster::color_control::feature::hue_saturation::add(color_control_cluster_1,"
-        in snippet
+        "extended_color_light_config_1.color_control.feature_flags |= "
+        "cluster::color_control::feature::hue_saturation::get_id();" in snippet
     )
     assert (
-        "cluster::color_control::feature::color_temperature::add(color_control_cluster_1,"
-        in snippet
+        "extended_color_light_config_1.color_control.feature_flags |= "
+        "cluster::color_control::feature::color_temperature::get_id();" in snippet
     )
     # continuation lines are not the old ragged 7-space indent
     assert "\n       cluster_t *" not in snippet
@@ -379,5 +381,8 @@ def test_created_cluster_pointer_reused_for_its_elements():
     ) in s
     assert "cluster::get(endpoint_0, TimeSynchronization::Id)" not in s
     assert "create_time_source(time_synchronization_cluster_0" in s
-    # a device-type-created cluster still needs the get
-    assert "cluster_t *on_off_cluster_1 = cluster::get(endpoint_1, OnOff::Id);" in s
+    # a device-type cluster's feature is set pre-create on the device config
+    assert (
+        "extended_color_light_config_1.on_off.feature_flags |= "
+        "cluster::on_off::feature::dead_front_behavior::get_id();" in s
+    )
