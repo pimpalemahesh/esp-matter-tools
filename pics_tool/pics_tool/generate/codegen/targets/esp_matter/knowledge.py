@@ -49,6 +49,21 @@ class Knowledge:
     def symbol(self, name: str) -> Signature | None:
         return None
 
+    def available_namespaces(self, cns: str, kind: str) -> set:
+        """Namespaces the component exposes for a cluster + element kind, used
+        to reconcile a spec-derived name against the component's actual naming
+        (see ``naming.resolve_element_ns``). Empty when unknown."""
+        return set()
+
+    def cluster_namespaces(self) -> set:
+        """All cluster namespaces the component exposes, used to reconcile a
+        spec-derived cluster namespace (see ``naming.resolve_cluster_ns``).
+        Empty when unknown."""
+        return set()
+
+
+_CLUSTER_NS_RE = re.compile(r"cluster::([a-z0-9_]+)::")
+
 
 class BundledKnowledge(Knowledge):
     """Signatures from a committed caps_<ver>.json shipped with the tool."""
@@ -69,6 +84,20 @@ class BundledKnowledge(Knowledge):
                 Param(p.get("type", ""), p.get("name", "")) for p in s.get("params", [])
             ],
         )
+
+    def available_namespaces(self, cns: str, kind: str) -> set:
+        if kind == "feature":
+            pre, suf = f"cluster::{cns}::feature::", "::add"
+            return {
+                s[len(pre): -len(suf)]
+                for s in self._symbols
+                if s.startswith(pre) and s.endswith(suf)
+            }
+        pre = f"cluster::{cns}::{kind}::create_"
+        return {s[len(pre):] for s in self._symbols if s.startswith(pre)}
+
+    def cluster_namespaces(self) -> set:
+        return {m.group(1) for s in self._symbols if (m := _CLUSTER_NS_RE.match(s))}
 
 
 class ComponentKnowledge(BundledKnowledge):

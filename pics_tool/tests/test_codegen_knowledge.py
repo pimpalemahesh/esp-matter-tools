@@ -85,6 +85,100 @@ def test_synth_value_for(type_str, expected):
 
 
 # ---- the committed bundled knowledge ----
+def test_element_namespace_resolution_binds_irregular_names():
+    """Spec-derived element namespaces are reconciled against the component's
+    actual naming, so irregular spellings bind to a real API instead of
+    degrading to a manual comment. A name with NO component API stays derived
+    (the caller keeps it as a comment)."""
+    from pics_tool.generate.codegen.targets.esp_matter.naming import (
+        resolve_element_ns,
+    )
+
+    kb = load_bundled("1.5.1")
+
+    def feats(cns):
+        return kb.available_namespaces(cns, "feature")
+
+    # C++ keyword -> cluster-prefixed component name
+    assert resolve_element_ns("fan_control", "feature", "auto", feats("fan_control")) \
+        == "fan_auto"
+    # acronym / word-split spelling (underscore-insensitive match)
+    assert resolve_element_ns("energy_evse", "feature", "v_2_x", feats("energy_evse")) \
+        == "v2x"
+    assert resolve_element_ns(
+        "energy_evse", "feature", "so_c_reporting", feats("energy_evse")
+    ) == "soc_reporting"
+    # feature-code alias (air-quality levels): the 1.4 component used the short
+    # code names; 1.5.1 later adopted the full spelling, so this resolves
+    # per-version against whatever that component actually exposes.
+    kb14 = load_bundled("1.4")
+    assert resolve_element_ns(
+        "air_quality", "feature", "very_poor",
+        kb14.available_namespaces("air_quality", "feature"),
+    ) == "vpoor"
+    # attribute spelling split
+    attrs = kb.available_namespaces("wifi_network_diagnostics", "attribute")
+    assert resolve_element_ns(
+        "wifi_network_diagnostics", "attribute", "wi_fi_version", attrs
+    ) == "wifi_version"
+    # genuinely absent: no component API -> derived unchanged (becomes a comment)
+    assert resolve_element_ns(
+        "level_control", "feature", "frequency", feats("level_control")
+    ) == "frequency"
+
+
+def test_cluster_namespace_resolution_binds_irregular_names():
+    """A spec cluster whose esp-matter namespace diverges (C++ keyword suffix,
+    or a Wi-Fi-style spelling) is reconciled against the component's actual
+    cluster namespaces, so the whole cluster's create() + element calls bind to
+    a real API. A cluster with no component namespace stays derived."""
+    from pics_tool.generate.codegen.targets.esp_matter.naming import (
+        resolve_cluster_ns,
+    )
+
+    cns = load_bundled("1.5.1").cluster_namespaces()
+    # C++ keyword -> component suffixes _cluster (explicit alias)
+    assert resolve_cluster_ns("switch", cns) == "switch_cluster"
+    # spelling divergence (underscore-insensitive match, no alias needed)
+    assert resolve_cluster_ns("wi_fi_network_management", cns) == "wifi_network_management"
+    # regular cluster unchanged
+    assert resolve_cluster_ns("on_off", cns) == "on_off"
+    # not in the component -> derived unchanged (emitted call stays a comment)
+    assert resolve_cluster_ns("media_playback", cns) == "media_playback"
+
+
+def test_switch_cluster_side_emits_real_call():
+    """Regression: a claimed Switch cluster must emit cluster::switch_cluster::
+    (the C++-keyword-safe component namespace), not a wrong cluster::switch:: or
+    an 'add it manually' comment."""
+    sel = Selection.from_dict(
+        {
+            "spec_version": "1.5.1",
+            "transport": ["wifi_2g"],
+            "endpoints": [{"device_types": ["Generic Switch"], "claims": ["SWTCH.S.F00"]}],
+        }
+    )
+    out = generate_code(sel, loader.load_version("1.5.1"), target="esp_matter")
+    assert "cluster::switch_cluster::feature::latching_switch::add(" in out.primary
+    assert "cluster::switch::" not in out.primary
+    assert "not found" not in out.primary
+
+
+def test_fan_auto_feature_emits_real_call():
+    """Regression: the Fan device's Auto feature must emit a real
+    fan_auto::add() call, not an 'add it manually' comment."""
+    sel = Selection.from_dict(
+        {
+            "spec_version": "1.5.1",
+            "transport": ["wifi_2g"],
+            "endpoints": [{"device_types": ["Fan"], "claims": ["FAN.S.F01"]}],
+        }
+    )
+    out = generate_code(sel, loader.load_version("1.5.1"), target="esp_matter")
+    assert "cluster::fan_control::feature::fan_auto::add(" in out.primary
+    assert "not found" not in out.primary
+
+
 def test_bundled_1_5_1_loads():
     kb = load_bundled("1.5.1")
     assert kb is not None and "1.5.1" in kb.source_label

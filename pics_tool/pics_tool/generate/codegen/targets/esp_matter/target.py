@@ -30,7 +30,12 @@ from dataclasses import dataclass, field
 from ...ir import DataModelPlan
 from ..base import CodeTarget, GeneratedFile, GeneratedOutput
 from .knowledge import load_nearest
-from .naming import chip_cluster_name, esp_name
+from .naming import (
+    chip_cluster_name,
+    esp_name,
+    resolve_cluster_ns,
+    resolve_element_ns,
+)
 from .synth import build_call
 
 
@@ -263,45 +268,71 @@ class EspMatterTarget(CodeTarget):
 
     # ---- the optional calls for one cluster group (only verified ones) ----
     @staticmethod
-    def _group_items(cns, g):
+    def _group_items(cns, g, knowledge=None):
         """(kind, symbol, var_base, display_name, cluster_name) per element, in
-        render order: features, attributes, commands, events."""
-        items = [
-            (
-                "feature",
-                f"cluster::{cns}::feature::{f.feature_namespace}::add",
-                f"{cns}_{f.feature_namespace}",
-                f.feature_name,
-                f.cluster_name,
+        render order: features, attributes, commands, events.
+
+        Both the cluster namespace (``resolve_cluster_ns``: ``switch`` vs
+        ``switch_cluster``, ``wi_fi_network_management`` vs
+        ``wifi_network_management``) and each element's namespace
+        (``resolve_element_ns``: ``auto`` vs ``fan_auto``, ``wi_fi`` vs
+        ``wifi``, ``so_c`` vs ``soc``) are reconciled against the component's
+        ACTUAL naming so spelling irregularities bind to the real esp-matter
+        API instead of degrading to a manual comment. Variable names keep the
+        spec-derived ``cns`` (they are plain identifiers); only the emitted
+        ``cluster::<ns>::`` API paths use the resolved name.
+        """
+        rcns = (
+            resolve_cluster_ns(cns, knowledge.cluster_namespaces())
+            if knowledge
+            else cns
+        )
+
+        def ns_for(kind: str, derived: str) -> str:
+            avail = knowledge.available_namespaces(rcns, kind) if knowledge else set()
+            return resolve_element_ns(rcns, kind, derived, avail)
+
+        items = []
+        for f in g["features"]:
+            ns = ns_for("feature", f.feature_namespace)
+            items.append(
+                (
+                    "feature",
+                    f"cluster::{rcns}::feature::{ns}::add",
+                    f"{cns}_{ns}",
+                    f.feature_name,
+                    f.cluster_name,
+                )
             )
-            for f in g["features"]
-        ]
         for a in g["attributes"]:
+            ns = ns_for("attribute", a.namespace)
             items.append(
                 (
                     "attribute",
-                    f"cluster::{cns}::attribute::create_{a.namespace}",
-                    f"{cns}_{a.namespace}",
+                    f"cluster::{rcns}::attribute::create_{ns}",
+                    f"{cns}_{ns}",
                     a.name,
                     a.cluster_name,
                 )
             )
         for c in g["commands"]:
+            ns = ns_for("command", c.namespace)
             items.append(
                 (
                     "command",
-                    f"cluster::{cns}::command::create_{c.namespace}",
-                    f"{cns}_{c.namespace}",
+                    f"cluster::{rcns}::command::create_{ns}",
+                    f"{cns}_{ns}",
                     c.name,
                     c.cluster_name,
                 )
             )
         for e in g["events"]:
+            ns = ns_for("event", e.namespace)
             items.append(
                 (
                     "event",
-                    f"cluster::{cns}::event::create_{e.namespace}",
-                    f"{cns}_{e.namespace}",
+                    f"cluster::{rcns}::event::create_{ns}",
+                    f"{cns}_{ns}",
                     e.name,
                     e.cluster_name,
                 )
@@ -366,7 +397,7 @@ class EspMatterTarget(CodeTarget):
                 for cns, g in groups
                 if knowledge is not None
                 and any(
-                    knowledge.symbol(sym) for _, sym, *_ in self._group_items(cns, g)
+                    knowledge.symbol(sym) for _, sym, *_ in self._group_items(cns, g, knowledge)
                 )
             }
             created: dict[str, str] = {}  # cluster namespace -> captured var
@@ -384,9 +415,14 @@ class EspMatterTarget(CodeTarget):
                         f"{_ROOT_KCONFIG_NS[cns]} is enabled in sdkconfig"
                     )
                     continue
+                rcns = (
+                    resolve_cluster_ns(cns, knowledge.cluster_namespaces())
+                    if knowledge
+                    else cns
+                )
                 L.append("")
-                L.append(f"    cluster::{cns}::config_t {cns}_config_{n};")
-                call = f"cluster::{cns}::create(endpoint_{n}, &{cns}_config_{n}, {s.flags});"
+                L.append(f"    cluster::{rcns}::config_t {cns}_config_{n};")
+                call = f"cluster::{rcns}::create(endpoint_{n}, &{cns}_config_{n}, {s.flags});"
                 if cns in group_ns:  # elements follow: keep the pointer
                     created[cns] = f"{cns}_cluster_{n}"
                     L.append(f"    cluster_t *{created[cns]} = {call}")
@@ -397,7 +433,7 @@ class EspMatterTarget(CodeTarget):
                 calls: list[str] = []
                 notes: list[str] = []
                 for kind, symbol, var_base, name, cluster_name in self._group_items(
-                    cns, g
+                    cns, g, knowledge
                 ):
                     sig = knowledge.symbol(symbol) if knowledge is not None else None
                     if sig is None:  # API not in this component -> comment, don't drop
